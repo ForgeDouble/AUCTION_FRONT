@@ -1,6 +1,9 @@
-import type { Bid } from "../pages/auction_detail/AuctionDetailDto";
+import type { BidLogDto } from "../pages/auction_detail/AuctionDetailDto";
+import type { ApiResponse } from "../type/CommonType";
 
-export const fetchBids = async (productId: number): Promise<Bid[]> => {
+export const fetchBids = async (
+  productId: number
+): Promise<ApiResponse<BidLogDto[]>> => {
   const response = await fetch(`http://localhost:8080/bid/redis/${productId}`, {
     method: "GET",
     headers: {
