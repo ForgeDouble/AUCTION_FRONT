@@ -18,6 +18,8 @@ import {
   ArrowUp,
 } from "lucide-react";
 import { fetchBids } from "../../api/bidapi";
+import type { BidLogDto } from "./AuctionDetailDto";
+import dayjs from "dayjs";
 
 const AuctionDetail = () => {
   const [productId, setProductId] = useState(1);
@@ -29,7 +31,7 @@ const AuctionDetail = () => {
     seconds: 30,
   });
   const [isWatching, setIsWatching] = useState(false);
-  const [messages, setMessages] = useState([]); // 🔥 실시간 메시지 저장
+  const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 🔥 실시간 메시지 저장
   const [stompClient, setStompClient] = useState(null);
 
   // 카운트다운 타이머
@@ -54,7 +56,14 @@ const AuctionDetail = () => {
     const loadBids = async () => {
       try {
         const data = await fetchBids(productId);
-        setMessages(data);
+
+        // createdAt을 변환한 새로운 배열 만들기
+        const formattedLogs = data.result.map((bid: BidLogDto) => ({
+          ...bid,
+          createdAt: dayjs(bid.createdAt).format("YYYY-MM-DD HH:mm:ss"),
+        }));
+
+        setBidLogs(formattedLogs);
       } catch (error) {
         console.error(error);
       } finally {
@@ -73,9 +82,15 @@ const AuctionDetail = () => {
       // 구독 (topic/auction/{id})
       stomp.subscribe(`/topic/auction/${productId}`, (message) => {
         const payload = JSON.parse(message.body);
-        console.log("📩 받은 메시지:", payload);
 
-        setMessages((prev) => [...prev, payload]); // 메시지 저장
+        const refinedPayload: BidLogDto = {
+          ...payload,
+          createdAt: dayjs(payload.createdAt).format("YYYY-MM-DD HH:mm:ss"),
+        };
+
+        console.log("📩 받은 메시지:", refinedPayload);
+
+        setBidLogs((prev) => [refinedPayload, ...prev]); // 최신 로그를 위에 추가
       });
     });
 
@@ -356,7 +371,7 @@ const AuctionDetail = () => {
                 입찰 현황
               </h3>
               <div className="space-y-3">
-                {bidHistory.map((bid, index) => (
+                {bidLogs.map((bid, index) => (
                   <div
                     key={index}
                     className={`flex justify-between items-center p-3 rounded-lg ${
@@ -366,8 +381,12 @@ const AuctionDetail = () => {
                     }`}
                   >
                     <div>
-                      <div className="text-white font-semibold">{bid.user}</div>
-                      <div className="text-gray-400 text-sm">{bid.time}</div>
+                      <div className="text-white font-semibold">
+                        {bid.userName}
+                      </div>
+                      <div className="text-gray-400 text-sm">
+                        {bid.createdAt}
+                      </div>
                     </div>
                     <div className="text-right">
                       <div
@@ -375,7 +394,7 @@ const AuctionDetail = () => {
                           index === 0 ? "text-green-400" : "text-white"
                         }`}
                       >
-                        {bid.amount}
+                        {bid.bidAmount}
                       </div>
                       {index === 0 && (
                         <div className="text-green-400 text-xs flex items-center">
