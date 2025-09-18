@@ -6,3 +6,12 @@ export interface BidLogDto {
   createdAt: string;
   isWinned: string;
 }
+
+export interface ProductDto {
+  productId: number;
+  categoryId: number;
+  productName: string;
+  productContent: string;
+  price: number;
+  sellYN: string;
+}
