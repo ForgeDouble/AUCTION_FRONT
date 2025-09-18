@@ -17,12 +17,13 @@ import {
   CheckCircle,
   ArrowUp,
 } from "lucide-react";
-import { fetchBids } from "../../api/bidapi";
-import type { BidLogDto } from "./AuctionDetailDto";
+import { fetchBids, fetchProductById } from "../../api/bidapi";
+import type { BidLogDto, ProductDto } from "./AuctionDetailDto";
 import dayjs from "dayjs";
 
 const AuctionDetail = () => {
-  const [productId, setProductId] = useState(1);
+  const [productId, setProductId] = useState(2);
+  const [product, setProduct] = useState<ProductDto>();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState(1500010);
   const [timeLeft, setTimeLeft] = useState({
@@ -51,27 +52,39 @@ const AuctionDetail = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const loadBids = async () => {
+    try {
+      const data = await fetchBids(productId);
+
+      // createdAt을 변환한 새로운 배열 만들기
+      const formattedLogs = data.result.map((bid: BidLogDto) => ({
+        ...bid,
+        createdAt: dayjs(bid.createdAt).format("YYYY-MM-DD HH:mm:ss"),
+      }));
+
+      setBidLogs(formattedLogs);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  const loadProduct = async () => {
+    try {
+      const data = await fetchProductById(productId);
+      setProduct(data.result);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
   // 📡 WebSocket 연결
   useEffect(() => {
-    const loadBids = async () => {
-      try {
-        const data = await fetchBids(productId);
-
-        // createdAt을 변환한 새로운 배열 만들기
-        const formattedLogs = data.result.map((bid: BidLogDto) => ({
-          ...bid,
-          createdAt: dayjs(bid.createdAt).format("YYYY-MM-DD HH:mm:ss"),
-        }));
-
-        setBidLogs(formattedLogs);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        // setLoading(false);
-      }
-    };
-
     loadBids();
+    loadProduct();
 
     const socket = new SockJS("http://localhost:8080/ws");
     const stomp = Stomp.over(socket);
