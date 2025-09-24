@@ -9,7 +9,10 @@ function App() {
       <Routes>
         <Route element={<Navbar />}>
           <Route path="/" element={<Home />} />
-          <Route path="/auction_detail" element={<AuctionDetail />} />
+          <Route
+            path="/auction_detail/:productId"
+            element={<AuctionDetail />}
+          />
         </Route>
       </Routes>
     </>

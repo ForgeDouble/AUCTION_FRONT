@@ -20,19 +20,20 @@ import {
 import { fetchBids, fetchProductById } from "../../api/bidapi";
 import type { BidLogDto, ProductDto } from "./AuctionDetailDto";
 import dayjs from "dayjs";
+import { useParams } from "react-router-dom";
 
 const AuctionDetail = () => {
-  const [productId, setProductId] = useState(2);
+  const { productId } = useParams<{ productId: string }>();
   const [product, setProduct] = useState<ProductDto>();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [bidAmount, setBidAmount] = useState(1500010);
+  const [bidAmount, setBidAmount] = useState(0);
   const [timeLeft, setTimeLeft] = useState({
     hours: 2,
     minutes: 45,
     seconds: 30,
   });
   const [isWatching, setIsWatching] = useState(false);
-  const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 🔥 실시간 메시지 저장
+  const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 실시간 입찰 내역 저장
   const [stompClient, setStompClient] = useState(null);
 
   // 카운트다운 타이머
@@ -242,16 +243,7 @@ const AuctionDetail = () => {
             <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 mt-6">
               <h3 className="text-2xl font-bold text-white mb-4">상품 설명</h3>
               <div className="text-gray-300 space-y-4">
-                <p>
-                  1960년대 빈티지 롤렉스 서브마리너 5513 모델입니다. 오리지널
-                  다이얼과 베젤을 유지하고 있으며, 컬렉터들 사이에서 매우 인기가
-                  높은 희귀한 아이템입니다.
-                </p>
-                <p>
-                  시계의 상태는 매우 양호하며, 정기적인 서비스를 받아 정확한
-                  시간을 유지하고 있습니다. 박스와 보증서는 포함되지 않으나,
-                  진품 인증서가 함께 제공됩니다.
-                </p>
+                <p>{product?.productContent}</p>
               </div>
 
               {/* 상품 상세 정보 */}
@@ -285,7 +277,7 @@ const AuctionDetail = () => {
             {/* 경매 정보 카드 */}
             <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6">
               <h1 className="text-3xl font-bold text-white mb-2">
-                빈티지 롤렉스 서브마리너
+                {product?.productName}
               </h1>
               <p className="text-gray-400 mb-6">1965년 오리지널 다이얼</p>
 
@@ -295,13 +287,21 @@ const AuctionDetail = () => {
                   현재 최고 입찰가
                 </div>
                 <div className="text-4xl font-bold text-green-400 mb-2">
-                  ₩2,450,000
+                  ₩{bidLogs[0]?.bidAmount}
                 </div>
                 <div className="flex items-center text-gray-300">
                   <Users className="h-4 w-4 mr-1" />
                   <span>23명 참여</span>
                   <Eye className="h-4 w-4 ml-4 mr-1" />
                   <span>156명 관심</span>
+                </div>
+              </div>
+
+              {/* 입찰 시작가 */}
+              <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-xl p-4 mb-6">
+                <div className="text-sm text-gray-400 mb-1">입찰 시작가</div>
+                <div className="text-4xl font-bold text-green-400 mb-2">
+                  ₩{product?.price}
                 </div>
               </div>
 
