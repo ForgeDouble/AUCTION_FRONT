@@ -23,8 +23,8 @@ const Navbar = () => {
 
             <div className="hidden md:flex items-center space-x-8">
               <a
-                href="#"
                 className="text-gray-300 hover:text-white transition-colors"
+                onClick={() => navigate("/auction_list")}
               >
                 경매 목록
               </a>
