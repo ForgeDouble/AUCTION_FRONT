@@ -1,7 +1,9 @@
 import { Gavel } from "lucide-react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
   return (
     <>
       <nav className="bg-black/20 backdrop-blur-lg border-b border-white/10 fixed top-0 left-0 right-0 z-50">
@@ -9,7 +11,14 @@ const Navbar = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <Gavel className="h-8 w-8 text-purple-400" />
-              <span className="text-2xl font-bold text-white">AuctionHub</span>
+              <span
+                className="text-3xl font-bold text-white cursor-pointer hover:text-purple-300 transition-colors duration-300"
+                onClick={() => {
+                  window.location.replace("/");
+                }}
+              >
+                AuctionHub
+              </span>
             </div>
 
             <div className="hidden md:flex items-center space-x-8">
@@ -40,7 +49,12 @@ const Navbar = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <button className="text-gray-300 hover:text-white">로그인</button>
+              <button
+                className="text-gray-300 hover:text-white cursor-pointer"
+                onClick={() => navigate("/login")}
+              >
+                로그인
+              </button>
               <button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105">
                 회원가입
               </button>
