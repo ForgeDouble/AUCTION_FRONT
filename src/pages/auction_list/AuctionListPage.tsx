@@ -197,12 +197,12 @@ const AuctionListPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br  from-slate-900 via-purple-900 to-slate-900">
       {/* 헤더 */}
-      <header className="bg-black/20 backdrop-blur-lg border-b border-white/10 sticky top-0 z-40">
+      {/* <header className="bg-black/20 backdrop-blur-lg border-b border-white/10 sticky top-15 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            {/* 로고 */}
+            // 로고
             <div
               className="flex items-center space-x-3 cursor-pointer"
               onClick={handleLogoClick}
@@ -213,7 +213,7 @@ const AuctionListPage = () => {
               </span>
             </div>
 
-            {/* 검색바 */}
+            // 검색바
             <div className="flex-1 max-w-2xl mx-8">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -227,7 +227,7 @@ const AuctionListPage = () => {
               </div>
             </div>
 
-            {/* 사용자 메뉴 */}
+            // 사용자메뉴
             <div className="flex items-center space-x-4">
               <button className="text-gray-300 hover:text-white transition-colors">
                 <Heart className="h-6 w-6" />
@@ -238,9 +238,9 @@ const AuctionListPage = () => {
             </div>
           </div>
         </div>
-      </header>
+      </header>  */}
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-20">
         {/* 페이지 헤더 */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-4">진행 중인 경매</h1>
