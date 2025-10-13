@@ -11,34 +11,77 @@ import {
   Users,
   Heart,
 } from "lucide-react";
+import { fetchLogin } from "./LoginApi";
+import type { loginDto } from "./LoginDto";
+import { WarningModal } from "../../components/WarningModal";
 
 const LoginPage = () => {
+  // 비밀번호 보이기
   const [showPassword, setShowPassword] = useState(false);
+  // 로그인 정보
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // 비밀번호 기억하기
   const [rememberMe, setRememberMe] = useState(false);
+  // 로딩 상태
+  const [loading, setLoading] = useState(false);
+  // 에러 상태
+  const [error, setError] = useState<string | null>(null);
+  // 경고창
+  const [warningOpen, setWarningOpen] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+
     // 로그인 처리 로직
-    console.log("로그인 시도:", { email, password, rememberMe });
+    try {
+      const loginData: loginDto = { email, password };
+      const result = await fetchLogin(loginData);
+
+      console.log("로그인 성공:", result);
+      // 성공 후 처리 (예: 토큰 저장, 페이지 이동 등)
+      window.location.replace("/");
+    } catch (err) {
+      let errorMessage = "로그인에 실패했습니다.";
+      if (err instanceof Error) {
+        // 백엔드에서 보낸 에러 메시지 파싱
+        if (err.message.includes("401")) {
+          errorMessage = "이메일 또는 비밀번호가 올바르지 않습니다.";
+        } else if (err.message.includes("404")) {
+          errorMessage = "존재하지 않는 계정입니다.";
+        } else if (err.message.includes("500")) {
+          errorMessage = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        } else if (err.message.includes("Network")) {
+          errorMessage = "네트워크 연결을 확인해주세요.";
+        } else {
+          // 백엔드에서 보낸 커스텀 메시지가 있으면 사용
+          errorMessage = err.message;
+        }
+      }
+      setError(errorMessage);
+      setWarningOpen(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const testimonials = [
     {
-      name: "김지민",
+      name: "김성재",
       role: "아트 컬렉터",
       comment: "정말 안전하고 투명한 거래가 가능해요!",
       rating: 5,
     },
     {
-      name: "박현우",
+      name: "김형기",
       role: "골동품 수집가",
       comment: "다양한 희귀 아이템을 만날 수 있어서 좋아요",
       rating: 5,
     },
     {
-      name: "이서연",
+      name: "이명규",
       role: "패션 애호가",
       comment: "명품 경매에서 합리적인 가격에 구매했어요",
       rating: 5,
@@ -256,6 +299,12 @@ const LoginPage = () => {
         <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl"></div>
         <div className="absolute -top-32 -right-16 w-48 h-48 bg-pink-500/20 rounded-full blur-3xl"></div>
       </div>
+      <WarningModal
+        isOpen={warningOpen}
+        onClose={() => setWarningOpen(false)}
+        title="로그인 실패"
+        message={error}
+      />
     </div>
   );
 };
