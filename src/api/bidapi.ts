@@ -25,7 +25,7 @@ export const fetchBids = async (
 export const fetchProductById = async (
   productId: number
 ): Promise<ApiResponse<ProductDto>> => {
-  const response = await fetch(`http://localhost:8080/prodcut/${productId}`, {
+  const response = await fetch(`http://localhost:8080/product/${productId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
