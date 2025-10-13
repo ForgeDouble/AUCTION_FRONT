@@ -23,7 +23,7 @@ const Navbar = () => {
 
             <div className="hidden md:flex items-center space-x-8">
               <a
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-gray-300 hover:text-white transition-colors cursor-pointer"
                 onClick={() => navigate("/auction_list")}
               >
                 경매 목록
