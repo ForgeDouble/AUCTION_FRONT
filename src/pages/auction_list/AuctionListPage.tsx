@@ -511,11 +511,11 @@ const AuctionListPage = () => {
                     <div className="flex items-center space-x-6">
                       <div className="relative">
                         <img
-                          src={auction.image}
-                          alt={auction.title}
+                          src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400"
+                          alt={auction.productName}
                           className="w-32 h-24 object-cover rounded-xl"
                         />
-                        {auction.featured && (
+                        {true && (
                           <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                             추천
                           </div>
@@ -523,20 +523,20 @@ const AuctionListPage = () => {
                       </div>
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-white mb-2">
-                          {auction.title}
+                          {auction.productName}
                         </h3>
                         <div className="flex items-center space-x-6 mb-2">
                           <div className="flex items-center text-gray-400 text-sm">
                             <MapPin className="h-4 w-4 mr-1" />
-                            {auction.location}
+                            "지역이름"
                           </div>
                           <div className="flex items-center text-gray-400 text-sm">
                             <Users className="h-4 w-4 mr-1" />
-                            {auction.bids}명 참여
+                            0명 참여
                           </div>
                           <div className="flex items-center text-gray-400 text-sm">
                             <Eye className="h-4 w-4 mr-1" />
-                            {auction.watchers}명 관심
+                            0명 관심
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
@@ -546,16 +546,25 @@ const AuctionListPage = () => {
                                 현재 입찰가
                               </div>
                               <div className="text-2xl font-bold text-green-400">
-                                {formatPrice(auction.currentBid)}
+                                {formatPrice(0)}
                               </div>
                             </div>
                             <div
                               className={`${getStatusColor(
-                                auction.status
+                                "진행중"
                               )} text-white px-3 py-1 rounded-full text-sm font-bold flex items-center`}
                             >
-                              <Clock className="h-4 w-4 mr-1" />
-                              {auction.timeLeft}
+                              <Clock className="h-4 w-4 mr-1" />0
+                            </div>
+                            <div className="flex items-center gap-2 mb-4 text-xs text-gray-400">
+                              {auction.path.map((category) => (
+                                <div
+                                  key={category.categoryId}
+                                  className="px-3 py-1 bg-white/10 border border-white/20 rounded-full"
+                                >
+                                  {category.categoryName}
+                                </div>
+                              ))}
                             </div>
                           </div>
                           <div className="flex items-center space-x-3">
