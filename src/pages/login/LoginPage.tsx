@@ -12,9 +12,10 @@ import {
   Heart,
 } from "lucide-react";
 import { fetchLogin } from "./LoginApi";
-import type { loginDto } from "./LoginDto";
+
 import { WarningModal } from "../../components/WarningModal";
 import { useAuth } from "../../hooks/useAuth";
+import type { loginRequest } from "./LoginDto";
 
 const LoginPage = () => {
   // 비밀번호 보이기
@@ -40,10 +41,11 @@ const LoginPage = () => {
 
     // 로그인 처리 로직
     try {
-      const loginData: loginDto = { email, password };
+      const loginData: loginRequest = { email, password };
       const result = await fetchLogin(loginData);
 
       console.log("로그인 성공:", result);
+      localStorage.setItem("accessToken", result.result.token);
       // 성공 후 처리 (예: 토큰 저장, 페이지 이동 등)
       await checkAuth();
       window.location.replace("/");
