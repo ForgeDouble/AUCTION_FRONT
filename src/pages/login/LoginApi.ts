@@ -1,6 +1,9 @@
-import type { loginDto } from "./LoginDto";
+import type { ApiResponse } from "../../type/CommonType";
+import type { loginRequest, loginResponse } from "./LoginDto";
 
-export const fetchLogin = async (loginDto: loginDto): Promise<string> => {
+export const fetchLogin = async (
+  loginDto: loginRequest
+): Promise<ApiResponse<loginResponse>> => {
   const response = await fetch(`http://localhost:8080/user/login`, {
     method: "POST",
     headers: {
