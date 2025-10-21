@@ -21,6 +21,7 @@ import {
   type ParentCategoriesDto,
   type categoryDto,
 } from "./AuctionListDto";
+import { useNavigate } from "react-router-dom";
 
 const AuctionListPage = () => {
   // const navigate = useNavigate(); // 실제 사용 시 주석 해제
@@ -34,6 +35,8 @@ const AuctionListPage = () => {
   const [parentCategories, setParentCategories] = useState<
     ParentCategoriesDto[]
   >([{ categoryId: 0, categoryName: "전체", parentId: null }]);
+
+  const navigate = useNavigate();
 
   // 샘플 경매 데이터
   // const auctions = [
@@ -377,7 +380,7 @@ const AuctionListPage = () => {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white text-sm appearance-none pr-8"
+                    className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-black text-sm appearance-none pr-8"
                   >
                     <option value="ending_soon">마감임박순</option>
                     <option value="price_low">낮은 가격순</option>
@@ -501,7 +504,12 @@ const AuctionListPage = () => {
                             </div>
                           ))}
                         </div>
-                        <button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold">
+                        <button
+                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold"
+                          onClick={() =>
+                            navigate(`/auction_detail/${auction.productId}`)
+                          }
+                        >
                           입찰하기
                         </button>
                       </div>
