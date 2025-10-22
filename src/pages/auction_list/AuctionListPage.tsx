@@ -15,8 +15,13 @@ import {
   Users,
   MapPin,
 } from "lucide-react";
-import { fetchProducts } from "./AuctionListApi";
-import type { ProductListDto } from "./AuctionListDto";
+import { fetchParentCategories, fetchProducts } from "./AuctionListApi";
+import {
+  type ProductListDto,
+  type ParentCategoriesDto,
+  type categoryDto,
+} from "./AuctionListDto";
+import { useNavigate } from "react-router-dom";
 
 const AuctionListPage = () => {
   // const navigate = useNavigate(); // 실제 사용 시 주석 해제
@@ -24,121 +29,126 @@ const AuctionListPage = () => {
   const [sortBy, setSortBy] = useState("ending_soon");
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState<number>(0);
   const [priceRange, setPriceRange] = useState([0, 10000000]);
-  const [products, setProducts] = useState<ProductListDto[]>([]);
+  const [auctions, setAuctions] = useState<ProductListDto[]>([]);
+  const [parentCategories, setParentCategories] = useState<
+    ParentCategoriesDto[]
+  >([{ categoryId: 0, categoryName: "전체", parentId: null }]);
+
+  const navigate = useNavigate();
 
   // 샘플 경매 데이터
-  const auctions = [
-    {
-      id: 1,
-      title: "1960년대 빈티지 롤렉스 서브마리너",
-      image:
-        "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?w=400",
-      currentBid: 850000,
-      startingBid: 500000,
-      timeLeft: "2시간 15분",
-      bids: 23,
-      watchers: 156,
-      category: "시계",
-      location: "서울",
-      seller: "빈티지컬렉터",
-      rating: 4.9,
-      status: "진행중",
-      endTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
-      featured: true,
-    },
-    {
-      id: 2,
-      title: "피카소 원작 리토그래프 '평화의 비둘기'",
-      image:
-        "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400",
-      currentBid: 3200000,
-      startingBid: 2000000,
-      timeLeft: "5시간 32분",
-      bids: 45,
-      watchers: 289,
-      category: "미술",
-      location: "부산",
-      seller: "아트갤러리",
-      rating: 5.0,
-      status: "진행중",
-      endTime: new Date(Date.now() + 5 * 60 * 60 * 1000),
-      featured: true,
-    },
-    {
-      id: 3,
-      title: "한정판 에르메스 버킨백 35cm",
-      image:
-        "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400",
-      currentBid: 4500000,
-      startingBid: 3000000,
-      timeLeft: "1일 3시간",
-      bids: 67,
-      watchers: 234,
-      category: "패션",
-      location: "강남구",
-      seller: "럭셔리뜨",
-      rating: 4.8,
-      status: "진행중",
-      endTime: new Date(Date.now() + 27 * 60 * 60 * 1000),
-      featured: false,
-    },
-    {
-      id: 4,
-      title: "조선시대 백자 달항아리",
-      image:
-        "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400",
-      currentBid: 12000000,
-      startingBid: 8000000,
-      timeLeft: "45분",
-      bids: 89,
-      watchers: 456,
-      category: "골동품",
-      location: "인사동",
-      seller: "고미술상",
-      rating: 4.9,
-      status: "마감임박",
-      endTime: new Date(Date.now() + 45 * 60 * 1000),
-      featured: true,
-    },
-    {
-      id: 5,
-      title: "1955년 페라리 250 GT 모델카",
-      image:
-        "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400",
-      currentBid: 750000,
-      startingBid: 400000,
-      timeLeft: "3일 12시간",
-      bids: 34,
-      watchers: 123,
-      category: "수집품",
-      location: "용산구",
-      seller: "모델카매니아",
-      rating: 4.7,
-      status: "진행중",
-      endTime: new Date(Date.now() + 84 * 60 * 60 * 1000),
-      featured: false,
-    },
-    {
-      id: 6,
-      title: "샤넬 No.5 빈티지 퍼퓨병 컬렉션",
-      image:
-        "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400",
-      currentBid: 320000,
-      startingBid: 200000,
-      timeLeft: "6시간 45분",
-      bids: 28,
-      watchers: 89,
-      category: "수집품",
-      location: "청담동",
-      seller: "향수컬렉터",
-      rating: 4.6,
-      status: "진행중",
-      endTime: new Date(Date.now() + 6 * 60 * 60 * 1000),
-      featured: false,
-    },
-  ];
+  // const auctions = [
+  //   {
+  //     id: 1,
+  //     title: "1960년대 빈티지 롤렉스 서브마리너",
+  //     image:
+  //       "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?w=400",
+  //     currentBid: 850000,
+  //     startingBid: 500000,
+  //     timeLeft: "2시간 15분",
+  //     bids: 23,
+  //     watchers: 156,
+  //     category: "시계",
+  //     location: "서울",
+  //     seller: "빈티지컬렉터",
+  //     rating: 4.9,
+  //     status: "진행중",
+  //     endTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
+  //     featured: true,
+  //   },
+  //   {
+  //     id: 2,
+  //     title: "피카소 원작 리토그래프 '평화의 비둘기'",
+  //     image:
+  //       "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400",
+  //     currentBid: 3200000,
+  //     startingBid: 2000000,
+  //     timeLeft: "5시간 32분",
+  //     bids: 45,
+  //     watchers: 289,
+  //     category: "미술",
+  //     location: "부산",
+  //     seller: "아트갤러리",
+  //     rating: 5.0,
+  //     status: "진행중",
+  //     endTime: new Date(Date.now() + 5 * 60 * 60 * 1000),
+  //     featured: true,
+  //   },
+  //   {
+  //     id: 3,
+  //     title: "한정판 에르메스 버킨백 35cm",
+  //     image:
+  //       "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400",
+  //     currentBid: 4500000,
+  //     startingBid: 3000000,
+  //     timeLeft: "1일 3시간",
+  //     bids: 67,
+  //     watchers: 234,
+  //     category: "패션",
+  //     location: "강남구",
+  //     seller: "럭셔리뜨",
+  //     rating: 4.8,
+  //     status: "진행중",
+  //     endTime: new Date(Date.now() + 27 * 60 * 60 * 1000),
+  //     featured: false,
+  //   },
+  //   {
+  //     id: 4,
+  //     title: "조선시대 백자 달항아리",
+  //     image:
+  //       "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400",
+  //     currentBid: 12000000,
+  //     startingBid: 8000000,
+  //     timeLeft: "45분",
+  //     bids: 89,
+  //     watchers: 456,
+  //     category: "골동품",
+  //     location: "인사동",
+  //     seller: "고미술상",
+  //     rating: 4.9,
+  //     status: "마감임박",
+  //     endTime: new Date(Date.now() + 45 * 60 * 1000),
+  //     featured: true,
+  //   },
+  //   {
+  //     id: 5,
+  //     title: "1955년 페라리 250 GT 모델카",
+  //     image:
+  //       "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400",
+  //     currentBid: 750000,
+  //     startingBid: 400000,
+  //     timeLeft: "3일 12시간",
+  //     bids: 34,
+  //     watchers: 123,
+  //     category: "수집품",
+  //     location: "용산구",
+  //     seller: "모델카매니아",
+  //     rating: 4.7,
+  //     status: "진행중",
+  //     endTime: new Date(Date.now() + 84 * 60 * 60 * 1000),
+  //     featured: false,
+  //   },
+  //   {
+  //     id: 6,
+  //     title: "샤넬 No.5 빈티지 퍼퓨병 컬렉션",
+  //     image:
+  //       "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400",
+  //     currentBid: 320000,
+  //     startingBid: 200000,
+  //     timeLeft: "6시간 45분",
+  //     bids: 28,
+  //     watchers: 89,
+  //     category: "수집품",
+  //     location: "청담동",
+  //     seller: "향수컬렉터",
+  //     rating: 4.6,
+  //     status: "진행중",
+  //     endTime: new Date(Date.now() + 6 * 60 * 60 * 1000),
+  //     featured: false,
+  //   },
+  // ];
 
   const categories = [
     { value: "all", label: "전체", count: auctions.length },
@@ -148,11 +158,6 @@ const AuctionListPage = () => {
     { value: "골동품", label: "골동품", count: 1 },
     { value: "수집품", label: "수집품", count: 2 },
   ];
-
-  const handleLogoClick = () => {
-    // navigate('/'); // React Router 사용 시
-    window.location.href = "/";
-  };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("ko-KR").format(price) + "원";
@@ -170,21 +175,36 @@ const AuctionListPage = () => {
   };
 
   const filteredAuctions = auctions.filter((auction) => {
-    const matchesSearch = auction.title
+    const matchesSearch = auction.productName
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     const matchesCategory =
-      selectedCategory === "all" || auction.category === selectedCategory;
-    const matchesPrice =
-      auction.currentBid >= priceRange[0] &&
-      auction.currentBid <= priceRange[1];
+      selectedCategory === 0 ||
+      auction.path.some((category) => category.categoryId === selectedCategory);
+    // auction.category === selectedCategory;
+    const matchesPrice = true;
+    // auction.currentBid >= priceRange[0] &&
+    // auction.currentBid <= priceRange[1];
     return matchesSearch && matchesCategory && matchesPrice;
   });
 
   const loadProductList = async () => {
     try {
       const data = await fetchProducts();
-      setProducts(data.result);
+      setAuctions(data.result);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  const loadParentCategories = async () => {
+    try {
+      const data = await fetchParentCategories();
+      setParentCategories((prev) => [...prev, ...data.result]);
+
+      // setParentCategories(data.result);
     } catch (error) {
       console.error(error);
     } finally {
@@ -194,10 +214,11 @@ const AuctionListPage = () => {
 
   useEffect(() => {
     loadProductList();
+    loadParentCategories();
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br  from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-slate-800">
       {/* 헤더 */}
       {/* <header className="bg-black/20 backdrop-blur-lg border-b border-white/10 sticky top-15 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -262,24 +283,26 @@ const AuctionListPage = () => {
               <div className="mb-6">
                 <h4 className="text-white font-semibold mb-3">카테고리</h4>
                 <div className="space-y-2">
-                  {categories.map((category) => (
+                  {parentCategories.map((category) => (
                     <label
-                      key={category.value}
+                      key={category.categoryId}
                       className="flex items-center cursor-pointer"
                     >
                       <input
                         type="radio"
                         name="category"
-                        value={category.value}
-                        checked={selectedCategory === category.value}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        value={category.categoryId}
+                        checked={selectedCategory === category.categoryId}
+                        onChange={(e) =>
+                          setSelectedCategory(Number(e.target.value))
+                        }
                         className="mr-3 text-purple-500"
                       />
                       <span className="text-gray-300 flex-1">
-                        {category.label}
+                        {category.categoryName}
                       </span>
                       <span className="text-purple-400 text-sm">
-                        ({category.count})
+                        {/* ({category.count}) */}0
                       </span>
                     </label>
                   ))}
@@ -301,7 +324,7 @@ const AuctionListPage = () => {
                           priceRange[1],
                         ])
                       }
-                      className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                      className="w-24  px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
                     <span className="text-gray-400">~</span>
                     <input
@@ -314,7 +337,7 @@ const AuctionListPage = () => {
                           parseInt(e.target.value) || 10000000,
                         ])
                       }
-                      className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                      className="w-24 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
                   </div>
                 </div>
@@ -357,7 +380,7 @@ const AuctionListPage = () => {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white text-sm appearance-none pr-8"
+                    className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-black text-sm appearance-none pr-8"
                   >
                     <option value="ending_soon">마감임박순</option>
                     <option value="price_low">낮은 가격순</option>
@@ -404,7 +427,7 @@ const AuctionListPage = () => {
             >
               {filteredAuctions.map((auction) => (
                 <div
-                  key={auction.id}
+                  key={auction.productId}
                   className={
                     viewMode === "grid"
                       ? "bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden hover:transform hover:scale-105 transition-all duration-300 cursor-pointer group"
@@ -416,27 +439,25 @@ const AuctionListPage = () => {
                     <>
                       <div className="relative">
                         <img
-                          src={auction.image}
-                          alt={auction.title}
+                          src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400"
+                          alt={auction.productName}
                           className="w-full h-48 object-cover"
                         />
-                        {auction.featured && (
+                        {true && (
                           <div className="absolute top-4 left-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
                             추천
                           </div>
                         )}
                         <div
                           className={`absolute top-4 right-4 ${getStatusColor(
-                            auction.status
+                            "진행중"
                           )} text-white px-3 py-1 rounded-full text-xs font-bold flex items-center`}
                         >
-                          <Clock className="h-3 w-3 mr-1" />
-                          {auction.timeLeft}
+                          <Clock className="h-3 w-3 mr-1" />0
                         </div>
                         <div className="absolute bottom-4 right-4 flex items-center space-x-2">
                           <div className="bg-black/50 text-white px-2 py-1 rounded-lg text-xs flex items-center">
-                            <Eye className="h-3 w-3 mr-1" />
-                            {auction.watchers}
+                            <Eye className="h-3 w-3 mr-1" />0
                           </div>
                           <button className="bg-black/50 text-white p-2 rounded-lg hover:bg-black/70 transition-colors">
                             <Heart className="h-4 w-4" />
@@ -445,7 +466,7 @@ const AuctionListPage = () => {
                       </div>
                       <div className="p-6">
                         <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">
-                          {auction.title}
+                          {auction.productName}
                         </h3>
                         <div className="flex items-center justify-between mb-4">
                           <div>
@@ -453,27 +474,42 @@ const AuctionListPage = () => {
                               현재 입찰가
                             </div>
                             <div className="text-xl font-bold text-green-400">
-                              {formatPrice(auction.currentBid)}
+                              {formatPrice(0)}
                             </div>
                           </div>
                           <div className="text-right">
                             <div className="text-xs text-gray-400">입찰 수</div>
                             <div className="text-lg font-bold text-purple-400">
-                              {auction.bids}개
+                              0 개
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center justify-between mb-4 text-xs text-gray-400">
                           <div className="flex items-center">
                             <MapPin className="h-3 w-3 mr-1" />
-                            {auction.location}
+                            지역이름
                           </div>
                           <div className="flex items-center">
                             <Star className="h-3 w-3 mr-1 text-yellow-400 fill-current" />
-                            {auction.rating}
+                            0
                           </div>
                         </div>
-                        <button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold">
+                        <div className="flex items-center gap-2 mb-4 text-xs text-gray-400">
+                          {auction.path.map((category) => (
+                            <div
+                              key={category.categoryId}
+                              className="px-3 py-1 bg-white/10 border border-white/20 rounded-full"
+                            >
+                              {category.categoryName}
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold"
+                          onClick={() =>
+                            navigate(`/auction_detail/${auction.productId}`)
+                          }
+                        >
                           입찰하기
                         </button>
                       </div>
@@ -483,11 +519,11 @@ const AuctionListPage = () => {
                     <div className="flex items-center space-x-6">
                       <div className="relative">
                         <img
-                          src={auction.image}
-                          alt={auction.title}
+                          src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400"
+                          alt={auction.productName}
                           className="w-32 h-24 object-cover rounded-xl"
                         />
-                        {auction.featured && (
+                        {true && (
                           <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                             추천
                           </div>
@@ -495,20 +531,20 @@ const AuctionListPage = () => {
                       </div>
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-white mb-2">
-                          {auction.title}
+                          {auction.productName}
                         </h3>
                         <div className="flex items-center space-x-6 mb-2">
                           <div className="flex items-center text-gray-400 text-sm">
                             <MapPin className="h-4 w-4 mr-1" />
-                            {auction.location}
+                            "지역이름"
                           </div>
                           <div className="flex items-center text-gray-400 text-sm">
                             <Users className="h-4 w-4 mr-1" />
-                            {auction.bids}명 참여
+                            0명 참여
                           </div>
                           <div className="flex items-center text-gray-400 text-sm">
                             <Eye className="h-4 w-4 mr-1" />
-                            {auction.watchers}명 관심
+                            0명 관심
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
@@ -518,16 +554,25 @@ const AuctionListPage = () => {
                                 현재 입찰가
                               </div>
                               <div className="text-2xl font-bold text-green-400">
-                                {formatPrice(auction.currentBid)}
+                                {formatPrice(0)}
                               </div>
                             </div>
                             <div
                               className={`${getStatusColor(
-                                auction.status
+                                "진행중"
                               )} text-white px-3 py-1 rounded-full text-sm font-bold flex items-center`}
                             >
-                              <Clock className="h-4 w-4 mr-1" />
-                              {auction.timeLeft}
+                              <Clock className="h-4 w-4 mr-1" />0
+                            </div>
+                            <div className="flex items-center gap-2 mb-4 text-xs text-gray-400">
+                              {auction.path.map((category) => (
+                                <div
+                                  key={category.categoryId}
+                                  className="px-3 py-1 bg-white/10 border border-white/20 rounded-full"
+                                >
+                                  {category.categoryName}
+                                </div>
+                              ))}
                             </div>
                           </div>
                           <div className="flex items-center space-x-3">

@@ -1,5 +1,6 @@
 import { Gavel } from "lucide-react";
 import { Outlet, useNavigate } from "react-router-dom";
+import { AuthButtons } from "./AuthButtons";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -49,15 +50,7 @@ const Navbar = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <button
-                className="text-gray-300 hover:text-white cursor-pointer"
-                onClick={() => navigate("/login")}
-              >
-                로그인
-              </button>
-              <button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105">
-                회원가입
-              </button>
+              <AuthButtons />
             </div>
           </div>
         </div>
