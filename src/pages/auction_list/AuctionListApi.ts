@@ -1,5 +1,5 @@
 import type { ApiResponse } from "../../type/CommonType";
-import type { ProductListDto } from "./AuctionListDto";
+import type { ParentCategoriesDto, ProductListDto } from "./AuctionListDto";
 
 export const fetchProducts = async (): Promise<
   ApiResponse<ProductListDto[]>
@@ -11,6 +11,27 @@ export const fetchProducts = async (): Promise<
     },
     credentials: "include", // 필요하면 쿠키 포함
   });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch bids: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+export const fetchParentCategories = async (): Promise<
+  ApiResponse<ParentCategoriesDto[]>
+> => {
+  const response = await fetch(
+    `http://localhost:8080/category/parent_category`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include", // 필요하면 쿠키 포함
+    }
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to fetch bids: ${response.status}`);
