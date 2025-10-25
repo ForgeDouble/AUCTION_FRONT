@@ -38,6 +38,7 @@ const Navbar = () => {
               <a
                 href="#"
                 className="text-gray-300 hover:text-white transition-colors"
+                onClick={() => navigate("/sell_product")}
               >
                 판매하기
               </a>
