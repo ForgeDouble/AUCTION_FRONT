@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Gavel,
   Search,
@@ -15,26 +15,39 @@ import {
   Users,
   MapPin,
 } from "lucide-react";
-import { fetchParentCategories, fetchProducts } from "./AuctionListApi";
+import {
+  fetchCreateWishlist,
+  fetchDeleteWishlist,
+  fetchParentCategories,
+  fetchProducts,
+  fetchWishlistByUser,
+} from "./AuctionListApi";
 import {
   type ProductListDto,
   type ParentCategoriesDto,
   type categoryDto,
+  type wishlistDto,
 } from "./AuctionListDto";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const AuctionListPage = () => {
   // const navigate = useNavigate(); // 실제 사용 시 주석 해제
+  const { userEmail } = useAuth();
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
   const [sortBy, setSortBy] = useState("ending_soon");
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number>(0);
   const [priceRange, setPriceRange] = useState([0, 10000000]);
+  /* 경매 상품들 */
   const [auctions, setAuctions] = useState<ProductListDto[]>([]);
+  /* 부모 카테고리들 */
   const [parentCategories, setParentCategories] = useState<
     ParentCategoriesDto[]
   >([{ categoryId: 0, categoryName: "전체", parentId: null }]);
+  /* 사용자의 찜한 경매들 */
+  const [wishlist, setWishlist] = useState<wishlistDto[]>([]);
 
   const navigate = useNavigate();
 
@@ -57,98 +70,8 @@ const AuctionListPage = () => {
   //     status: "진행중",
   //     endTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
   //     featured: true,
-  //   },
-  //   {
-  //     id: 2,
-  //     title: "피카소 원작 리토그래프 '평화의 비둘기'",
-  //     image:
-  //       "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400",
-  //     currentBid: 3200000,
-  //     startingBid: 2000000,
-  //     timeLeft: "5시간 32분",
-  //     bids: 45,
-  //     watchers: 289,
-  //     category: "미술",
-  //     location: "부산",
-  //     seller: "아트갤러리",
-  //     rating: 5.0,
-  //     status: "진행중",
-  //     endTime: new Date(Date.now() + 5 * 60 * 60 * 1000),
-  //     featured: true,
-  //   },
-  //   {
-  //     id: 3,
-  //     title: "한정판 에르메스 버킨백 35cm",
-  //     image:
-  //       "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400",
-  //     currentBid: 4500000,
-  //     startingBid: 3000000,
-  //     timeLeft: "1일 3시간",
-  //     bids: 67,
-  //     watchers: 234,
-  //     category: "패션",
-  //     location: "강남구",
-  //     seller: "럭셔리뜨",
-  //     rating: 4.8,
-  //     status: "진행중",
-  //     endTime: new Date(Date.now() + 27 * 60 * 60 * 1000),
-  //     featured: false,
-  //   },
-  //   {
-  //     id: 4,
-  //     title: "조선시대 백자 달항아리",
-  //     image:
-  //       "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400",
-  //     currentBid: 12000000,
-  //     startingBid: 8000000,
-  //     timeLeft: "45분",
-  //     bids: 89,
-  //     watchers: 456,
-  //     category: "골동품",
-  //     location: "인사동",
-  //     seller: "고미술상",
-  //     rating: 4.9,
-  //     status: "마감임박",
-  //     endTime: new Date(Date.now() + 45 * 60 * 1000),
-  //     featured: true,
-  //   },
-  //   {
-  //     id: 5,
-  //     title: "1955년 페라리 250 GT 모델카",
-  //     image:
-  //       "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400",
-  //     currentBid: 750000,
-  //     startingBid: 400000,
-  //     timeLeft: "3일 12시간",
-  //     bids: 34,
-  //     watchers: 123,
-  //     category: "수집품",
-  //     location: "용산구",
-  //     seller: "모델카매니아",
-  //     rating: 4.7,
-  //     status: "진행중",
-  //     endTime: new Date(Date.now() + 84 * 60 * 60 * 1000),
-  //     featured: false,
-  //   },
-  //   {
-  //     id: 6,
-  //     title: "샤넬 No.5 빈티지 퍼퓨병 컬렉션",
-  //     image:
-  //       "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400",
-  //     currentBid: 320000,
-  //     startingBid: 200000,
-  //     timeLeft: "6시간 45분",
-  //     bids: 28,
-  //     watchers: 89,
-  //     category: "수집품",
-  //     location: "청담동",
-  //     seller: "향수컬렉터",
-  //     rating: 4.6,
-  //     status: "진행중",
-  //     endTime: new Date(Date.now() + 6 * 60 * 60 * 1000),
-  //     featured: false,
-  //   },
-  // ];
+  //   }
+  //]
 
   const categories = [
     { value: "all", label: "전체", count: auctions.length },
@@ -159,7 +82,7 @@ const AuctionListPage = () => {
     { value: "수집품", label: "수집품", count: 2 },
   ];
 
-  const formatPrice = (price) => {
+  const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + "원";
   };
 
@@ -188,6 +111,37 @@ const AuctionListPage = () => {
     return matchesSearch && matchesCategory && matchesPrice;
   });
 
+  // 찜 목록을 Set으로 변환 (성능 최적화)
+  const wishlistProductIds = useMemo(
+    () => new Set(wishlist.map((item) => item.productId)),
+    [wishlist]
+  );
+
+  const isWishlisted = (productId: number) => {
+    return wishlistProductIds.has(productId);
+  };
+
+  /* 위시리스트 버튼 토글 함수 */
+  const handleWishlistToggle = async (productId: number) => {
+    try {
+      if (isWishlisted(productId)) {
+        // 찜 제거
+        const item = wishlist.find((w) => w.productId === productId);
+        if (item) {
+          await handleDeleteWishlist(item.wishlistId);
+          setWishlist((prev) => prev.filter((w) => w.productId !== productId));
+        }
+      } else {
+        // 찜 추가
+        await handleCreateWishlist(productId);
+        await loadWishlistByUser();
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  /* 모든 상품 조회 */
   const loadProductList = async () => {
     try {
       const data = await fetchProducts();
@@ -198,7 +152,7 @@ const AuctionListPage = () => {
       // setLoading(false);
     }
   };
-
+  /* 부모 카테고리 조회 */
   const loadParentCategories = async () => {
     try {
       const data = await fetchParentCategories();
@@ -211,10 +165,60 @@ const AuctionListPage = () => {
       // setLoading(false);
     }
   };
+  /* 위시리스트 생성 */
+  const handleCreateWishlist = async (productId: number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        throw Error("No Token");
+        return;
+      }
+      const data = await fetchCreateWishlist(token, productId);
+      console.log(data);
+      // setParentCategories(data.result);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  /* 위시리스트 삭제 */
+  const handleDeleteWishlist = async (wishlistId: number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        throw Error("No Token");
+        return;
+      }
+      const data = await fetchDeleteWishlist(token, wishlistId);
+      console.log(data);
+      // setParentCategories(data.result);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+  /* 사용자의 위시리스트 조회 */
+  const loadWishlistByUser = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const data = await fetchWishlistByUser(token);
+      setWishlist(data.result);
+
+      // setParentCategories(data.result);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadProductList();
     loadParentCategories();
+    loadWishlistByUser();
   }, []);
 
   return (
@@ -443,11 +447,15 @@ const AuctionListPage = () => {
                           alt={auction.productName}
                           className="w-full h-48 object-cover"
                         />
+
+                        {/* 추천 뱃지 - 왼쪽 상단 */}
                         {true && (
                           <div className="absolute top-4 left-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
                             추천
                           </div>
                         )}
+
+                        {/* 상태 뱃지 - 오른쪽 상단 */}
                         <div
                           className={`absolute top-4 right-4 ${getStatusColor(
                             "진행중"
@@ -455,13 +463,32 @@ const AuctionListPage = () => {
                         >
                           <Clock className="h-3 w-3 mr-1" />0
                         </div>
-                        <div className="absolute bottom-4 right-4 flex items-center space-x-2">
+
+                        {/* 하단 정보 영역 */}
+                        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                          {/* 조회수 - 왼쪽 하단 */}
                           <div className="bg-black/50 text-white px-2 py-1 rounded-lg text-xs flex items-center">
                             <Eye className="h-3 w-3 mr-1" />0
                           </div>
-                          <button className="bg-black/50 text-white p-2 rounded-lg hover:bg-black/70 transition-colors">
-                            <Heart className="h-4 w-4" />
-                          </button>
+
+                          {/* 하트 버튼 - 오른쪽 하단 */}
+                          {userEmail !== auction.userEmail && (
+                            <button
+                              onClick={() =>
+                                handleWishlistToggle(auction.productId)
+                              }
+                            >
+                              {isWishlisted(auction.productId) ? (
+                                <Heart
+                                  fill="#ef4444"
+                                  color="#ef4444"
+                                  size={20}
+                                />
+                              ) : (
+                                <Heart color="#6b7280" size={20} />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div className="p-6">
