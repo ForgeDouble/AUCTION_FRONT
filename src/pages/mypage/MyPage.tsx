@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import {
   User,
   Mail,
@@ -20,17 +21,27 @@ import {
   User2,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { type UserDto, type UserProfile } from "./MyPageDto";
-import { fetchLoginUser } from "./MyPageApi";
+import {
+  type BidListDto,
+  type ProductListDto,
+  type UserDto,
+  type UserProfile,
+} from "./MyPageDto";
+import {
+  fetchBidsByUser,
+  fetchLoginUser,
+  fetchProductsByUser,
+  fetchProductsByWishlist,
+} from "./MyPageApi";
 
 const MyPage = () => {
   const navigate = useNavigate();
   const { userEmail, logout } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"profile" | "auctions" | "bids">(
-    "profile"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "profile" | "auctions" | "bids" | "wishlist"
+  >("profile");
 
   const [profile, setProfile] = useState<UserProfile>({
     name: "홍길동",
@@ -43,6 +54,12 @@ const MyPage = () => {
   const [user, setUser] = useState<UserDto>();
   const [tempUser, setTempUser] = useState<UserDto>();
   // const [editedProfile, setEditedProfile] = useState(profile);
+  /* 나의 경매 상품 리스트 */
+  const [products, setProducts] = useState<ProductListDto[]>();
+  /* 나의 입찰 리스트 */
+  const [bids, setBids] = useState<BidListDto[]>();
+  /* 나의 찜한 상품 리스트 */
+  const [wishlist, setWishlist] = useState<ProductListDto[]>();
 
   const handleSave = () => {
     setUser(tempUser);
@@ -65,16 +82,7 @@ const MyPage = () => {
       const token = localStorage.getItem("accessToken");
       const data = await fetchLoginUser(token);
       const userProfile = {
-        userId: data.result.userId,
-        name: data.result.name,
-        nickname: data.result.nickname,
-        email: data.result.email,
-        phone: data.result.phone,
-        address: data.result.address,
-        birthday: data.result.birthday,
-        gender: data.result.gender,
-        profileImageUrl: data.result.profileImageUrl,
-        warning: data.result.warning,
+        ...data.result,
         createdAt: data.result.createdAt.split("T")[0].replace(/-/g, "."),
       };
 
@@ -87,9 +95,67 @@ const MyPage = () => {
     }
   };
 
+  const loadProductsByUser = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const data = await fetchProductsByUser(token);
+      setProducts(data.result);
+      console.log(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  const loadBidsByUser = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const data = await fetchBidsByUser(token);
+
+      const bidData = data.result.map((bid) => ({
+        ...bid,
+        // bidCreatedAt: bid.bidCreatedAt.split("T")[0].replace(/-/g, "."),
+      }));
+
+      setBids(bidData);
+      console.log(bidData);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  const loadProductsByWishlist = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const data = await fetchProductsByWishlist(token);
+      setWishlist(data.result);
+      console.log(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  // useEffect(() => {
+  //   loadLoginUser();
+  //   loadProductsByUser();
+  // }, []);
+
   useEffect(() => {
-    loadLoginUser();
-  }, []);
+    if (activeTab === "profile" && !user) {
+      loadLoginUser();
+    } else if (activeTab === "auctions" && !products) {
+      loadProductsByUser();
+    } else if (activeTab === "bids" && !bids) {
+      loadBidsByUser();
+    } else if (activeTab === "wishlist" && !wishlist) {
+      loadProductsByWishlist();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (user) {
@@ -97,9 +163,9 @@ const MyPage = () => {
     }
   }, [user]);
 
-  if (!user) {
-    return null;
-  }
+  // if (!user) {
+  //   return null;
+  // }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black pt-24 pb-12">
@@ -113,9 +179,9 @@ const MyPage = () => {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-white mb-2">
-                  {user.nickname}
+                  {user?.nickname || null}
                 </h1>
-                <p className="text-gray-400">{user.email}</p>
+                <p className="text-gray-400">{user?.email || null}</p>
               </div>
             </div>
             <button
@@ -166,7 +232,10 @@ const MyPage = () => {
                   <Gavel className="w-5 h-5" />
                   <span>입찰 내역</span>
                 </button>
-                <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5 transition-all">
+                <button
+                  onClick={() => setActiveTab("wishlist")}
+                  className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/5 transition-all"
+                >
                   <Heart className="w-5 h-5" />
                   <span>찜한 경매</span>
                 </button>
@@ -229,7 +298,7 @@ const MyPage = () => {
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
                       />
                     ) : (
-                      <p className="text-white text-lg">{user.name}</p>
+                      <p className="text-white text-lg">{user?.name || null}</p>
                     )}
                   </div>
                   {/* 닉네임 */}
@@ -252,7 +321,9 @@ const MyPage = () => {
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
                       />
                     ) : (
-                      <p className="text-white text-lg">{user.nickname}</p>
+                      <p className="text-white text-lg">
+                        {user?.nickname || null}
+                      </p>
                     )}
                   </div>
                   {/* 이메일 */}
@@ -261,7 +332,7 @@ const MyPage = () => {
                       <Mail className="w-4 h-4" />
                       <span>이메일</span>
                     </label>
-                    <p className="text-white text-lg">{user.email}</p>
+                    <p className="text-white text-lg">{user?.email || null}</p>
                     <p className="text-gray-500 text-sm mt-1">
                       이메일은 변경할 수 없습니다
                     </p>
@@ -286,7 +357,9 @@ const MyPage = () => {
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
                       />
                     ) : (
-                      <p className="text-white text-lg">{user.phone}</p>
+                      <p className="text-white text-lg">
+                        {user?.phone || null}
+                      </p>
                     )}
                   </div>
                   {/* 주소 */}
@@ -309,7 +382,9 @@ const MyPage = () => {
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
                       />
                     ) : (
-                      <p className="text-white text-lg">{user.address}</p>
+                      <p className="text-white text-lg">
+                        {user?.address || null}
+                      </p>
                     )}
                   </div>
                   {/* 생년월일 */}
@@ -332,7 +407,9 @@ const MyPage = () => {
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors [color-scheme:dark]"
                       />
                     ) : (
-                      <p className="text-white text-lg">{user.birthday}</p>
+                      <p className="text-white text-lg">
+                        {user?.birthday || null}
+                      </p>
                     )}
                   </div>
                   {/* 성별 */}
@@ -382,7 +459,11 @@ const MyPage = () => {
                       </div>
                     ) : (
                       <p className="text-white text-lg">
-                        {user.gender === "M" ? "남성" : "여성"}
+                        {user?.gender === "M"
+                          ? "남성"
+                          : user?.gender === "F"
+                          ? "여성"
+                          : ""}
                       </p>
                     )}
                   </div>
@@ -392,7 +473,9 @@ const MyPage = () => {
                       <Calendar className="w-4 h-4" />
                       <span>가입일</span>
                     </label>
-                    <p className="text-white text-lg">{user.createdAt}</p>
+                    <p className="text-white text-lg">
+                      {user?.createdAt || null}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -405,24 +488,30 @@ const MyPage = () => {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* 경매 카드 예시 */}
-                  {[1, 2, 3].map((item) => (
+                  {(products || []).map((product) => (
                     <div
-                      key={item}
+                      key={product.productId}
                       className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-purple-500 transition-colors cursor-pointer"
                     >
-                      <div className="aspect-video bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg mb-3"></div>
+                      <img
+                        src={product.previewImageUrl || placeholderImg}
+                        alt={product.productName}
+                        className="w-full h-55 object-cover"
+                      />
                       <h3 className="text-white font-semibold mb-2">
-                        경매 상품 {item}
+                        경매 상품 : {product.productName}
                       </h3>
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-400">현재가</span>
                         <span className="text-purple-400 font-bold">
-                          {(item * 10000).toLocaleString()}원
+                          {product.latestBidAmount.toLocaleString()}원
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-sm mt-1">
                         <span className="text-gray-400">입찰</span>
-                        <span className="text-white">{item * 3}건</span>
+                        <span className="text-white">
+                          {product.bidCount - 1}건
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -436,9 +525,9 @@ const MyPage = () => {
                   입찰 내역
                 </h2>
                 <div className="space-y-4">
-                  {[1, 2, 3, 4].map((item) => (
+                  {(bids || []).map((bid) => (
                     <div
-                      key={item}
+                      key={bid.bidId}
                       className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-purple-500 transition-colors"
                     >
                       <div className="flex items-center justify-between">
@@ -446,15 +535,15 @@ const MyPage = () => {
                           <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg"></div>
                           <div>
                             <h3 className="text-white font-semibold mb-1">
-                              경매 상품 {item}
+                              경매 상품 {bid?.productName || ""}
                             </h3>
                             <p className="text-gray-400 text-sm">
-                              입찰가: {(item * 15000).toLocaleString()}원
+                              입찰가: {(bid?.bidAmount || 0).toLocaleString()}원
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <span
+                          {/* <span
                             className={`px-3 py-1 rounded-full text-sm ${
                               item === 1
                                 ? "bg-green-500/20 text-green-400"
@@ -462,11 +551,57 @@ const MyPage = () => {
                             }`}
                           >
                             {item === 1 ? "낙찰" : "진행중"}
-                          </span>
+                          </span> */}
                           <p className="text-gray-500 text-sm mt-1">
-                            2024.10.{20 - item}
+                            {bid?.bidCreatedAt
+                              .split("T")[0]
+                              .replace(/-/g, ".") || ""}
+                          </p>
+                          <p className="text-gray-500 text-sm mt-1">
+                            {bid?.bidCreatedAt
+                              .split("T")[1]
+                              .split(".")[0]
+                              .replace(/-/g, ".") || ""}
                           </p>
                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "wishlist" && (
+              <div className="bg-black/40 backdrop-blur-lg rounded-2xl border border-white/10 p-8">
+                <h2 className="text-2xl font-bold text-white mb-6">
+                  찜한 경매
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* 경매 카드 예시 */}
+                  {(wishlist || []).map((product) => (
+                    <div
+                      key={product.productId}
+                      className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-purple-500 transition-colors cursor-pointer"
+                    >
+                      <img
+                        src={product.previewImageUrl || placeholderImg}
+                        alt={product.productName}
+                        className="w-full h-55 object-cover"
+                      />
+                      <h3 className="text-white font-semibold mb-2">
+                        경매 상품 : {product.productName}
+                      </h3>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-400">현재가</span>
+                        <span className="text-purple-400 font-bold">
+                          {product.latestBidAmount.toLocaleString()}원
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm mt-1">
+                        <span className="text-gray-400">입찰</span>
+                        <span className="text-white">
+                          {product.bidCount - 1}건
+                        </span>
                       </div>
                     </div>
                   ))}
