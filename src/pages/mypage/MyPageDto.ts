@@ -19,3 +19,24 @@ export interface UserDto {
   warning: number;
   createdAt: string;
 }
+
+export interface ProductListDto {
+  productId: number;
+  productName: string;
+  productContent: string;
+  price: number;
+  sellYN: string;
+  previewImageUrl: string;
+  latestBidAmount: number;
+  bidCount: number;
+}
+
+export interface BidListDto {
+  bidId: number;
+  productId: number;
+  productName: string;
+  bidAmount: number;
+  bidCreatedAt: string;
+  isWinned: string;
+  productCreatedAt: string;
+}
