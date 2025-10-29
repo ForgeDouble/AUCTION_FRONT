@@ -5,12 +5,14 @@ export type categoryDto = {
 
 export interface ProductListDto {
   productId: number;
-  path: categoryDto[];
-  userEmail: string;
   productName: string;
   productContent: string;
   price: number;
   sellYN: string;
+  previewImageUrl: string;
+  categoryId: number;
+  userEmail: string;
+  path: categoryDto[];
 }
 
 export interface ParentCategoriesDto {
