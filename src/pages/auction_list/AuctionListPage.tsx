@@ -48,6 +48,10 @@ const AuctionListPage = () => {
   >([{ categoryId: 0, categoryName: "전체", parentId: null }]);
   /* 사용자의 찜한 경매들 */
   const [wishlist, setWishlist] = useState<wishlistDto[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(3);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   const navigate = useNavigate();
 
@@ -142,16 +146,47 @@ const AuctionListPage = () => {
   };
 
   /* 모든 상품 조회 */
-  const loadProductList = async () => {
+  const loadProductList = async (page = 0, size = 3) => {
     try {
-      const data = await fetchProducts();
-      setAuctions(data.result);
+      const sortParam = getSortParam(sortBy);
+      const data = await fetchProducts(page, size, sortParam);
+
+      setAuctions(data.result.content);
+      setTotalPages(data.result.totalPages);
+      setTotalElements(data.result.totalElements);
+      setCurrentPage(data.result.number);
     } catch (error) {
       console.error(error);
     } finally {
       // setLoading(false);
     }
   };
+
+  /* sortBy state를 API 파라미터로 변환하는 함수 */
+  const getSortParam = (sortBy: string) => {
+    switch (sortBy) {
+      case "ending_soon":
+        return "createdAt,desc";
+      case "price_low":
+        return "price,asc";
+      case "price_high":
+        return "price,desc";
+      case "newest":
+        return "createdAt,desc";
+      default:
+        return "createdAt,desc";
+    }
+  };
+
+  /* 페이지 변경 핸들러 */
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+      loadProductList(newPage, pageSize);
+      window.scrollTo({ top: 0, behavior: "smooth" }); // 페이지 상단으로 스크롤
+    }
+  };
+
   /* 부모 카테고리 조회 */
   const loadParentCategories = async () => {
     try {
@@ -215,8 +250,13 @@ const AuctionListPage = () => {
     }
   };
 
+  // sortBy 변경 시 첫 페이지로 이동하며 재조회
   useEffect(() => {
-    loadProductList();
+    loadProductList(0, pageSize);
+  }, [sortBy]);
+
+  useEffect(() => {
+    loadProductList(0, pageSize);
     loadParentCategories();
     loadWishlistByUser();
   }, []);
@@ -618,26 +658,67 @@ const AuctionListPage = () => {
               ))}
             </div>
 
-            {/* 페이지네이션 */}
+            {/* 페이지네이션 수정 */}
             <div className="flex items-center justify-center space-x-2 mt-12">
-              <button className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 0}
+                className={`px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white transition-colors ${
+                  currentPage === 0
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-white/20"
+                }`}
+              >
                 이전
               </button>
-              {[1, 2, 3, 4, 5].map((page) => (
-                <button
-                  key={page}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    page === 1
-                      ? "bg-purple-600 text-white"
-                      : "bg-white/10 border border-white/20 text-white hover:bg-white/20"
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-              <button className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors">
+
+              {/* 페이지 번호 버튼들 */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                // 현재 페이지 기준으로 앞뒤 2개씩 보여주기
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i;
+                } else if (currentPage < 2) {
+                  pageNum = i;
+                } else if (currentPage > totalPages - 3) {
+                  pageNum = totalPages - 5 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      pageNum === currentPage
+                        ? "bg-purple-600 text-white"
+                        : "bg-white/10 border border-white/20 text-white hover:bg-white/20"
+                    }`}
+                  >
+                    {pageNum + 1}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages - 1}
+                className={`px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white transition-colors ${
+                  currentPage === totalPages - 1
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-white/20"
+                }`}
+              >
                 다음
               </button>
+            </div>
+
+            {/* 페이지 정보 표시 (선택사항) */}
+            <div className="text-center mt-4 text-gray-400 text-sm">
+              {currentPage * pageSize + 1} -{" "}
+              {Math.min((currentPage + 1) * pageSize, totalElements)} /{" "}
+              {totalElements}
             </div>
           </div>
         </div>
