@@ -3,3 +3,21 @@ export interface ApiResponse<T> {
   status_message: string;
   result: T;
 }
+
+export interface PageResponse<T> {
+  content: T[];
+  pageable: {
+    pageNumber: number;
+    pageSize: number;
+    sort: {
+      sorted: boolean;
+      unsorted: boolean;
+    };
+  };
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+  first: boolean;
+  number: number;
+  size: number;
+}
