@@ -7,6 +7,7 @@ import AuctionListPage from "./pages/auction_list/AuctionListPage";
 import { AuthProvider } from "./contexts/AuthProvider";
 import MyPage from "./pages/mypage/Mypage";
 import SellProductPage from "./pages/sell_product_page/SellProductPage ";
+import RegisterPage from "./pages/register/Register";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/auction_list" element={<AuctionListPage />} />
             <Route path="/mypage" element={<MyPage />} />
             <Route path="/sell_product" element={<SellProductPage />} />
+            <Route path="/register" element={<RegisterPage />} />
           </Route>
         </Routes>
       </AuthProvider>
