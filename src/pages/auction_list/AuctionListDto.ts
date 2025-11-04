@@ -18,7 +18,7 @@ export interface ProductListDto {
 export interface ParentCategoriesDto {
   categoryId: number;
   categoryName: string;
-  parentId: null | string;
+  children: [] | ParentCategoriesDto[];
 }
 
 export interface wishlistDto {
