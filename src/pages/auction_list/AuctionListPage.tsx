@@ -45,7 +45,7 @@ const AuctionListPage = () => {
   /* 부모 카테고리들 */
   const [parentCategories, setParentCategories] = useState<
     ParentCategoriesDto[]
-  >([{ categoryId: 0, categoryName: "전체", parentId: null }]);
+  >([{ categoryId: 0, categoryName: "전체", children: [] }]);
   /* 사용자의 찜한 경매들 */
   const [wishlist, setWishlist] = useState<wishlistDto[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -316,7 +316,7 @@ const AuctionListPage = () => {
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* 사이드바 필터 */}
-          <div className="lg:w-64 flex-shrink-0">
+          <div className="lg:w-64 flex-shrink-0 relative z-50">
             <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 sticky top-24">
               <h3 className="text-xl font-bold text-white mb-6 flex items-center">
                 <Filter className="h-5 w-5 mr-2" />
@@ -328,27 +328,59 @@ const AuctionListPage = () => {
                 <h4 className="text-white font-semibold mb-3">카테고리</h4>
                 <div className="space-y-2">
                   {parentCategories.map((category) => (
-                    <label
-                      key={category.categoryId}
-                      className="flex items-center cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name="category"
-                        value={category.categoryId}
-                        checked={selectedCategory === category.categoryId}
-                        onChange={(e) =>
-                          setSelectedCategory(Number(e.target.value))
-                        }
-                        className="mr-3 text-purple-500"
-                      />
-                      <span className="text-gray-300 flex-1">
-                        {category.categoryName}
-                      </span>
-                      <span className="text-purple-400 text-sm">
-                        {/* ({category.count}) */}0
-                      </span>
-                    </label>
+                    <div key={category.categoryId} className="relative group">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          name="category"
+                          value={category.categoryId}
+                          checked={selectedCategory === category.categoryId}
+                          onChange={(e) =>
+                            setSelectedCategory(Number(e.target.value))
+                          }
+                          className="mr-3 text-purple-500"
+                        />
+                        <span className="text-gray-300 flex-1">
+                          {category.categoryName}
+                        </span>
+                        <span className="text-purple-400 text-sm">0</span>
+                        {category.children && category.children.length > 0 && (
+                          <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+                        )}
+                      </label>
+
+                      {/* 자식 카테고리 드롭다운 */}
+                      {category.children && category.children.length > 0 && (
+                        <div className="hidden group-hover:block absolute left-full top-0 w-48 z-[100]">
+                          {/* 보이지 않는 연결 브릿지 */}
+                          <div className="absolute right-full w-2 h-full"></div>
+                          <div className="ml-2 bg-slate-900 border border-white/20 rounded-lg p-2 shadow-xl">
+                            {category.children.map((child) => (
+                              <label
+                                key={child.categoryId}
+                                className="flex items-center cursor-pointer p-2 hover:bg-white/10 rounded transition-colors"
+                              >
+                                <input
+                                  type="radio"
+                                  name="category"
+                                  value={child.categoryId}
+                                  checked={
+                                    selectedCategory === child.categoryId
+                                  }
+                                  onChange={(e) =>
+                                    setSelectedCategory(Number(e.target.value))
+                                  }
+                                  className="mr-3 text-purple-500"
+                                />
+                                <span className="text-gray-300 text-sm flex-1">
+                                  {child.categoryName}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
