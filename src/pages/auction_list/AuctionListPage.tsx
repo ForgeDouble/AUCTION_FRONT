@@ -100,20 +100,20 @@ const AuctionListPage = () => {
         return "bg-blue-500";
     }
   };
-
-  const filteredAuctions = auctions.filter((auction) => {
-    const matchesSearch = auction.productName
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === 0 ||
-      auction.path.some((category) => category.categoryId === selectedCategory);
-    // auction.category === selectedCategory;
-    const matchesPrice = true;
-    // auction.currentBid >= priceRange[0] &&
-    // auction.currentBid <= priceRange[1];
-    return matchesSearch && matchesCategory && matchesPrice;
-  });
+  // 필터 백엔드 처리
+  // const filteredAuctions = auctions.filter((auction) => {
+  //   const matchesSearch = auction.productName
+  //     .toLowerCase()
+  //     .includes(searchQuery.toLowerCase());
+  //   const matchesCategory =
+  //     selectedCategory === 0 ||
+  //     auction.path.some((category) => category.categoryId === selectedCategory);
+  //   // auction.category === selectedCategory;
+  //   const matchesPrice = true;
+  //   // auction.currentBid >= priceRange[0] &&
+  //   // auction.currentBid <= priceRange[1];
+  //   return matchesSearch && matchesCategory && matchesPrice;
+  // });
 
   // 찜 목록을 Set으로 변환 (성능 최적화)
   const wishlistProductIds = useMemo(
@@ -149,7 +149,33 @@ const AuctionListPage = () => {
   const loadProductList = async (page = 0, size = 3) => {
     try {
       const sortParam = getSortParam(sortBy);
-      const data = await fetchProducts(page, size, sortParam);
+
+      // 쿼리 파라미터 구성
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: size.toString(),
+        sort: sortParam,
+      });
+
+      // 카테고리 필터 추가 (전체가 아닐 때만)
+      if (selectedCategory !== 0) {
+        params.append("categoryId", selectedCategory.toString());
+      }
+
+      // 검색어 추가
+      if (searchQuery.trim()) {
+        params.append("search", searchQuery.trim());
+      }
+
+      // 가격 범위 추가 (기본값이 아닐 때만)
+      if (priceRange[0] > 0) {
+        params.append("minPrice", priceRange[0].toString());
+      }
+      if (priceRange[1] < 10000000) {
+        params.append("maxPrice", priceRange[1].toString());
+      }
+
+      const data = await fetchProducts(params); // fetchProducts 수정 필요
 
       setAuctions(data.result.content);
       setTotalPages(data.result.totalPages);
@@ -157,8 +183,6 @@ const AuctionListPage = () => {
       setCurrentPage(data.result.number);
     } catch (error) {
       console.error(error);
-    } finally {
-      // setLoading(false);
     }
   };
 
@@ -253,7 +277,7 @@ const AuctionListPage = () => {
   // sortBy 변경 시 첫 페이지로 이동하며 재조회
   useEffect(() => {
     loadProductList(0, pageSize);
-  }, [sortBy]);
+  }, [sortBy, selectedCategory, searchQuery]);
 
   useEffect(() => {
     loadProductList(0, pageSize);
@@ -443,9 +467,7 @@ const AuctionListPage = () => {
               <div className="flex items-center space-x-4">
                 <span className="text-gray-300">
                   총{" "}
-                  <span className="text-white font-bold">
-                    {filteredAuctions.length}
-                  </span>
+                  <span className="text-white font-bold">{totalElements}</span>
                   개 경매
                 </span>
               </div>
@@ -501,7 +523,7 @@ const AuctionListPage = () => {
                   : "space-y-4"
               }
             >
-              {filteredAuctions.map((auction) => (
+              {auctions.map((auction) => (
                 <div
                   key={auction.productId}
                   className={
