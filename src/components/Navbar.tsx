@@ -29,12 +29,7 @@ const Navbar = () => {
               >
                 경매 목록
               </a>
-              <a
-                href="#"
-                className="text-gray-300 hover:text-white transition-colors"
-              >
-                카테고리
-              </a>
+
               <a
                 href="#"
                 className="text-gray-300 hover:text-white transition-colors"
