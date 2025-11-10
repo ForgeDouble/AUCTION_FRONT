@@ -1,6 +1,6 @@
 import { Gavel } from "lucide-react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { AuthButtons } from "./AuthButtons";
+import AuthButtons from "./AuthButtons";
 
 const Navbar = () => {
   const navigate = useNavigate();
