@@ -1,4 +1,3 @@
-// src/components/AuthButtons.tsx
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
@@ -14,14 +13,14 @@ export default function AuthButtons() {
     navigate("/");
   };
 
-  const openChatPopup = () => {
+  const openChatListPopup = () => {
     const w = 420, h = 720;
     const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2);
     const top  = window.screenY + Math.max(0, (window.outerHeight - h) / 2);
     window.open(
-      "/chat-popup",
-      "chat_popup",
-      `popup=yes,width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      "/chat-list",
+      "chat_list_popup",
+      "popup=yes,width=" + w + ",height=" + h + ",left=" + left + ",top=" + top + ",resizable=yes,scrollbars=yes"
     );
   };
 
@@ -34,7 +33,7 @@ export default function AuthButtons() {
 
         <button
           className="relative bg-white/10 text-white px-4 py-2 rounded-full hover:bg-white/20 transition"
-          onClick={openChatPopup}
+          onClick={openChatListPopup}
         >
           채팅
           {unreadTotal > 0 && (
@@ -44,17 +43,13 @@ export default function AuthButtons() {
           )}
         </button>
 
-        <button
-          className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
-          onClick={handleLogout}
-        >
+        <button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700"
+                onClick={handleLogout}>
           로그아웃
         </button>
 
-        <button
-          className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
-          onClick={() => navigate("/mypage")}
-        >
+        <button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700"
+                onClick={() => navigate("/mypage")}>
           마이페이지
         </button>
       </>
@@ -63,16 +58,9 @@ export default function AuthButtons() {
 
   return (
     <>
-      <button
-        className="text-gray-300 hover:text-white cursor-pointer transition-colors"
-        onClick={() => navigate("/login")}
-      >
-        로그인
-      </button>
-      <button
-        className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
-        onClick={() => navigate("/register")}
-      >
+      <button className="text-gray-300 hover:text-white" onClick={() => navigate("/login")}>로그인</button>
+      <button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700"
+              onClick={() => navigate("/register")}>
         회원가입
       </button>
     </>

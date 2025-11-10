@@ -3,22 +3,22 @@ import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import { useAuth } from "@/hooks/useAuth";
 import type { ChatMessageDto, ChatRoomDto } from "@/pages/chat/ChatTypes";
-import { chatMyRooms, chatEnterRoom, chatRecent } from "@/api/chatApi";
+import { myRooms, openRoom, recentMessages, sendMessage, enterRoom, exitRoom } from "@/api/chatApi";
 
 export interface ChatContextType {
   connected: boolean;
   rooms: ChatRoomDto[];
   currentRoom?: ChatRoomDto;
-  messages: Record<string, ChatMessageDto[]>; // roomId -> messages
+  messages: Record<string, ChatMessageDto[]>;
   unread: Record<string, number>;
   refreshRooms: () => Promise<void>;
   selectRoom: (roomId: string) => Promise<void>;
-  send: (roomId: string, content: string) => void; // STOMP 전송
+  send: (roomId: string, content: string) => Promise<void>;
+  openAdminAndSelect: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
 
-// 외부에서 쓰는 훅
 export function useChat(): ChatContextType {
   const ctx = useContext(ChatContext);
   if (!ctx) throw new Error("useChat must be used within ChatProvider");
@@ -27,8 +27,11 @@ export function useChat(): ChatContextType {
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, userEmail } = useAuth();
+
   const token = useMemo(() => localStorage.getItem("accessToken"), [isAuthenticated]);
-  const userId = useMemo(() => (localStorage.getItem("userId") || userEmail || "").toString(), [userEmail, isAuthenticated]);
+  const myId = useMemo(() => {
+    return localStorage.getItem("userId") || userEmail || "";
+  }, [userEmail, isAuthenticated]);
 
   const clientRef = useRef<Stomp.Client | null>(null);
   const [connected, setConnected] = useState(false);
@@ -36,98 +39,87 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentRoomId, setCurrentRoomId] = useState<string | undefined>();
   const [messages, setMessages] = useState<Record<string, ChatMessageDto[]>>({});
   const [unread, setUnread] = useState<Record<string, number>>({});
-  const subsRef = useRef<Record<string, Stomp.Subscription | undefined>>({});
+  const subscriptionsRef = useRef<Record<string, Stomp.Subscription | undefined>>({});
   const retryRef = useRef(0);
 
-  // STOMP 연결
+  /* STOMP 연결 (옵션) */
   useEffect(() => {
     if (!token) return;
-
-    const sock = new SockJS(`${(import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8080"}/ws`);
+    const sock = new SockJS("http://localhost:8080/ws");
     const client = Stomp.over(sock);
     client.heartbeat.outgoing = 10000;
     client.heartbeat.incoming = 10000;
-    client.debug = () => {}; // 로그 억제
+    client.debug = () => {};
 
-    client.connect(
-      { Authorization: `Bearer ${token}` },
-      async () => {
-        clientRef.current = client;
-        setConnected(true);
-        retryRef.current = 0;
-        // 최초 방 목록
-        await refreshRooms();
-      },
-      () => {
-        setConnected(false);
-        clientRef.current = null;
-        const backoff = Math.min(1000 * 2 ** retryRef.current, 10000);
-        retryRef.current += 1;
-        setTimeout(() => {
-          // 재시도는 의존성(token) 변화 시 다시 실행됨
-        }, backoff);
-      }
-    );
+    client.connect({ Authorization: "Bearer " + token }, async () => {
+      clientRef.current = client;
+      setConnected(true);
+      retryRef.current = 0;
+    }, () => {
+      setConnected(false);
+      clientRef.current = null;
+      const backoff = Math.min(1000 * Math.pow(2, retryRef.current), 10000);
+      retryRef.current += 1;
+      setTimeout(() => {}, backoff);
+    });
 
     return () => {
       try { client.disconnect(() => {}); } catch {}
       setConnected(false);
       clientRef.current = null;
-      subsRef.current = {};
+      subscriptionsRef.current = {};
     };
-  }, [token, userId]);
+  }, [token]);
 
   const currentRoom = useMemo(() => rooms.find(r => r.roomId === currentRoomId), [rooms, currentRoomId]);
 
+  /* 목록 로드 */
   const refreshRooms = async () => {
-    if (!userId) return;
-    const res = await chatMyRooms(userId, token);
-    const list = res.result || [];
+    if (!token || !myId) return;
+    const list = await myRooms(token, myId);
     setRooms(list);
     const initUnread: Record<string, number> = {};
-    list.forEach(r => { initUnread[r.roomId] = r.unread || 0; });
+    list.forEach(r => initUnread[r.roomId] = r.unread || 0);
     setUnread(initUnread);
   };
 
+  useEffect(() => { refreshRooms().catch(console.error); }, [token, myId]);
+
+  /* 구독 */
   const subscribeRoom = (roomId: string) => {
-    if (!clientRef.current || subsRef.current[roomId]) return;
-    const sub = clientRef.current.subscribe(`/topic/chat/${roomId}`, frame => {
-      const msg: ChatMessageDto = JSON.parse(frame.body);
-      setMessages(prev => ({ ...prev, [roomId]: [...(prev[roomId] || []), msg] }));
-      setUnread(u => ({ ...u, [roomId]: roomId === currentRoomId ? 0 : (u[roomId] || 0) + 1 }));
-    });
-    subsRef.current[roomId] = sub;
-  };
-
-  const selectRoom = async (roomId: string) => {
-    setCurrentRoomId(roomId);
-    subscribeRoom(roomId);
-
-    // 메시지 최초 로딩
-    if (!messages[roomId]) {
+    if (!clientRef.current || subscriptionsRef.current[roomId]) return;
+    const sub = clientRef.current.subscribe("/topic/chat/" + roomId, (frame) => {
       try {
-        const page = await chatRecent(roomId, 50, token);
-        setMessages(prev => ({ ...prev, [roomId]: page.result || [] }));
+        const payload: ChatMessageDto = JSON.parse(frame.body);
+        setMessages(prev => ({ ...prev, [roomId]: [ ...(prev[roomId] || []), payload ] }));
+        setUnread(u => ({ ...u, [roomId]: roomId === currentRoomId ? 0 : (u[roomId] || 0) + 1 }));
       } catch (e) {
         console.error(e);
       }
-    }
-
-    // 읽음 처리
-    try {
-      await chatEnterRoom({ userId, roomId }, token);
-      setUnread(u => ({ ...u, [roomId]: 0 }));
-    } catch {}
+    });
+    subscriptionsRef.current[roomId] = sub;
   };
 
-  const send = (roomId: string, content: string) => {
-    if (!clientRef.current || !connected) return;
-    const body = JSON.stringify({ roomId, content });
-    clientRef.current.send("/app/chat.send", { Authorization: `Bearer ${token}` }, body);
+  /* 방 선택 */
+  const selectRoom = async (roomId: string) => {
+    if (!token || !myId) return;
+    setCurrentRoomId(roomId);
+    subscribeRoom(roomId);
+    await enterRoom(token, myId, roomId);
+    if (!messages[roomId]) {
+      const list = await recentMessages(token, roomId, 50);
+      setMessages(p => ({ ...p, [roomId]: list }));
+    }
+    setUnread(u => ({ ...u, [roomId]: 0 }));
+  };
 
+  /* 전송 */
+  const send = async (roomId: string, content: string) => {
+    if (!token || !myId || !content.trim()) return;
+    await sendMessage(token, { roomId, senderId: myId, content });
     // 낙관적 반영
     const mine: ChatMessageDto = {
-      messageId: `tmp-${Date.now()}`,
+      messageId: "tmp-" + Date.now(),
       roomId,
       senderId: -1,
       senderNickname: "me",
@@ -135,8 +127,30 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: new Date().toISOString(),
       mine: true,
     };
-    setMessages(p => ({ ...p, [roomId]: [...(p[roomId] || []), mine] }));
+    setMessages(p => ({ ...p, [roomId]: [ ...(p[roomId] || []), mine ] }));
   };
+
+  /* 관리자 문의: targetId="ADMIN" 가정 */
+  const openAdminAndSelect = async () => {
+    if (!token || !myId) return;
+    const roomId = await openRoom(token, { userId: myId, targetId: "ADMIN" });
+    await refreshRooms();
+    await selectRoom(roomId);
+    const w = 420, h = 720;
+    const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2);
+    const top  = window.screenY + Math.max(0, (window.outerHeight - h) / 2);
+    window.open(
+      "/chat?roomId=" + encodeURIComponent(roomId),
+      "chat_room_" + roomId,
+      "popup=yes,width=" + w + ",height=" + h + ",left=" + left + ",top=" + top + ",resizable=yes,scrollbars=yes"
+    );
+  };
+
+  useEffect(() => {
+    return () => {
+      if (token && myId) exitRoom(token, myId).catch(() => {});
+    };
+  }, [token, myId]);
 
   const value: ChatContextType = {
     connected,
@@ -147,6 +161,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshRooms,
     selectRoom,
     send,
+    openAdminAndSelect,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

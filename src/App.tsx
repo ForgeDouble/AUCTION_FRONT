@@ -10,7 +10,10 @@ import SellProductPage from "./pages/sell_product_page/SellProductPage";
 import RegisterPage from "./pages/register/Register";
 import Chat from "./pages/chat/Chat";
 import { ChatProvider } from "./contexts/ChatProvider";
-import ChatListPopup from "./pages/chat/ChatListPopup"; // ⬅️ 추가
+import ChatListPopup from "./pages/chat/ChatListPopup";
+import ChatRoomPopup from "@/pages/chat/ChatRoomPopup";
+import ChatRoomPage from "./pages/chat/ChatRoomPage";
+
 function App() {
   return (
     <AuthProvider>
@@ -28,8 +31,11 @@ function App() {
             <Route path="/mypage" element={<MyPage />} />
             <Route path="/sell_product" element={<SellProductPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/chat" element={<Chat />} />
+            {/* <Route path="/chat" element={<Chat />} /> */}
+
           </Route>
+                      <Route path="/chat-list" element={<ChatListPopup />} />
+            <Route path="/chat" element={<ChatRoomPopup />} />
         </Routes>
       </ChatProvider>
     </AuthProvider>
