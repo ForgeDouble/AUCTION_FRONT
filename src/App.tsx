@@ -6,27 +6,32 @@ import LoginPage from "./pages/login/LoginPage";
 import AuctionListPage from "./pages/auction_list/AuctionListPage";
 import { AuthProvider } from "./contexts/AuthProvider";
 import MyPage from "./pages/mypage/Mypage";
-import SellProductPage from "./pages/sell_product_page/SellProductPage ";
+import SellProductPage from "./pages/sell_product_page/SellProductPage";
 import RegisterPage from "./pages/register/Register";
+import Chat from "./pages/chat/Chat";
+import { ChatProvider } from "./contexts/ChatProvider";
 
 function App() {
   return (
     <>
       <AuthProvider>
-        <Routes>
-          <Route element={<Navbar />}>
-            <Route path="/" element={<Home />} />
-            <Route
-              path="/auction_detail/:productId"
-              element={<AuctionDetail />}
-            />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/auction_list" element={<AuctionListPage />} />
-            <Route path="/mypage" element={<MyPage />} />
-            <Route path="/sell_product" element={<SellProductPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
-        </Routes>
+        <ChatProvider>
+          <Routes>
+            <Route element={<Navbar />}>
+              <Route path="/" element={<Home />} />
+              <Route
+                path="/auction_detail/:productId"
+                element={<AuctionDetail />}
+              />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/auction_list" element={<AuctionListPage />} />
+              <Route path="/mypage" element={<MyPage />} />
+              <Route path="/sell_product" element={<SellProductPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/chat" element={<Chat />} />
+            </Route>
+          </Routes>
+        </ChatProvider>
       </AuthProvider>
     </>
   );
