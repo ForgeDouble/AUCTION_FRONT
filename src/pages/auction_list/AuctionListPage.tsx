@@ -353,25 +353,24 @@ const AuctionListPage = () => {
                 <div className="space-y-2">
                   {parentCategories.map((category) => (
                     <div key={category.categoryId} className="relative group">
-                      <label className="flex items-center cursor-pointer">
-                        <input
-                          type="radio"
-                          name="category"
-                          value={category.categoryId}
-                          checked={selectedCategory === category.categoryId}
-                          onChange={(e) =>
-                            setSelectedCategory(Number(e.target.value))
-                          }
-                          className="mr-3 text-purple-500"
-                        />
-                        <span className="text-gray-300 flex-1">
+                      <div
+                        onClick={() => setSelectedCategory(category.categoryId)}
+                        className="flex items-center cursor-pointer p-2 hover:bg-white/10 rounded transition-colors"
+                      >
+                        <span
+                          className={`flex-1 ${
+                            selectedCategory === category.categoryId
+                              ? "text-purple-400 font-semibold"
+                              : "text-gray-300"
+                          }`}
+                        >
                           {category.categoryName}
                         </span>
                         <span className="text-purple-400 text-sm">0</span>
                         {category.children && category.children.length > 0 && (
                           <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
                         )}
-                      </label>
+                      </div>
 
                       {/* 자식 카테고리 드롭다운 */}
                       {category.children && category.children.length > 0 && (
@@ -380,26 +379,23 @@ const AuctionListPage = () => {
                           <div className="absolute right-full w-2 h-full"></div>
                           <div className="ml-2 bg-slate-900 border border-white/20 rounded-lg p-2 shadow-xl">
                             {category.children.map((child) => (
-                              <label
+                              <div
                                 key={child.categoryId}
+                                onClick={() =>
+                                  setSelectedCategory(child.categoryId)
+                                }
                                 className="flex items-center cursor-pointer p-2 hover:bg-white/10 rounded transition-colors"
                               >
-                                <input
-                                  type="radio"
-                                  name="category"
-                                  value={child.categoryId}
-                                  checked={
+                                <span
+                                  className={`text-sm flex-1 ${
                                     selectedCategory === child.categoryId
-                                  }
-                                  onChange={(e) =>
-                                    setSelectedCategory(Number(e.target.value))
-                                  }
-                                  className="mr-3 text-purple-500"
-                                />
-                                <span className="text-gray-300 text-sm flex-1">
+                                      ? "text-purple-400 font-semibold"
+                                      : "text-gray-300"
+                                  }`}
+                                >
                                   {child.categoryName}
                                 </span>
-                              </label>
+                              </div>
                             ))}
                           </div>
                         </div>
@@ -543,11 +539,11 @@ const AuctionListPage = () => {
                         />
 
                         {/* 추천 뱃지 - 왼쪽 상단 */}
-                        {true && (
+                        {/* {true && (
                           <div className="absolute top-4 left-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
                             추천
                           </div>
-                        )}
+                        )} */}
 
                         {/* 상태 뱃지 - 오른쪽 상단 */}
                         <div
@@ -595,13 +591,15 @@ const AuctionListPage = () => {
                               현재 입찰가
                             </div>
                             <div className="text-xl font-bold text-green-400">
-                              {formatPrice(0)}
+                              {auction.latestBidAmount
+                                ? formatPrice(auction.latestBidAmount)
+                                : "0원"}
                             </div>
                           </div>
                           <div className="text-right">
                             <div className="text-xs text-gray-400">입찰 수</div>
                             <div className="text-lg font-bold text-purple-400">
-                              0 개
+                              {auction.bidCount - 1} 개
                             </div>
                           </div>
                         </div>
