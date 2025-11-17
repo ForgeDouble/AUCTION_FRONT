@@ -13,6 +13,8 @@ export interface ProductListDto {
   categoryId: number;
   userEmail: string;
   path: categoryDto[];
+  latestBidAmount: number | null;
+  bidCount: number;
 }
 
 export interface ParentCategoriesDto {
