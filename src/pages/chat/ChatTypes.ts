@@ -1,3 +1,4 @@
+// ChatTypes.ts
 export interface ChatRoomDto {
   roomId: string;
   title: string;

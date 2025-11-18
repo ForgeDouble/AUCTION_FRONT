@@ -46,6 +46,7 @@ const LoginPage = () => {
 
       console.log("로그인 성공:", result);
       localStorage.setItem("accessToken", result.result.token);
+      localStorage.setItem("userId", email);
       // 성공 후 처리 (예: 토큰 저장, 페이지 이동 등)
       await checkAuth();
       window.location.replace("/");

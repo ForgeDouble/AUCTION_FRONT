@@ -1,3 +1,4 @@
+// pages/chat/chatRoomPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useChat } from "@/hooks/useChat";

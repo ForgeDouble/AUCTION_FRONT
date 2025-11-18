@@ -1,3 +1,4 @@
+// pages/chat/chat.tsx
 import React from "react";
 import ChatRoomList from "@/components/ChatRoomList";
 import { useChat } from "@/hooks/useChat";

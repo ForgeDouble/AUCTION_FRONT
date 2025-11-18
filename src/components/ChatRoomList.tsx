@@ -1,3 +1,4 @@
+// src/components/chatRoomlist.tsx
 import React from "react";
 import type { ChatRoomDto } from "@/pages/chat/ChatTypes";
 

@@ -14,7 +14,7 @@ export default function ChatRoomPopup() {
     if (roomId) selectRoom(roomId);
   }, [roomId]);
 
-  const title = currentRoom?.title || ""; // “채팅” 고정 문구 제거
+  const title = currentRoom?.title || ""; 
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fbf3ff] to-[#f7eefb]">
