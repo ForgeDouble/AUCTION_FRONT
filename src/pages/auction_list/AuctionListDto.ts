@@ -8,7 +8,7 @@ export interface ProductListDto {
   productName: string;
   productContent: string;
   price: number;
-  sellYN: string;
+  status: string;
   previewImageUrl: string;
   categoryId: number;
   userEmail: string;
