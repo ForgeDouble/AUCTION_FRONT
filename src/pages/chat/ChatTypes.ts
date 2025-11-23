@@ -5,7 +5,8 @@ export interface ChatRoomDto {
   lastMessage?: string;
   lastAt?: string;
   unread?: number;
-  peerUserId?: number;
+  // peerUserId?: number;
+  adminChat?: boolean;
   peerNickname?: string;
   productId?: number;
 }
@@ -13,8 +14,9 @@ export interface ChatRoomDto {
 export interface ChatMessageDto {
   messageId: string;
   roomId: string;
-  senderId: number;
+  senderId: string;
   senderNickname: string;
+  senderProfileImageUrl?: string;
   content: string;
   createdAt: string;
   mine?: boolean;

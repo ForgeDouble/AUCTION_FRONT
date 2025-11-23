@@ -1,4 +1,4 @@
-// api/chatApi
+// api/chatApi.ts
 import type { ChatMessageDto, ChatRoomDto } from "@/pages/chat/ChatTypes";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8080";
@@ -37,9 +37,9 @@ if (json && typeof json === "object" && "result" in json) return json.result as 
 return json as T;
 }
 
-// GET /chat/room/my?userId=...
-export async function myRooms(token: string | null | undefined, userId: string) {
-const res = await fetch(buildURL("/chat/room/my", { userId }), {
+// GET /chat/room/my (현재 로그인 유저 기준)
+export async function myRooms(token: string | null | undefined) {
+const res = await fetch(buildURL("/chat/room/my"), {
 method: "GET",
 headers: authHeaders(token ?? undefined),
 credentials: "include",
@@ -47,60 +47,57 @@ credentials: "include",
 const raw = unwrap<any[]>(await handle<any>(res)) || [];
 
 const list: ChatRoomDto[] = raw.map((r) => {
-let title = "대화";
-if (Array.isArray(r.participantIds)) {
-const other = r.participantIds.find((id: string) => String(id) !== String(userId));
-title = other || title;
-}
 return {
 roomId: r.roomId || r.id || "",
-title,
+title: r.roomName || r.title || "대화",
 lastMessage: r.recentText || "",
 lastAt: r.recentTime || "",
 unread: r.unread || 0,
+adminChat: !!r.adminChat,
 };
 });
 
 return list;
 }
 
-// POST /chat/room/open (유저끼리 1:1 채팅용으로 유지)
+// POST /chat/room/open (유저끼리 1:1 채팅 또는 관리자/문의와 1:1)
 export async function openRoom(
 token: string | null | undefined,
-body: { userId: string; targetId?: string; productId?: number }
+body: { targetEmail: string; adminChat?: boolean }
 ) {
+const payload = {
+targetId: body.targetEmail, // 백엔드 ChatRoomOpenRequest.targetId = 이메일
+adminChat: body.adminChat ?? false,
+};
+
 const res = await fetch(buildURL("/chat/room/open"), {
 method: "POST",
 headers: authHeaders(token ?? undefined),
 credentials: "include",
-body: JSON.stringify(body),
+body: JSON.stringify(payload),
 });
 const json = await handle<any>(res);
 return unwrap<string>(json); // roomId
 }
 
-// POST /chat/room/inquire (문의하기 전용)
-export async function openInquiryRoom(
-token: string | null | undefined,
-body: { userId: string }
-) {
+// POST /chat/room/inquire (문의하기 전용, 바디 불필요)
+export async function openInquiryRoom(token: string | null | undefined) {
 const res = await fetch(buildURL("/chat/room/inquire"), {
 method: "POST",
 headers: authHeaders(token ?? undefined),
 credentials: "include",
-body: JSON.stringify(body),
+body: JSON.stringify({}), // 컨트롤러가 @RequestBody 제거되었다면 이마저도 생략 가능
 });
 const json = await handle<any>(res);
 return unwrap<string>(json); // roomId
 }
 
-// POST /chat/room/enter?userId=...&roomId=...
+// POST /chat/room/enter?roomId=...
 export async function enterRoom(
 token: string | null | undefined,
-userId: string,
 roomId: string
 ) {
-const res = await fetch(buildURL("/chat/room/enter", { userId, roomId }), {
+const res = await fetch(buildURL("/chat/room/enter", { roomId }), {
 method: "POST",
 headers: authHeaders(token ?? undefined),
 credentials: "include",
@@ -108,12 +105,9 @@ credentials: "include",
 await handle<any>(res);
 }
 
-// POST /chat/room/exit?userId=...
-export async function exitRoom(
-token: string | null | undefined,
-userId: string
-) {
-const res = await fetch(buildURL("/chat/room/exit", { userId }), {
+// POST /chat/room/exit (파라미터 없음)
+export async function exitRoom(token: string | null | undefined) {
+const res = await fetch(buildURL("/chat/room/exit"), {
 method: "POST",
 headers: authHeaders(token ?? undefined),
 credentials: "include",
@@ -133,14 +127,16 @@ headers: authHeaders(token ?? undefined),
 credentials: "include",
 });
 const arr = unwrap<any[]>(await handle<any>(res)) || [];
+
 const mapped: ChatMessageDto[] = arr.map((m) => ({
 messageId: m.id || m.messageId || m.uuid || String(Math.random()),
-roomId: m.roomId || "",
-senderId: -1,
-senderNickname: "",
+roomId: m.roomId || roomId,
+senderId: m.senderId || m.senderEmail || "",
+senderNickname: m.senderNickname || "",
+senderProfileImageUrl: m.senderProfileImageUrl || "",
 content: m.message || "",
 createdAt: m.createdAt || new Date().toISOString(),
-mine: false,
+mine: false, // mine 여부는 ChatProvider에서 email 비교로 세팅
 }));
 return mapped;
 }
@@ -148,12 +144,11 @@ return mapped;
 // POST /chat/message/send
 export async function sendMessage(
 token: string | null | undefined,
-body: { roomId: string; senderId: string; content: string }
+body: { roomId: string; content: string; type?: "TALK" | "IMAGE" | "FILE" }
 ) {
 const payload = {
 roomId: body.roomId,
-senderId: body.senderId,
-messageType: "TALK",
+messageType: body.type ?? "TALK",
 message: body.content,
 files: [],
 };

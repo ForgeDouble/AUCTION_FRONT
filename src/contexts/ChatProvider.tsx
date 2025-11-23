@@ -1,40 +1,59 @@
-import React, {createContext,useContext,useEffect,useMemo,useRef,useState,} from "react";
+//contests/ChatProvider.tsx
+import React, {
+createContext,
+useContext,
+useEffect,
+useMemo,
+useRef,
+useState,
+} from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import { useAuth } from "@/hooks/useAuth";
 import type { ChatMessageDto, ChatRoomDto } from "@/pages/chat/ChatTypes";
-import {myRooms,openInquiryRoom, openRoom,recentMessages,sendMessage,enterRoom,exitRoom,} from "@/api/chatApi";
+import {
+myRooms,
+openInquiryRoom,
+openRoom,
+recentMessages,
+sendMessage,
+enterRoom,
+exitRoom,
+} from "@/api/chatApi";
 
 export interface ChatContextType {
-  connected: boolean;
-  rooms: ChatRoomDto[];
-  currentRoom?: ChatRoomDto;
-  messages: Record<string, ChatMessageDto[]>;
-  unread: Record<string, number>;
-  refreshRooms: () => Promise<void>;
-  selectRoom: (roomId: string) => Promise<void>;
-  send: (roomId: string, content: string) => Promise<void>;
-  openAdminAndSelect: () => Promise<void>;
+connected: boolean;
+rooms: ChatRoomDto[];
+currentRoom?: ChatRoomDto;
+messages: Record<string, ChatMessageDto[]>;
+unread: Record<string, number>;
+refreshRooms: () => Promise<void>;
+selectRoom: (roomId: string) => Promise<void>;
+send: (roomId: string, content: string) => Promise<void>;
+openAdminAndSelect: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
 
 export function useChat(): ChatContextType {
-  const ctx = useContext(ChatContext);
-  if (!ctx) throw new Error("useChat must be used within ChatProvider");
-  return ctx;
+const ctx = useContext(ChatContext);
+if (!ctx) throw new Error("useChat must be used within ChatProvider");
+return ctx;
 }
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-// 채팅 쪽에서는 userEmail 사용 X, 인증 여부만 필요
-const { isAuthenticated } = useAuth();
+const { userEmail, isAuthenticated } = useAuth();
 
-// 토큰은 기존처럼 localStorage에서
-const token = useMemo( () => localStorage.getItem("accessToken"), [isAuthenticated] );
+const token = useMemo(
+() => localStorage.getItem("accessToken"),
+[isAuthenticated]
+);
 
-// 중요: 채팅용 userId는 항상 백엔드의 User PK 문자열만 사용
-// 로그인 성공 시 백엔드 응답의 userId를 localStorage.userId에 꼭 저장해야 함
-const myId = useMemo( () => localStorage.getItem("userId") || "", [isAuthenticated] );
+// 채팅에서 나를 구분하는 기준: 항상 이메일
+const myEmail = useMemo(
+() => userEmail ?? "",
+[userEmail, isAuthenticated]
+);
 
 const clientRef = useRef<Stomp.Client | null>(null);
 const [connected, setConnected] = useState(false);
@@ -47,134 +66,176 @@ const retryRef = useRef(0);
 
 // STOMP 연결
 useEffect(() => {
-  if (!token) return;
+if (!token) return;
 
-  const sock = new SockJS("http://localhost:8080/ws");
-  const client = Stomp.over(sock);
-  client.heartbeat.outgoing = 10000;
-  client.heartbeat.incoming = 10000;
-  client.debug = () => {};
+const sock = new SockJS("http://localhost:8080/ws");
+const client = Stomp.over(sock);
+client.heartbeat.outgoing = 10000;
+client.heartbeat.incoming = 10000;
+client.debug = () => {};
 
+const connect = () => {
   client.connect(
-    { Authorization: "Bearer " + token },() => {
+    { Authorization: "Bearer " + token },
+    () => {
       clientRef.current = client;
       setConnected(true);
       retryRef.current = 0;
-    }, () => {
+    },
+    () => {
       setConnected(false);
       clientRef.current = null;
       const backoff = Math.min(1000 * Math.pow(2, retryRef.current), 10000);
       retryRef.current += 1;
-      setTimeout(() => {}, backoff);
+      setTimeout(connect, backoff); // 간단 재시도
     }
   );
+};
 
-  return () => {
-    try {
-      client.disconnect(() => {});
-    } catch {}
-    setConnected(false);
-    clientRef.current = null;
-    subscriptionsRef.current = {};
-  };
+connect();
+
+return () => {
+  try {
+    client.disconnect(() => {});
+  } catch {}
+  setConnected(false);
+  clientRef.current = null;
+  subscriptionsRef.current = {};
+};
+
+
 }, [token]);
 
 const currentRoom = useMemo(
-  () => rooms.find((r) => r.roomId === currentRoomId),
-  [rooms, currentRoomId]
+() => rooms.find((r) => r.roomId === currentRoomId),
+[rooms, currentRoomId]
 );
 
 const refreshRooms = async () => {
-  if (!token || !myId) return;
-  const list = await myRooms(token, myId);
-  setRooms(list);
-  const initUnread: Record<string, number> = {};
-  list.forEach((r) => (initUnread[r.roomId] = r.unread || 0));
-  setUnread(initUnread);
+if (!token || !myEmail) return;
+const list = await myRooms(token);
+setRooms(list);
+const initUnread: Record<string, number> = {};
+list.forEach((r) => (initUnread[r.roomId] = r.unread || 0));
+setUnread(initUnread);
 };
 
-// 로그인 / myId 변동 시 방 목록 초기 로드
+// 로그인 / email 변동 시 방 목록 초기 로드
 useEffect(() => {
 refreshRooms().catch(console.error);
-}, [token, myId]);
+}, [token, myEmail]);
 
 const subscribeRoom = (roomId: string) => {
-if (!clientRef.current || subscriptionsRef.current[roomId]) return;
+  if (!clientRef.current || subscriptionsRef.current[roomId]) return;
 
-// 백엔드 STOMP 목적지는 /topic/chat/room/{roomId}
-const sub = clientRef.current.subscribe(
+  const sub = clientRef.current.subscribe(
   "/topic/chat/room/" + roomId,
   (frame) => {
-    try {
-      const p = JSON.parse(frame.body) || {};
-      const sid = String(p.senderId ?? p.sender ?? p.senderEmail ?? "");
-      const mine = !!myId && !!sid && String(myId) === sid;
+  try {
+  const p = JSON.parse(frame.body) || {};
+  const senderEmail = String(
+  p.senderId ?? p.sender ?? p.senderEmail ?? ""
+  );
+  const mine = !!myEmail && !!senderEmail && senderEmail === myEmail;
 
       const msg: ChatMessageDto = {
         messageId: String(
           p.id ?? p.messageId ?? "stomp-" + Date.now()
         ),
         roomId: String(p.roomId || roomId),
-        senderId: -1,
-        senderNickname: "",
+        senderId: senderEmail,
+        senderNickname: String(p.senderNickname ?? ""),
+        senderProfileImageUrl: p.senderProfileImageUrl || "",
         content: String(p.message ?? p.content ?? ""),
         createdAt: String(p.createdAt ?? new Date().toISOString()),
         mine,
       };
 
+      // 1) 메시지 목록 갱신
       setMessages((prev) => ({
         ...prev,
         [roomId]: [...(prev[roomId] || []), msg],
       }));
-      setUnread((u) => ({
-        ...u,
-        [roomId]:
-          roomId === currentRoomId ? 0 : (u[roomId] || 0) + 1,
-      }));
+
+      // 2) 미읽음 카운트 갱신
+      setUnread((u) => {
+        const prevCount = u[roomId] || 0;
+        if (mine) {
+          // 내가 보낸 건 미읽음 증가 없음
+          return { ...u, [roomId]: prevCount };
+        }
+        // 다른 사람이 보낸 건 +1 (현재 방인지 여부는 selectRoom 쪽에서 0으로 다시 맞춰줌)
+        return { ...u, [roomId]: prevCount + 1 };
+      });
+
+      // 3) 방 리스트의 최근 메시지 / 시간 갱신
+      setRooms((prev) =>
+        prev.map((r) =>
+          r.roomId === roomId
+            ? { ...r, lastMessage: msg.content, lastAt: msg.createdAt }
+            : r
+        )
+      );
     } catch (e) {
       console.error(e);
     }
   }
-);
-
-subscriptionsRef.current[roomId] = sub;
 
 
+  );
+
+  subscriptionsRef.current[roomId] = sub;
 };
 
 const selectRoom = async (roomId: string) => {
-if (!token || !myId) return;
+// 1) 이메일 체크는 제거, 토큰만 있으면 진행
+if (!token) return;
+
 setCurrentRoomId(roomId);
 subscribeRoom(roomId);
-await enterRoom(token, myId, roomId);
+await enterRoom(token, roomId);
 
-if (!messages[roomId]) {
-  const list = await recentMessages(token, roomId, 50);
-  const corrected = list.map((m) => ({
-    ...m,
-    mine:
-      !!myId &&
-      String(myId) === String(
-        (m as any).senderIdText ?? m.senderId ?? ""
-      ),
-  }));
-  setMessages((p) => ({ ...p, [roomId]: corrected }));
-}
+// 2) 방 들어올 때마다 항상 서버 히스토리 한 번 가져오기
+const list = await recentMessages(token, roomId, 50);
+
+const corrected = list.map((m) => ({
+...m,
+mine: !!myEmail && m.senderId === myEmail, // 이메일 있으면 mine 판정, 없어도 문제 없음
+}));
+
+setMessages((prev) => {
+const prevList = prev[roomId] || [];
+
+const map = new Map<string, ChatMessageDto>();
+prevList.forEach((m) => map.set(m.messageId, m));
+corrected.forEach((m) => map.set(m.messageId, m));
+
+const merged = Array.from(map.values());
+merged.sort(
+  (a, b) =>
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+);
+
+return { ...prev, [roomId]: merged };
+
+
+});
+
 setUnread((u) => ({ ...u, [roomId]: 0 }));
-
-
 };
 
 const send = async (roomId: string, content: string) => {
-if (!token || !myId || !content.trim()) return;
+if (!token || !myEmail || !content.trim()) return;
 
-await sendMessage(token, { roomId, senderId: myId, content });
+await sendMessage(token, { roomId, content });
 
+// 낙관적 추가 (서버에서 다시 내려오긴 하지만 UX용)
 const mineMsg: ChatMessageDto = {
   messageId: "tmp-" + Date.now(),
   roomId,
-  senderId: -1,
-  senderNickname: "me",
+  senderId: myEmail,
+  senderNickname: "나",
+  senderProfileImageUrl: "",
   content,
   createdAt: new Date().toISOString(),
   mine: true,
@@ -189,14 +250,13 @@ setMessages((p) => ({
 
 // 문의하기 → /chat/room/inquire 사용
 const openAdminAndSelect = async () => {
-  console.log("openAdminAndSelect token =", token, "myId =", myId);
-  if (!token || !myId) {
-    alert("로그인이 필요합니다."); // 최소한 사용자에게 피드백
-    return;
-  }
+if (!token || !myEmail) {
+alert("로그인이 필요합니다.");
+return;
+}
 
-  try {
-  const roomId = await openInquiryRoom(token, { userId: myId });
+try {
+  const roomId = await openInquiryRoom(token);
   await refreshRooms();
   await selectRoom(roomId);
 
@@ -208,20 +268,20 @@ const openAdminAndSelect = async () => {
     "chat_room_" + roomId,
     "popup=yes,width=" + w + ",height=" + h + ",left=" + left + ",top=" + top + ",resizable=yes,scrollbars=yes"
   );
+} catch (e) {
+  console.error(e);
+  alert("문의방 생성 중 오류가 발생했습니다.");
+}
 
 
-  } catch (e) {
-    console.error(e);
-    alert("문의방 생성 중 오류가 발생했습니다.");
-  }
 };
 
-// 언마운트 시 퇴장 처리
+// 언마운트 시 퇴장 처리 (email은 서버가 토큰에서 판단)
 useEffect(() => {
 return () => {
-if (token && myId) exitRoom(token, myId).catch(() => {});
+if (token) exitRoom(token).catch(() => {});
 };
-}, [token, myId]);
+}, [token]);
 
 const value: ChatContextType = {
 connected,
@@ -235,5 +295,5 @@ send,
 openAdminAndSelect,
 };
 
-return (<ChatContext.Provider value={value}>{children}</ChatContext.Provider>);
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
