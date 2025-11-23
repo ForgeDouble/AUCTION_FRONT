@@ -137,7 +137,12 @@ const subscribeRoom = (roomId: string) => {
   p.senderId ?? p.sender ?? p.senderEmail ?? ""
   );
   const mine = !!myEmail && !!senderEmail && senderEmail === myEmail;
-
+    console.log("[STOMP] recv", {
+      roomId,
+      senderEmail,
+      mine,
+      raw: p,
+    });
       const msg: ChatMessageDto = {
         messageId: String(
           p.id ?? p.messageId ?? "stomp-" + Date.now()

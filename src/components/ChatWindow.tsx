@@ -1,22 +1,35 @@
 // components/ChatWindow.tsx
 import React, { useEffect, useRef } from "react";
 import type { ChatMessageDto } from "@/pages/chat/ChatTypes";
+import { useAuth } from "@/hooks/useAuth";
 
 type Props = { title?: string; messages: ChatMessageDto[] };
 
-function pad(n: number) { return n < 10 ? "0" + n : "" + n; }
-function isSameDay(a: Date, b: Date) {
-return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+function pad(n: number) {
+return n < 10 ? "0" + n : "" + n;
 }
-function formatTime(d: Date) { return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+function isSameDay(a: Date, b: Date) {
+return (
+a.getFullYear() === b.getFullYear() &&
+a.getMonth() === b.getMonth() &&
+a.getDate() === b.getDate()
+);
+}
+function formatTime(d: Date) {
+return pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
 function formatKoreanDate(d: Date) {
-const yoil = ["일","월","화","수","목","금","토"][d.getDay()];
-return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${yoil}요일`;
+const yoil = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${yoil}요일`;
 }
 
 export default function ChatWindow({ title, messages }: Props) {
 const bottomRef = useRef<HTMLDivElement | null>(null);
-useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+const { userEmail } = useAuth(); // 추가: 현재 로그인 이메일
+
+useEffect(() => {
+bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+}, [messages]);
 
 const today = new Date();
 let lastDayKey = "";
@@ -32,11 +45,13 @@ return (
   <div className="flex-1 overflow-y-auto px-3 py-2">
     {messages.map((m, idx) => {
       const d = new Date(m.createdAt);
-      const dayKey = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+      const dayKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
       const needDayChip = idx === 0 || dayKey !== lastDayKey;
       lastDayKey = dayKey;
 
-      const mine = !!m.mine;
+      // 여기 변경: mine을 senderId와 현재 로그인 이메일로 판단
+      const mine = !!userEmail && m.senderId === userEmail;
+
       const showTime = formatTime(d);
       const isToday = isSameDay(d, today);
 
@@ -59,9 +74,7 @@ return (
                 <div className="text-[11px] text-gray-500 mb-0.5">
                   {nickname}
                 </div>
-                <div
-                  className="rounded-2xl px-3 py-1.5 text-[13px] leading-snug shadow-sm bg-[#e8d8ff] text-gray-900"
-                >
+                <div className="rounded-2xl px-3 py-1.5 text-[13px] leading-snug shadow-sm bg-[#e8d8ff] text-gray-900">
                   <div className="whitespace-pre-wrap break-words">{m.content}</div>
                   <div className="text-gray-700/70 text-[10px] mt-0.5 text-right">
                     {isToday ? showTime : showTime}
@@ -87,9 +100,7 @@ return (
                   <div className="text-[11px] text-gray-500 mb-0.5">
                     {nickname}
                   </div>
-                  <div
-                    className="max-w-[100%] rounded-2xl px-3 py-1.5 text-[13px] leading-snug shadow-sm bg-white text-gray-800 border border-black/5"
-                  >
+                  <div className="max-w-[100%] rounded-2xl px-3 py-1.5 text-[13px] leading-snug shadow-sm bg-white text-gray-800 border border-black/5">
                     <div className="whitespace-pre-wrap break-words">{m.content}</div>
                     <div className="text-gray-500 text-[10px] mt-0.5 text-right">
                       {isToday ? showTime : showTime}
