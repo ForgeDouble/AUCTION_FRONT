@@ -1,3 +1,4 @@
+// App.tsx
 import { Route, Routes } from "react-router-dom";
 import Home from "./pages/home/Home";
 import Navbar from "./components/Navbar";
@@ -34,8 +35,8 @@ function App() {
             {/* <Route path="/chat" element={<Chat />} /> */}
 
           </Route>
-                      <Route path="/chat-list" element={<ChatListPopup />} />
-            <Route path="/chat" element={<ChatRoomPopup />} />
+          <Route path="/chat-list" element={<ChatListPopup />} />
+          <Route path="/chat" element={<ChatRoomPopup />} />
         </Routes>
       </ChatProvider>
     </AuthProvider>

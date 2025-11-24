@@ -18,7 +18,7 @@ export default function ChatRoomPopup() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fbf3ff] to-[#f7eefb]">
-      {/* 상단바: 연보라색 */}
+    
       <div className="sticky top-0 z-10 bg-[#EDE7F6] text-[#3B2B73]
                       px-3 py-2 flex items-center justify-between border-b border-black/5">
         <button
