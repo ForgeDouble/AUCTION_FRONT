@@ -86,8 +86,7 @@ export default function ChatWindow({ title, messages }: Props) {
               </div>
             ) : (
               <div className="flex justify-start mb-1">
-                <div className="flex items-end gap-2 max-w-[80%]">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 text-xs font-semibold overflow-hidden">
+                <div className="flex items-start gap-2 max-w-[80%]"><div className="w-8 h-8 shrink-0 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 text-xs font-semibold overflow-hidden">
                     {m.senderProfileImageUrl ? (
                       <img
                         src={m.senderProfileImageUrl}
