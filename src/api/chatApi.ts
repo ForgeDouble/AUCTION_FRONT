@@ -1,5 +1,5 @@
 // api/chatApi.ts
-import type { ChatMessageDto, ChatRoomDto } from "@/pages/chat/ChatTypes";
+import type { ChatMessageDto, ChatRoomDto, ChatMessageType} from "@/pages/chat/ChatTypes";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8080";
 
@@ -129,16 +129,32 @@ export async function recentMessages(
     });
     const arr = unwrap<any[]>(await handle<any>(res)) || [];
 
-    const mapped: ChatMessageDto[] = arr.map((m) => ({
-        messageId: m.id || m.messageId || m.uuid || String(Math.random()),
-        roomId: m.roomId || roomId,
-        senderId: m.senderId || m.senderEmail || "",
-        senderNickname: m.senderNickname || "",
-        senderProfileImageUrl: m.senderProfileImageUrl || "",
-        content: m.message || "",
-        createdAt: m.createdAt || new Date().toISOString(),
-        mine: false,
-    }));
+    const mapped: ChatMessageDto[] = arr.map((m) => {
+        const type: ChatMessageType = (m.messageType as ChatMessageType) || "TALK";
+
+        // 기본 구조
+        let content: string = m.message || m.content || "";
+
+        // IMAGE 타입이면 fileUrl 쪽을 우선 사용
+        if (type === "IMAGE") {
+            const fileUrl = (Array.isArray(m.files) && m.files[0] && m.files[0].fileUrl) || m.fileUrl || m.url;
+            if (fileUrl) {
+                content = String(fileUrl);
+            }
+        }
+
+        return {
+            messageId: m.id || m.messageId || m.uuid || String(Math.random()),
+            roomId: m.roomId || roomId,
+            senderId: m.senderId || m.senderEmail || "",
+            senderNickname: m.senderNickname || "",
+            senderProfileImageUrl: m.senderProfileImageUrl || "",
+            content,
+            createdAt: m.createdAt || new Date().toISOString(),
+            type,
+            mine: false,
+        };
+    });
     return mapped;
 }
 
@@ -160,4 +176,27 @@ export async function sendMessage(
         body: JSON.stringify(payload),
     });
     await handle<any>(res);
+}
+
+export async function uploadChatImage(
+    token: string | null | undefined,
+    file: File
+): Promise<string> {
+    const fd = new FormData();
+    fd.append("file", file);
+
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = "Bearer " + token;
+
+    const res = await fetch(buildURL("/chat/file/upload"), {
+    method: "POST",
+    headers,
+    credentials: "include",
+    body: fd,
+    });
+
+    const json = await handle<any>(res);
+    const dto = unwrap<{ fileName: string; fileUrl: string }>(json);
+
+    return dto.fileUrl;
 }

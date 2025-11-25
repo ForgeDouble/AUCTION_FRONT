@@ -3,8 +3,8 @@ import React, {createContext, useContext, useEffect, useMemo, useRef, useState,}
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import { useAuth } from "@/hooks/useAuth";
-import type { ChatMessageDto, ChatRoomDto } from "@/pages/chat/ChatTypes";
-import {myRooms, openInquiryRoom, openRoom, recentMessages, sendMessage, enterRoom, exitRoom,} from "@/api/chatApi";
+import type { ChatMessageDto, ChatRoomDto, ChatMessageType } from "@/pages/chat/ChatTypes";
+import {myRooms, openInquiryRoom, openRoom, recentMessages, sendMessage, enterRoom, exitRoom, uploadChatImage,} from "@/api/chatApi";
 
 export interface ChatContextType {
   connected: boolean;
@@ -15,6 +15,7 @@ export interface ChatContextType {
   refreshRooms: () => Promise<void>;
   selectRoom: (roomId: string) => Promise<void>;
   send: (roomId: string, content: string) => Promise<void>;
+  sendImage: (roomId: string, file: File) => Promise<void>;
   openAdminAndSelect: () => Promise<void>;
 }
 
@@ -125,19 +126,33 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const p = JSON.parse(frame.body) || {};
             const senderEmail = String(p.senderId ?? p.sender ?? p.senderEmail ?? "");
             const mine = !!myEmail && !!senderEmail && senderEmail === myEmail;
+            const type: ChatMessageType = (p.messageType as ChatMessageType) || "TALK";
 
-            console.log("[STOMP] recv", {roomId,senderEmail,mine,raw: p,});
+            // 기본 내용
+            let content: string = String(p.message ?? p.content ?? "");
+
+            // IMAGE 타입이면 fileUrl / files[0].fileUrl / url 중 하나를 우선
+            if (type === "IMAGE") {
+              const fileUrl =
+              (Array.isArray(p.files) && p.files[0] && p.files[0].fileUrl) ||
+              p.fileUrl ||
+              p.url;
+              if (fileUrl) {
+                content = String(fileUrl);
+              }
+            }
+
+            console.log("[STOMP] recv", { roomId, senderEmail, mine, type, content, raw: p });
 
             const msg: ChatMessageDto = {
-              messageId: String(
-                p.id ?? p.messageId ?? "stomp-" + Date.now()
-              ),
+              messageId: String(p.id ?? p.messageId ?? "stomp-" + Date.now()),
               roomId: String(p.roomId || roomId),
               senderId: senderEmail,
               senderNickname: String(p.senderNickname ?? ""),
               senderProfileImageUrl: p.senderProfileImageUrl || "",
-              content: String(p.message ?? p.content ?? ""),
+              content,
               createdAt: String(p.createdAt ?? new Date().toISOString()),
+              type,
               mine,
             };
 
@@ -178,7 +193,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setCurrentRoomId(roomId);
 
-    // 서버에서 -> "이 방에 들어왔다" 알림
+    // 서버 -> "이 방에 들어왔다" 알림
     await enterRoom(token, roomId);
 
     // 최근 메시지 가져오기
@@ -212,8 +227,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const send = async (roomId: string, content: string) => {
     if (!token || !myEmail || !content.trim()) return;
 
-    // 서버에만 보내고, 화면에는 STOMP 수신(subscribeRoom)으로만 반영
-    await sendMessage(token, { roomId, content });
+    // 서버전송 + 프론트 STOMP, subscribeRoom 으로만 반영
+    await sendMessage(token, { roomId, content, type: "TALK"});
   };
 
   // 문의하기 → /chat/room/inquire 사용
@@ -244,6 +259,43 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   };
 
+  const sendImage = async (roomId: string, file: File) => {
+    if (!token || !myEmail) return;
+
+console.log("[ChatProvider.sendImage] start", { roomId, fileName: file.name });
+
+    try {
+      const url = await uploadChatImage(token, file);
+      console.log("[ChatProvider.sendImage] uploaded url =", url);
+
+
+      await sendMessage(token, { roomId, content: url, type: "IMAGE" });
+      console.log("[ChatProvider.sendImage] sendMessage OK");
+
+      const mineMsg: ChatMessageDto = {
+        messageId: "img-" + Date.now(),
+        roomId,
+        senderId: myEmail,
+        senderNickname: "나",
+        senderProfileImageUrl: "",
+        content: url,
+        createdAt: new Date().toISOString(),
+        type: "IMAGE",
+        mine: true,
+      };
+
+      // setMessages((p) => ({
+      //   ...p,
+      //   [roomId]: [...(p[roomId] || []), mineMsg],
+      // }));
+
+
+    } catch (e) {
+      console.error(e);
+      alert("이미지 전송 중 오류가 발생했습니다.");
+    }
+  };
+
   useEffect(() => {
     if (!connected || !currentRoomId) return;
     return () => {
@@ -260,8 +312,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshRooms,
     selectRoom,
     send,
+    sendImage,
     openAdminAndSelect,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
+

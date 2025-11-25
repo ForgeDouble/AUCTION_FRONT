@@ -1,3 +1,4 @@
+console.log("[ChatRoomPopup] render");
 // src/pages/chat/ChatRoomPopup.tsx
 import React, { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -6,7 +7,7 @@ import ChatWindow from "@/components/ChatWindow";
 import MessageInput from "@/components/MessageInput";
 
 export default function ChatRoomPopup() {
-  const { currentRoom, messages, selectRoom, send } = useChat();
+  const { currentRoom, messages, selectRoom, send, sendImage } = useChat();
   const [sp] = useSearchParams();
   const roomId = sp.get("roomId") || "";
 
@@ -35,7 +36,7 @@ export default function ChatRoomPopup() {
       <div className="h-[calc(100vh-56px)] px-3 pt-2 pb-3">
         <div className="h-full min-h-0 bg-white/70 border border-black/5 rounded-2xl flex flex-col">
           <ChatWindow messages={roomId ? (messages[roomId] || []) : []} />
-          {roomId && <MessageInput onSend={(t) => send(roomId, t)} />}
+          {roomId && <MessageInput onSend={(t) => send(roomId, t)} onSendImage={(file) => sendImage(roomId, file)} />}
         </div>
       </div>
     </div>

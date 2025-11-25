@@ -1,3 +1,4 @@
+console.log("[ChatRoomPage] render");
 // pages/chat/chatRoomPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -6,7 +7,7 @@ import ChatWindow from "@/components/ChatWindow";
 import MessageInput from "@/components/MessageInput";
 
 const ChatRoomPage: React.FC = () => {
-  const { currentRoom, messages, selectRoom, send, rooms } = useChat();
+  const { currentRoom, messages, selectRoom, send, rooms, sendImage } = useChat();
   const [sp] = useSearchParams();
   const roomId = sp.get("roomId") || "";
 
@@ -62,7 +63,7 @@ const ChatRoomPage: React.FC = () => {
         <div className="h-[72vh] bg-white/70 border border-black/10 rounded-2xl overflow-hidden shadow-sm flex flex-col">
           <ChatWindow title={title} messages={msgList} />
           {roomId && (
-            <MessageInput onSend={(t) => send(roomId, t)} />
+            <MessageInput onSend={(t) => send(roomId, t)} onSendImage={(file) => sendImage(roomId, file)} />
           )}
         </div>
       </div>
