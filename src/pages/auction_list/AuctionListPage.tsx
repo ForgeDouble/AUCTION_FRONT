@@ -524,9 +524,22 @@ const AuctionListPage = () => {
                   key={auction.productId}
                   className={
                     viewMode === "grid"
-                      ? "bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden hover:transform hover:scale-105 transition-all duration-300 cursor-pointer group"
-                      : "bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all duration-300 cursor-pointer"
+                      ? `bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden transition-all duration-300 group ${
+                          auction.status === "READY"
+                            ? "opacity-50 cursor-not-allowed"
+                            : "cursor-pointer hover:transform hover:scale-105"
+                        }`
+                      : `bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 transition-all duration-300 ${
+                          auction.status === "READY"
+                            ? "opacity-50 cursor-not-allowed"
+                            : "cursor-pointer hover:bg-white/15"
+                        }`
                   }
+                  onClick={() => {
+                    if (auction.status !== "READY") {
+                      navigate(`/auction_detail/${auction.productId}`);
+                    }
+                  }}
                 >
                   {viewMode === "grid" ? (
                     // 그리드 뷰
@@ -537,6 +550,17 @@ const AuctionListPage = () => {
                           alt={auction.productName}
                           className="w-full h-48 object-cover"
                         />
+                        {/* 준비중 오버레이 */}
+                        {auction.status === "READY" && (
+                          <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
+                            <div className="text-center">
+                              <Clock className="h-8 w-8 text-white mx-auto mb-1" />
+                              <span className="text-white text-sm font-bold">
+                                준비중
+                              </span>
+                            </div>
+                          </div>
+                        )}
 
                         {/* 추천 뱃지 - 왼쪽 상단 */}
                         {/* {true && (
@@ -623,13 +647,22 @@ const AuctionListPage = () => {
                             </div>
                           ))}
                         </div>
+
                         <button
-                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold"
-                          onClick={() =>
-                            navigate(`/auction_detail/${auction.productId}`)
-                          }
+                          className={`px-6 py-2 rounded-xl transition-all duration-300 font-bold ${
+                            auction.status === "READY"
+                              ? "w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold cursor-not-allowed"
+                              : "w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold"
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (auction.status !== "READY") {
+                              navigate(`/auction_detail/${auction.productId}`);
+                            }
+                          }}
+                          disabled={auction.status === "READY"}
                         >
-                          입찰하기
+                          {auction.status === "READY" ? "준비중" : "입찰하기"}
                         </button>
                       </div>
                     </>
