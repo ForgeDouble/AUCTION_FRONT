@@ -8,6 +8,7 @@ import {
   Clock,
   ImageIcon,
 } from "lucide-react";
+
 import { Status, type ProductCreateDto } from "./SellProductDto";
 import { fetchCreateProduct } from "./SellProductApi";
 
@@ -21,15 +22,18 @@ const categoryMap: { [key: string]: number } = {
   etc: 6,
 };
 
+
 const SellProductPage = () => {
   const [images, setImages] = useState([]);
   const [formData, setFormData] = useState({
     productName: "",
     category: "",
     price: "",
+
     description: "",
   });
   const [loading, setLoading] = useState(false);
+
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -44,6 +48,7 @@ const SellProductPage = () => {
   const removeImage = (id) => {
     setImages((prev) => prev.filter((img) => img.id !== id));
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,6 +94,7 @@ const SellProductPage = () => {
     } finally {
       setLoading(false);
     }
+
   };
 
   const handleChange = (e) => {
@@ -115,7 +121,9 @@ const SellProductPage = () => {
           <div>
             <label className="flex items-center text-lg font-semibold text-gray-800 mb-4">
               <ImageIcon className="mr-2 text-purple-600" size={24} />
+
               상품 이미지 (최대 10장) *
+
             </label>
 
             <div className="grid grid-cols-5 gap-4">
@@ -171,7 +179,9 @@ const SellProductPage = () => {
             <div className="md:col-span-2">
               <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
                 <Package className="mr-2 text-purple-600" size={18} />
+
                 상품명 *
+
               </label>
               <input
                 type="text"
@@ -187,7 +197,9 @@ const SellProductPage = () => {
             {/* 카테고리 */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
+
                 카테고리 *
+
               </label>
               <select
                 name="category"
@@ -206,11 +218,14 @@ const SellProductPage = () => {
               </select>
             </div>
 
+
             {/* 시작 가격 */}
             <div>
               <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
                 <DollarSign className="mr-2 text-purple-600" size={18} />
+
                 시작 가격 *
+
               </label>
               <div className="relative">
                 <input
@@ -219,7 +234,9 @@ const SellProductPage = () => {
                   value={formData.price}
                   onChange={handleChange}
                   placeholder="0"
+
                   min="0"
+
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
@@ -228,12 +245,14 @@ const SellProductPage = () => {
                 </span>
               </div>
             </div>
+
           </div>
 
           {/* 상품 설명 */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               상품 설명 *
+
             </label>
             <textarea
               name="description"
@@ -270,6 +289,7 @@ const SellProductPage = () => {
               onClick={() => window.history.back()}
               className="flex-1 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all"
               disabled={loading}
+
             >
               취소
             </button>
@@ -279,6 +299,7 @@ const SellProductPage = () => {
               className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "등록 중..." : "상품 등록하기"}
+
             </button>
           </div>
         </form>

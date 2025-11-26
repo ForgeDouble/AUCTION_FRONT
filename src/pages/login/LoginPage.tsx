@@ -1,3 +1,4 @@
+// login/loginpage.tsx
 import React, { useState } from "react";
 import {
   Gavel,
@@ -39,20 +40,18 @@ const LoginPage = () => {
     setLoading(true);
     setError(null);
 
-    // 로그인 처리 로직
     try {
       const loginData: loginRequest = { email, password };
       const result = await fetchLogin(loginData);
 
       console.log("로그인 성공:", result);
       localStorage.setItem("accessToken", result.result.token);
-      // 성공 후 처리 (예: 토큰 저장, 페이지 이동 등)
+      localStorage.setItem("userId", email);
       await checkAuth();
       window.location.replace("/");
     } catch (err) {
       let errorMessage = "로그인에 실패했습니다.";
       if (err instanceof Error) {
-        // 백엔드에서 보낸 에러 메시지 파싱
         if (err.message.includes("401")) {
           errorMessage = "이메일 또는 비밀번호가 올바르지 않습니다.";
         } else if (err.message.includes("404")) {
@@ -62,7 +61,6 @@ const LoginPage = () => {
         } else if (err.message.includes("Network")) {
           errorMessage = "네트워크 연결을 확인해주세요.";
         } else {
-          // 백엔드에서 보낸 커스텀 메시지가 있으면 사용
           errorMessage = err.message;
         }
       }
@@ -96,10 +94,8 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex">
-      {/* 왼쪽 로그인 폼 */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
-          {/* 로고 */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center space-x-3 mb-4">
               <Gavel className="h-10 w-10 text-purple-400" />
@@ -111,9 +107,8 @@ const LoginPage = () => {
             <p className="text-gray-400">특별한 아이템들이 기다리고 있어요</p>
           </div>
 
-          {/* 로그인 폼 */}
           <div className="space-y-6">
-            {/* 이메일 입력 */}
+
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 이메일
