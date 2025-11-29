@@ -546,7 +546,7 @@ const AuctionListPage = () => {
                     <>
                       <div className="relative">
                         <img
-                          src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400"
+                          src={auction.previewImageUrl}
                           alt={auction.productName}
                           className="w-full h-48 object-cover"
                         />
