@@ -14,11 +14,21 @@ import { ChatProvider } from "./contexts/ChatProvider";
 import ChatListPopup from "./pages/chat/ChatListPopup";
 import ChatRoomPopup from "@/pages/chat/ChatRoomPopup";
 import ChatRoomPage from "./pages/chat/ChatRoomPage";
-
+import { FcmNotificationCenter } from "./components/fcm/FcmNotificationCenter";
+// import { useEffect } from "react";
+// import { requestFcmToken } from "./firebase/firebase";
 function App() {
+  // fcm 로그 확인용 
+  // useEffect(() => { (async () => {
+  //   console.log("[App] FCM 디버그용 토큰 요청 시작");
+  //   const token = await requestFcmToken();
+  //   console.log("[App] FCM 디버그용 토큰 결과:", token);
+  // })();
+  //   }, []);
   return (
     <AuthProvider>
       <ChatProvider>
+        <FcmNotificationCenter />
         <Routes>
           {/* 팝업 전용: Navbar 없이 렌더링 */}
           <Route path="/chat-popup" element={<ChatListPopup />} />

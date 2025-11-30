@@ -53,8 +53,7 @@ const LoginPage = () => {
       await checkAuth();
 
       try {  
-        const alreadyRegistered =  
-          localStorage.getItem("fcm_registered") === "true";  
+        const alreadyRegistered = localStorage.getItem("fcm_registered") === "true";  
 
         const fcmToken = await requestFcmToken();  
 
