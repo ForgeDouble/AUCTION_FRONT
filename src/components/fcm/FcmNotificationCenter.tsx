@@ -1,96 +1,112 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import type { MessagePayload } from "firebase/messaging";
 import { requestFcmToken, subscribeForegroundMessage } from "@/firebase/firebase";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { registerDeviceToken } from "@/api/pushApi";
+
 type NotificationItem = {
-id: string;
-title: string;
-body: string;
-type?: string;
-data?: Record<string, string>;
+  id: string;
+  title: string;
+  body: string;
+  type?: string;
+  data?: Record<string, string>;
 };
 
 const MAX_STACK = 3;
 const AUTO_CLOSE_MS = 5000;
 
 export function FcmNotificationCenter() {
-const [items, setItems] = useState<NotificationItem[]>([]);
-const navigate = useNavigate();
+  const [items, setItems] = useState<NotificationItem[]>([]);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-useEffect(() => {
-let isMounted = true;
+  const isChatRoute =
+  location.pathname.startsWith("/chat") || // /chat, /chat?roomId=...
+  location.pathname.startsWith("/chat-list") || // /chat-list
+  location.pathname.startsWith("/chat-popup"); // /chat-popup (팝업 전용)
 
-// 1) FCM 토큰 발급 + /push/register 호출
-const initFcm = async () => {
-  try {
-    console.log("[FcmCenter] initFcm 시작");
+  const isChatRouteRef = useRef(isChatRoute);
+  useEffect(() => {
+    isChatRouteRef.current = isChatRoute;
+  }, [isChatRoute]);
+  useEffect(() => {
+    let isMounted = true;
 
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      console.log("[FcmCenter] accessToken 없음, 등록 스킵");
-    } else {
-      const alreadyRegistered =
-        localStorage.getItem("fcm_registered") === "true";
+  // 1) FCM 토큰 발급 + /push/register 호출
+    const initFcm = async () => {
+      try {
+        console.log("[FcmCenter] initFcm 시작");
 
-      const token = await requestFcmToken();
-      if (token) {
-        const prevToken = localStorage.getItem("fcm_token");
-        if (!alreadyRegistered || prevToken !== token) {
-          console.log("[FcmCenter] /push/register 호출 시도");
-          await registerDeviceToken(token);
-          console.log("[FcmCenter] /push/register 성공");
-          localStorage.setItem("fcm_registered", "true");
-          localStorage.setItem("fcm_token", token);
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) {
+          console.log("[FcmCenter] accessToken 없음, 등록 스킵");
         } else {
-          console.log("[FcmCenter] 기존 토큰과 동일, 재등록 스킵");
+          const alreadyRegistered =
+            localStorage.getItem("fcm_registered") === "true";
+
+          const token = await requestFcmToken();
+          if (token) {
+            const prevToken = localStorage.getItem("fcm_token");
+            if (!alreadyRegistered || prevToken !== token) {
+              console.log("[FcmCenter] /push/register 호출 시도");
+              await registerDeviceToken(token);
+              console.log("[FcmCenter] /push/register 성공");
+              localStorage.setItem("fcm_registered", "true");
+              localStorage.setItem("fcm_token", token);
+            } else {
+              console.log("[FcmCenter] 기존 토큰과 동일, 재등록 스킵");
+            }
+          } else {
+            console.warn("[FcmCenter] requestFcmToken 결과가 null");
+          }
         }
-      } else {
-        console.warn("[FcmCenter] requestFcmToken 결과가 null");
+
+        // 2) 포그라운드 메시지 구독
+        console.log("[FcmCenter] foreground message 구독 설정");
+        subscribeForegroundMessage((payload: MessagePayload) => {
+          if (!isMounted) return;
+
+          const data = (payload.data || {}) as Record<string, string>;
+          const type = data.type;
+          const baseTitle = payload.notification?.title || "AuctionHub 알림";
+          const baseBody = payload.notification?.body || "";
+
+          if (type === "INQUIRY_NEW_MESSAGE" && isChatRouteRef.current) {
+            console.log("[FcmCenter] 채팅 경로이므로 INQUIRY_NEW_MESSAGE 토스트 스킵");
+            return;
+          }
+          
+          const item: NotificationItem = {
+            id: crypto.randomUUID(),
+            title: baseTitle,
+            body: baseBody,
+            type,
+            data,
+          };
+
+          setItems((prev) => {
+            const next = [item, ...prev];
+            if (next.length > MAX_STACK) next.pop();
+            return next;
+          });
+
+          setTimeout(() => {
+            setItems((prev) => prev.filter((x) => x.id !== item.id));
+          }, AUTO_CLOSE_MS);
+        });
+      } catch (e) {
+        console.error("[FcmCenter] initFcm 중 오류:", e);
       }
-    }
+    };
 
-    // 2) 포그라운드 메시지 구독
-    console.log("[FcmCenter] foreground message 구독 설정");
-    subscribeForegroundMessage((payload: MessagePayload) => {
-      if (!isMounted) return;
+    initFcm();
 
-      const data = (payload.data || {}) as Record<string, string>;
-      const type = data.type;
-      const baseTitle = payload.notification?.title || "AuctionHub 알림";
-      const baseBody = payload.notification?.body || "";
-
-      const item: NotificationItem = {
-        id: crypto.randomUUID(),
-        title: baseTitle,
-        body: baseBody,
-        type,
-        data,
-      };
-
-      setItems((prev) => {
-        const next = [item, ...prev];
-        if (next.length > MAX_STACK) next.pop();
-        return next;
-      });
-
-      setTimeout(() => {
-        setItems((prev) => prev.filter((x) => x.id !== item.id));
-      }, AUTO_CLOSE_MS);
-    });
-  } catch (e) {
-    console.error("[FcmCenter] initFcm 중 오류:", e);
-  }
-};
-
-initFcm();
-
-return () => {
-  isMounted = false;
-};
+    return () => {
+      isMounted = false;
+    };
 
 
-}, []);
+  }, []);
 
 const handleClick = (item: NotificationItem) => {
 const type = item.type;

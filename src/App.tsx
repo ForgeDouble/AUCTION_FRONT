@@ -27,8 +27,9 @@ function App() {
   //   }, []);
   return (
     <AuthProvider>
+      <FcmNotificationCenter />
       <ChatProvider>
-        <FcmNotificationCenter />
+        
         <Routes>
           {/* 팝업 전용: Navbar 없이 렌더링 */}
           <Route path="/chat-popup" element={<ChatListPopup />} />
