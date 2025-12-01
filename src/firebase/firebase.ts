@@ -131,32 +131,32 @@ return null;
 // 5) 포그라운드 메시지 구독
 // ─────────────────────────────
 export function subscribeForegroundMessage(
-handler: (payload: MessagePayload) => void
+  callback: (payload: MessagePayload) => void
 ): Promise<() => void> {
-console.log("[FCM] foreground message 구독 시도");
+  console.log("[FCM] foreground message 구독 시도");
 
-return ensureMessaging()
-.then((messaging) => {
-if (!messaging) {
-console.warn("[FCM] messaging 없음 → 포그라운드 구독 생략");
-// 실패해도 호출 측이 안전하게 unsubscribe 호출할 수 있도록 no-op 반환
-return () => {};
-}
-
-  console.log("[FCM] foreground message 구독 시작");
-  const unsubscribe = onMessage(messaging, (payload) => {
-    console.log("[FCM] foreground message 수신:", payload);
-    handler(payload);
-  });
-
-  // onMessage 가 리스너 해제 함수 반환
-  return unsubscribe;
-})
-.catch((e) => {
-  console.error("[FCM] 포그라운드 메시지 구독 실패:", e);
-  // 에러가 나도 항상 함수 하나는 돌려주자
+  return ensureMessaging()
+  .then((messaging) => {
+  if (!messaging) {
+  console.warn("[FCM] messaging 없음 → 포그라운드 구독 생략");
+  // 실패해도 호출 측이 안전하게 unsubscribe 호출할 수 있도록 no-op 반환
   return () => {};
-});
+  }
+
+    console.log("[FCM] foreground message 구독 시작");
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log("[FCM] foreground message 수신:", payload);
+      callback(payload);
+    });
+
+    // onMessage 가 리스너 해제 함수 반환
+    return unsubscribe;
+  })
+  .catch((e) => {
+    console.error("[FCM] 포그라운드 메시지 구독 실패:", e);
+    // 에러가 나도 항상 함수 하나는 돌려주자
+    return () => {};
+  });
 
 
 }
