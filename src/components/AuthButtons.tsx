@@ -43,11 +43,17 @@ function NotificationMenu(props: {
 
   useClickOutside(ref, () => setOpen(false));
 
-  const filtered = tab === "ALL" ? notifications : notifications.filter((n) => n.category === tab);
+  const filtered =
+    tab === "ALL"
+      ? notifications
+      : notifications.filter((n) => n.category === tab);
 
   const handleToggle = () => setOpen((v) => !v);
 
-  const categoryMeta: Record< NotificationCategory, { label: string; className: string } > = {
+  const categoryMeta: Record<
+    NotificationCategory,
+    { label: string; className: string }
+  > = {
     ALL: { label: "전체", className: "bg-slate-100 text-slate-600" },
     AUCTION: { label: "경매", className: "bg-purple-50 text-purple-600" },
     INQUIRY: { label: "문의", className: "bg-sky-50 text-sky-600" },
@@ -57,90 +63,106 @@ function NotificationMenu(props: {
 
   return (
     <div className="relative" ref={ref}>
-    {/* 종 아이콘 버튼 */}
-    <button type="button" onClick={handleToggle} className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/30 text-white transition" >
-      <Bell className="w-5 h-5" />
-      {unreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
-          {unreadCount > 9 ? "9+" : unreadCount}
-        </span>
-      )}
-    </button>
+      {/* 종 아이콘 버튼 */}
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/30 text-white transition"
+      >
+        <Bell className="w-5 h-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </button>
 
-    {open && (
-      <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-white/60 bg-white/95 text-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.32)] backdrop-blur-xl overflow-hidden">
-        {/* 상단 탭 */}
-        <div className="flex text-xs border-b border-slate-200 bg-white/80">
-          {[
-            { key: "ALL", label: "전체" },
-            { key: "AUCTION", label: "경매" },
-            { key: "INQUIRY", label: "문의" },
-            { key: "PRODUCT", label: "상품" },
-            { key: "CHAT", label: "채팅" },
-          ].map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key as NotificationCategory)}
-              className={
-                "flex-1 py-2 text-center transition-colors " +
-                (tab === t.key
-                  ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow-sm"
-                  : "text-slate-500 hover:bg-slate-50")
-              }
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+      {open && (
+        <div className="absolute right-0 mt-3 w-96 rounded-2xl border border-white/60 bg-white/95 text-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.32)] backdrop-blur-xl overflow-hidden">
+          {/* 최상단 헤더 */}
+          <div className="px-4 py-3 bg-white/95 border-b border-slate-200 flex items-center justify-between">
+            <span className="text-sm font-semibold text-slate-900">
+              알림
+            </span>
+            {unreadCount > 0 && (
+              <span className="text-[11px] text-slate-400">
+                새 알림 {unreadCount}개
+              </span>
+            )}
+          </div>
 
-        {/* 리스트 */}
-        <div className="max-h-80 overflow-y-auto p-3 space-y-1 bg-white/80">
-          {filtered.length === 0 && (
-            <div className="py-6 text-center text-xs text-slate-400">
-              표시할 알림이 없습니다.
-            </div>
-          )}
-
-          {filtered.map((n) => {
-            const meta = categoryMeta[n.category];
-            return (
+          {/* 타입 탭 */}
+          <div className="flex text-[11px] border-b border-slate-200 bg-slate-50/80">
+            {[
+              { key: "ALL", label: "전체" },
+              { key: "AUCTION", label: "경매" },
+              { key: "INQUIRY", label: "문의" },
+              { key: "PRODUCT", label: "상품" },
+              { key: "CHAT", label: "채팅" },
+            ].map((t) => (
               <button
-                key={n.id}
+                key={t.key}
                 type="button"
-                className="w-full text-left px-3 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-100 transition flex flex-col gap-1"
+                onClick={() => setTab(t.key as NotificationCategory)}
+                className={
+                  "flex-1 py-2 text-center transition-colors " +
+                  (tab === t.key
+                    ? "bg-purple-600 text-white font-semibold shadow-sm"
+                    : "text-slate-500 hover:bg-slate-100")
+                }
               >
-                <div className="flex justify-between items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-900">
-                    {n.title}
-                  </span>
-                  <span className="text-[10px] text-slate-400">
-                    {n.createdAt}
-                  </span>
-                </div>
-
-                <div className="mt-1 flex justify-between items-start gap-2">
-                  {n.body && (
-                    <p className="text-xs text-slate-600 leading-snug flex-1">
-                      {n.body}
-                    </p>
-                  )}
-                  <span
-                    className={
-                      "ml-2 px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap " +
-                      meta.className
-                    }
-                  >
-                    {meta.label}
-                  </span>
-                </div>
+                {t.label}
               </button>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* 리스트 영역 */}
+          <div className="max-h-96 overflow-y-auto p-4 space-y-2 bg-white/90">
+            {filtered.length === 0 && (
+              <div className="py-8 text-center text-xs text-slate-400">
+                표시할 알림이 없습니다.
+              </div>
+            )}
+
+            {filtered.map((n) => {
+              const meta = categoryMeta[n.category];
+              return (
+                <button
+                  key={n.id}
+                  type="button"
+                  className="w-full text-left px-4 py-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-100 transition flex flex-col gap-1.5"
+                >
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-900">
+                      {n.title}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {n.createdAt}
+                    </span>
+                  </div>
+
+                  <div className="mt-0.5 flex justify-between items-start gap-3">
+                    {n.body && (
+                      <p className="text-xs text-slate-600 leading-snug flex-1">
+                        {n.body}
+                      </p>
+                    )}
+                    <span
+                      className={
+                        "ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap " +
+                        meta.className
+                      }
+                    >
+                      {meta.label}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-    )}
-  </div>
+      )}
+    </div>
   );
 }
 
@@ -279,12 +301,12 @@ export default function AuthButtons() {
         type="button"
         className="text-gray-100 hover:text-white"
         onClick={() => navigate("/login")}
-        >
+      >
         로그인
       </button>
       <button
         type="button"
-        className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700"
+        className="bg-purple-600 text-white px-6 py-2 rounded-full hover:bg-purple-700 transition-colors"
         onClick={() => navigate("/register")}
         >
         회원가입
