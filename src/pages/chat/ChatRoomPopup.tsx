@@ -1,4 +1,4 @@
-console.log("[ChatRoomPopup] render");
+//console.log("[ChatRoomPopup] render");
 // src/pages/chat/ChatRoomPopup.tsx
 import React, { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";

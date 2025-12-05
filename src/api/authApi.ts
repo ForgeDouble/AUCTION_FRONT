@@ -1,3 +1,4 @@
+// api/authApi.ts
 import type { ApiResponse } from "../type/CommonType";
 
 export const fetchLoginEmail = async (

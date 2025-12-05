@@ -23,7 +23,7 @@ export default function ChatListPopup() {
     <div className="sticky top-0 z-10 bg-white/70 backdrop-blur border-b border-black/5 px-4 py-3 flex items-center justify-between">
     <div className="font-bold text-gray-800">채팅</div>
     <button onClick={openAdminAndSelect} className="flex items-center gap-1 text-sm bg-purple-600 text-white px-3 py-1.5 rounded-full hover:bg-purple-700" title="관리자에게 문의하기" >
-    <Plus size={16} /> 문의하기
+      <Plus size={16} /> 문의하기
     </button>
     </div>
 

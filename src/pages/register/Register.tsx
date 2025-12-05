@@ -1,4 +1,3 @@
-// src/pages/auction_register/Register.tsx (혹은 너가 둔 RegisterPage 파일 경로)
 import React, { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { registerUser, type RegisterRequest } from "@/api/registerapi";
@@ -19,8 +18,8 @@ type FormState = {
   password: string;
   passwordConfirm: string;
   gender: Gender;
-  birthdayInput: string; // input=date (yyyy-MM-dd)
-  phone: string;         // 화면: 010-****
+  birthdayInput: string;
+  phone: string;
   address: string;
   nickname: string;
   agree: boolean;
@@ -107,7 +106,6 @@ export default function RegisterPage() {
       ["agree", f.agree],
     ];
     return checks.every(([k, v]) => validateField(k, v));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f.email, f.name, f.password, f.passwordConfirm, f.birthdayInput, f.phone, f.agree]);
 
   async function onSubmit(e: React.FormEvent) {
@@ -115,14 +113,12 @@ export default function RegisterPage() {
 
     let ok = true;
     (Object.keys(f) as (keyof FormState)[]).forEach((k) => {
-      // @ts-expect-error
       ok = validateField(k, f[k]) && ok;
     });
     if (!ok) return;
 
     const birthdayDot = toBirthdayDotFromInputDate(f.birthdayInput);
 
-    // ✅ 서버가 여성 코드를 "W"로 받는 경우에 맞춰 변환 ("F" -> "W")
     const genderForServer: RegisterRequest["gender"] = f.gender === "M" ? "M" : "W";
 
     const body: RegisterRequest = {
