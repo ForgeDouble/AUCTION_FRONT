@@ -17,13 +17,14 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage(function (payload) {
     console.log("[firebase-messaging-sw.js] 받는 백그라운드 메세지 ", payload);
 
-    const notificationTitle =
-    (payload.notification && payload.notification.title) || "Auction 알림";
+    if (payload.notification) {
+        return;
+    }
+    const notificationTitle =(payload.data && payload.data.title) || "Auction 알림";
 
     const notificationOptions = {
-        body: (payload.notification && payload.notification.body) || "",
+        body: (payload.data && payload.data.body) || "",
         icon: "/icon-192x192.png",
-        // 나중에 라우팅에 쓸 data
         data: payload.data || {},
     };
 
