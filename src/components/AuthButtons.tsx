@@ -83,17 +83,11 @@ function NotificationMenu(props: {
 
   useClickOutside(ref, () => setOpen(false));
 
-  const filtered =
-    tab === "ALL"
-      ? notifications
-      : notifications.filter((n) => n.category === tab);
+  const filtered = tab === "ALL" ? notifications : notifications.filter((n) => n.category === tab);
 
   const handleToggle = () => setOpen((v) => !v);
 
-  const categoryMeta: Record<
-    NotificationCategory,
-    { label: string; className: string }
-  > = {
+  const categoryMeta: Record< NotificationCategory, { label: string; className: string } > = {
     ALL: { label: "전체", className: "bg-slate-100 text-slate-600" },
     AUCTION: { label: "경매", className: "bg-purple-50 text-purple-600" },
     INQUIRY: { label: "문의", className: "bg-sky-50 text-sky-600" },
@@ -180,17 +174,8 @@ function NotificationMenu(props: {
                   </div>
 
                   <div className="mt-0.5 flex justify-between items-start gap-3">
-                    {n.body && (
-                      <p className="text-xs text-slate-600 leading-snug flex-1">
-                        {n.body}
-                      </p>
-                    )}
-                    <span
-                      className={
-                        "ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap " +
-                        meta.className
-                      }
-                    >
+                    {n.body && (<p className="text-xs text-slate-600 leading-snug flex-1"> {n.body} </p> )}
+                    <span className={"ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap " + meta.className}>
                       {meta.label}
                     </span>
                   </div>

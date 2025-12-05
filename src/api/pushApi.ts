@@ -11,11 +11,12 @@ export async function registerDeviceToken(token: string) {
     }
 
     const dto = {
-        token,                 // ★ dto.getToken()
-        platform: "WEB",       // ★ dto.getPlatform() -> DevicePlatform.WEB
+        token,
+        platform: "WEB",
         appVersion: "web-1.0.0",
         deviceModel: navigator.userAgent.slice(0, 100),
     };
+
 
     const response = await fetch(`${API_BASE_URL}/push/register`, {
         method: "POST",
@@ -65,6 +66,4 @@ export async function unregisterDeviceToken(fcmToken: string): Promise<void> {
         console.error("[pushApi] FCM 토큰 해제 실패", response.status, text);
         throw new Error("FCM 토큰 해제 실패: " + response.status);
     }
-
-
 }

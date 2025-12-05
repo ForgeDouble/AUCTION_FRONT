@@ -4,7 +4,6 @@ import logoBid from "@/assets/bid-logo.png";
 
 const Navbar = () => {
   const navigate = useNavigate();
-
   return (
   <>
     <nav className="bg-black/20 backdrop-blur-lg border-b border-white/10 fixed top-0 left-0 right-0 z-50">
