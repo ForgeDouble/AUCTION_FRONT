@@ -1,4 +1,4 @@
-console.log("[Chat] render");
+//console.log("[Chat] render");
 // pages/chat/chat.tsx
 import React from "react";
 import ChatRoomList from "@/components/ChatRoomList";

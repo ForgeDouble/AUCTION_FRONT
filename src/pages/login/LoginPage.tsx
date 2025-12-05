@@ -17,6 +17,8 @@ import { fetchLogin } from "./LoginApi";
 import { WarningModal } from "../../components/WarningModal";
 import { useAuth } from "../../hooks/useAuth";
 import type { loginRequest } from "./LoginDto";
+import { requestFcmToken } from "@/firebase/firebase";
+import { registerDeviceToken } from "../../api/pushApi";
 
 const LoginPage = () => {
   // 비밀번호 보이기
@@ -45,9 +47,32 @@ const LoginPage = () => {
       const result = await fetchLogin(loginData);
 
       console.log("로그인 성공:", result);
+
       localStorage.setItem("accessToken", result.result.token);
       localStorage.setItem("userId", email);
       await checkAuth();
+
+      try {  
+        const alreadyRegistered = localStorage.getItem("fcm_registered") === "true";  
+
+        const fcmToken = await requestFcmToken();  
+
+        if (fcmToken) {  
+          const prevToken = localStorage.getItem("fcm_token");  
+
+          if (!alreadyRegistered || prevToken !== fcmToken) {  
+            await registerDeviceToken(fcmToken);  
+
+            localStorage.setItem("fcm_registered", "true");  
+            localStorage.setItem("fcm_token", fcmToken);  
+          }  
+        } else {  
+          console.warn("FCM 토큰 없음 (권한 거부 또는 오류)");  
+        }  
+      } catch (fcmError) {  
+        console.error("로그인 후 FCM 등록 중 오류:", fcmError);  
+      }
+
       window.location.replace("/");
     } catch (err) {
       let errorMessage = "로그인에 실패했습니다.";

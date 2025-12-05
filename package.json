@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.2.1",
     "dayjs": "^1.11.18",
+    "firebase": "^12.6.0",
     "globalthis": "^1.0.4",
     "lucide-react": "^0.536.0",
     "react": "^19.1.0",

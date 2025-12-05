@@ -9,16 +9,27 @@ import { AuthProvider } from "./contexts/AuthProvider";
 import MyPage from "./pages/mypage/Mypage";
 import SellProductPage from "./pages/sell_product_page/SellProductPage";
 import RegisterPage from "./pages/register/Register";
+// import { useEffect } from "react";
+// import { requestFcmToken } from "./firebase/firebase";
 import Chat from "./pages/chat/Chat";
 import { ChatProvider } from "./contexts/ChatProvider";
 import ChatListPopup from "./pages/chat/ChatListPopup";
 import ChatRoomPopup from "@/pages/chat/ChatRoomPopup";
 import ChatRoomPage from "./pages/chat/ChatRoomPage";
+import { FcmNotificationCenter } from "./components/fcm/FcmNotificationCenter";
 
 function App() {
+  // fcm 로그 확인용 
+  // useEffect(() => { (async () => {
+  //   console.log("[App] FCM 디버그용 토큰 요청 시작");
+  //   const token = await requestFcmToken();
+  //   console.log("[App] FCM 디버그용 토큰 결과:", token);
+  // })();
+  //   }, []);
   return (
     <AuthProvider>
       <ChatProvider>
+        <FcmNotificationCenter />
         <Routes>
           {/* 팝업 전용: Navbar 없이 렌더링 */}
           <Route path="/chat-popup" element={<ChatListPopup />} />

@@ -1,4 +1,5 @@
 // ChatTypes.ts
+export type ChatMessageType = "TALK" | "IMAGE" | "FILE";
 export interface ChatRoomDto {
   roomId: string;
   title: string;
@@ -19,6 +20,7 @@ export interface ChatMessageDto {
   senderProfileImageUrl?: string;
   content: string;
   createdAt: string;
+  type: ChatMessageType;
   mine?: boolean;
 }
 
