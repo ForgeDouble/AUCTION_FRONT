@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Bell, ChevronDown } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
 
 type NotificationCategory = "ALL" | "AUCTION" | "INQUIRY" | "PRODUCT" | "CHAT";
 
@@ -30,7 +31,46 @@ function useClickOutside(
     return () => document.removeEventListener("mousedown", handle);
   }, [ref, onClose]);
 }
+function formatRelativeTime(createdAt: string): string {
+  if (!createdAt) return "";
 
+  if (createdAt.indexOf("전") >= 0 || createdAt.indexOf("방금") >= 0) {
+    return createdAt;
+  }
+
+  const date = new Date(createdAt);
+  if (isNaN(date.getTime())) {
+    return createdAt;
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+
+  if (diffSec < 60) {
+    return "방금 전";
+  }
+
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) {
+    return diffMin + "분 전";
+  }
+
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) {
+    return diffHour + "시간 전";
+  }
+
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) {
+    return diffDay + "일 전";
+  }
+  // 7일 초과 -> 날짜표기
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, "0");
+  const d = date.getDate().toString().padStart(2, "0");
+  return y + "." + m + "." + d;
+}
 //알림 드롭다운
 function NotificationMenu(props: {
   notifications: NotificationItem[];
@@ -136,9 +176,7 @@ function NotificationMenu(props: {
                     <span className="text-sm font-semibold text-slate-900">
                       {n.title}
                     </span>
-                    <span className="text-[11px] text-slate-400">
-                      {n.createdAt}
-                    </span>
+                    <span className="text-[11px] text-slate-400"> {formatRelativeTime(n.createdAt)} </span>
                   </div>
 
                   <div className="mt-0.5 flex justify-between items-start gap-3">
@@ -263,6 +301,8 @@ export default function AuthButtons() {
   };
 
   const { unread } = useChat();
+  const { notifications, unreadCount } = useNotifications();
+
   const unreadTotal = Object.values(unread || {}).reduce(
     (a, b) => a + (b || 0),
     0
@@ -281,16 +321,7 @@ export default function AuthButtons() {
     window.open(
     "/chat-list",
     "chat_list_popup",
-    "popup=yes,width=" +
-    w +
-    ",height=" +
-    h +
-    ",left=" +
-    left +
-    ",top=" +
-    top +
-    ",resizable=yes,scrollbars=yes"
-    );
+    "popup=yes,width=" + w + ",height=" + h +",left=" + left +",top=" +top +",resizable=yes,scrollbars=yes");
   };
 
   // 로그인 안 된 상태
@@ -318,51 +349,31 @@ export default function AuthButtons() {
   // 로그인 된 상태
   const displayName = nickname || userEmail || "USER";
 
-  // 실제 알림 API 확인용 더미 데이터
-  const demoNotifications: NotificationItem[] = [
-    {
-      id: "1",
-      title: "경매 낙찰",
-      body: "입찰하신 상품이 낙찰되었습니다.",
-      category: "AUCTION",
-      createdAt: "방금",
-    },
-    {
-      id: "2",
-      title: "새 문의 답변",
-      body: "고객센터에서 문의에 답변했습니다.",
-      category: "INQUIRY",
-      createdAt: "2분 전",
-    },
-  ];
-  const demoUnreadCount = demoNotifications.length;
 
   return (
-  <>
-  {/* 채팅 아이콘 */}
-  <button type="button" onClick={openChatListPopup} className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/30 text-white transition" >
-  <MessageCircle className="w-5 h-5" />
-  {unreadTotal > 0 && (
-  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
-  {unreadTotal > 9 ? "9+" : unreadTotal}
-  </span>
-  )}
-  </button>
+    <>
+      {/* 채팅 아이콘 */}
+      <button type="button" onClick={openChatListPopup} className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/30 text-white transition" >
+        <MessageCircle className="w-5 h-5" />
+        {unreadTotal > 0 && (
+          <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
+            {unreadTotal > 9 ? "9+" : unreadTotal}
+          </span>
+        )}
+      </button>
 
-    {/* 알림 아이콘 + 드롭다운 */}
-    <NotificationMenu
-      notifications={demoNotifications}
-      unreadCount={demoUnreadCount}
-    />
+      {/* 알림 아이콘 + 드롭다운 */}
+      <NotificationMenu
+        notifications={notifications}
+        unreadCount={unreadCount}
+      />
 
-    {/* 유저 메뉴 */}
-    <UserMenu
-      nickname={displayName}
-      profileUrl={profileImageUrl}
-      onLogout={handleLogout}
-    />
-  </>
-
-
+      {/* 유저 메뉴 */}
+      <UserMenu
+        nickname={displayName}
+        profileUrl={profileImageUrl}
+        onLogout={handleLogout}
+      />
+    </>
   );
 }

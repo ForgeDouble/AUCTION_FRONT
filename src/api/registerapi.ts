@@ -1,3 +1,6 @@
+// api/registerapi.ts
+const API_BASE_URL = import.meta.env.VITE_API_BASE;
+
 export type ApiResponse<T> = { status_code: number; status_message: string; result: T };
 
 export type RegisterRequest = {
@@ -5,8 +8,8 @@ export type RegisterRequest = {
   name: string;
   password: string;
   gender: "M" | "F" | "W";
-  birthday: string; // yyyy.MM.dd
-  phone: string;    // 010-1234-5678
+  birthday: string;
+  phone: string;
   address?: string;
   nickname?: string;
 };
@@ -17,7 +20,7 @@ export async function registerUser(body: RegisterRequest): Promise<void> {
     if (v !== undefined && v !== null) fd.append(k, String(v));
   });
 
-  const res = await fetch(`http://localhost:8080/user/register`, {
+  const res = await fetch(`${API_BASE_URL}/user/register`, {
     method: "POST",
     body: fd,
   });

@@ -1,7 +1,7 @@
 // api/chatApi.ts
 import type { ChatMessageDto, ChatRoomDto, ChatMessageType} from "@/pages/chat/ChatTypes";
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8080";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 function authHeaders(token?: string | null) {
     const h: Record<string, string> = { "Content-Type": "application/json" };
@@ -37,7 +37,7 @@ function unwrap<T>(json: any): T {
     return json as T;
 }
 
-// GET /chat/room/my (현재 로그인 유저 기준)
+// GET /chat/room/my
 export async function myRooms(token: string | null | undefined) {
     const res = await fetch(buildURL("/chat/room/my"), {
         method: "GET",
@@ -62,22 +62,22 @@ export async function myRooms(token: string | null | undefined) {
 
 // POST /chat/room/open (유저끼리 1:1 채팅 또는 관리자/문의와 1:1)
 export async function openRoom(
-token: string | null | undefined,
-body: { targetEmail: string; adminChat?: boolean }
+    token: string | null | undefined,
+    body: { targetEmail: string; adminChat?: boolean }
 ) {
-const payload = {
-targetId: body.targetEmail,
-adminChat: body.adminChat ?? false,
+    const payload = {
+    targetId: body.targetEmail,
+    adminChat: body.adminChat ?? false,
 };
 
 const res = await fetch(buildURL("/chat/room/open"), {
-method: "POST",
-headers: authHeaders(token ?? undefined),
-credentials: "include",
-body: JSON.stringify(payload),
+    method: "POST",
+    headers: authHeaders(token ?? undefined),
+    credentials: "include",
+    body: JSON.stringify(payload),
 });
-const json = await handle<any>(res);
-return unwrap<string>(json); // roomId
+    const json = await handle<any>(res);
+    return unwrap<string>(json); // roomId
 }
 
 // POST /chat/room/inquire (문의하기 전용)
@@ -132,10 +132,8 @@ export async function recentMessages(
     const mapped: ChatMessageDto[] = arr.map((m) => {
         const type: ChatMessageType = (m.messageType as ChatMessageType) || "TALK";
 
-        // 기본 구조
         let content: string = m.message || m.content || "";
 
-        // IMAGE 타입이면 fileUrl 쪽을 우선 사용
         if (type === "IMAGE") {
             const fileUrl = (Array.isArray(m.files) && m.files[0] && m.files[0].fileUrl) || m.fileUrl || m.url;
             if (fileUrl) {
