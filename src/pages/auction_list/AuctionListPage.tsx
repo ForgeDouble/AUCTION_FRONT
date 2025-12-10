@@ -527,19 +527,14 @@ const AuctionListPage = () => {
                       ? `bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden transition-all duration-300 group ${
                           auction.status === "READY"
                             ? "opacity-50 cursor-not-allowed"
-                            : "cursor-pointer hover:transform hover:scale-105"
+                            : "hover:transform hover:scale-105"
                         }`
                       : `bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 transition-all duration-300 ${
                           auction.status === "READY"
                             ? "opacity-50 cursor-not-allowed"
-                            : "cursor-pointer hover:bg-white/15"
+                            : "hover:bg-white/15"
                         }`
                   }
-                  onClick={() => {
-                    if (auction.status !== "READY") {
-                      navigate(`/auction_detail/${auction.productId}`);
-                    }
-                  }}
                 >
                   {viewMode === "grid" ? (
                     // 그리드 뷰
@@ -557,6 +552,18 @@ const AuctionListPage = () => {
                               <Clock className="h-8 w-8 text-white mx-auto mb-1" />
                               <span className="text-white text-sm font-bold">
                                 준비중
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* NOTSELLED 오버레이 */}
+                        {auction.status === "NOTSELLED" && (
+                          <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
+                            <div className="text-center">
+                              <Clock className="h-8 w-8 text-white mx-auto mb-1" />
+                              <span className="text-white text-sm font-bold">
+                                경매종료
                               </span>
                             </div>
                           </div>
@@ -652,7 +659,7 @@ const AuctionListPage = () => {
                           className={`px-6 py-2 rounded-xl transition-all duration-300 font-bold ${
                             auction.status === "READY"
                               ? "w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold cursor-not-allowed"
-                              : "w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold"
+                              : "w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold cursor-pointer"
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -662,7 +669,7 @@ const AuctionListPage = () => {
                           }}
                           disabled={auction.status === "READY"}
                         >
-                          {auction.status === "READY" ? "준비중" : "입찰하기"}
+                          {auction.status === "READY" ? "준비중" : "참여하기"}
                         </button>
                       </div>
                     </>
