@@ -14,4 +14,11 @@ export interface ProductDto {
   productContent: string;
   price: number;
   sellYN: string;
+  images: imageDto;
 }
+
+export type imageDto = {
+  id: number;
+  url: string;
+  position: number;
+};
