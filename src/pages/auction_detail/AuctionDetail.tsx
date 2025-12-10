@@ -132,20 +132,9 @@ const AuctionDetail = () => {
     }
   };
 
-  const images = [
-    "https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?q=80&w=928&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://plus.unsplash.com/premium_photo-1682125784386-d6571f1ac86a?q=80&w=1208&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3Dp",
-    "https://plus.unsplash.com/premium_photo-1682125779534-76c5debea767?q=80&w=1062&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    "https://images.unsplash.com/photo-1563103311-860aee557af8?q=80&w=654&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  ];
-
-  const bidHistory = [
-    { user: "user123", amount: "₩2,450,000", time: "방금 전" },
-    { user: "collector88", amount: "₩2,400,000", time: "2분 전" },
-    { user: "vintage_lover", amount: "₩2,350,000", time: "5분 전" },
-    { user: "watch_expert", amount: "₩2,300,000", time: "8분 전" },
-    { user: "auction_pro", amount: "₩2,250,000", time: "12분 전" },
-  ];
+  const images = product?.images
+    ? [...product.images].sort((a, b) => a.position - b.position)
+    : [];
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
@@ -158,8 +147,8 @@ const AuctionDetail = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* 네비게이션 브레드크럼 */}
-      <div className="bg-black/20 backdrop-blur-lg border-b border-white/10 px-4 py-4">
-        <div className="max-w-7xl mx-auto">
+      <div className="h-30">
+        {/* <div className="max-w-7xl mx-auto">
           <div className="flex items-center space-x-2 text-gray-400">
             <span>홈</span>
             <ChevronRight className="h-4 w-4" />
@@ -167,7 +156,7 @@ const AuctionDetail = () => {
             <ChevronRight className="h-4 w-4" />
             <span className="text-white">빈티지 롤렉스 서브마리너</span>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -178,10 +167,24 @@ const AuctionDetail = () => {
               {/* 메인 이미지 */}
               <div className="relative">
                 <img
-                  src={images[currentImageIndex]}
+                  src={
+                    images[currentImageIndex]?.url
+                      ? images[currentImageIndex]?.url
+                      : null
+                  }
                   alt="경매 아이템"
                   className="w-full h-96 lg:h-[500px] object-cover"
                 />
+                {product?.status == "NOTSELLED" && (
+                  <div className="absolute inset-0 bg-black/70 rounded-t-xl flex items-center justify-center">
+                    <div className="text-center">
+                      <Clock className="h-8 w-8 text-white mx-auto mb-1" />
+                      <span className="text-white text-sm font-bold">
+                        경매종료
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <button
                   onClick={prevImage}
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/70 transition-all"
@@ -229,7 +232,7 @@ const AuctionDetail = () => {
                       }`}
                     >
                       <img
-                        src={image}
+                        src={image?.url ? image?.url : null}
                         alt={`썸네일 ${index + 1}`}
                         className="w-20 h-16 object-cover"
                       />
@@ -248,7 +251,7 @@ const AuctionDetail = () => {
 
               {/* 상품 상세 정보 */}
               <div className="mt-6 grid grid-cols-2 gap-4">
-                <div>
+                {/* <div>
                   <span className="text-gray-400">브랜드:</span>
                   <span className="text-white ml-2 font-semibold">롤렉스</span>
                 </div>
@@ -267,7 +270,7 @@ const AuctionDetail = () => {
                   <span className="text-green-400 ml-2 font-semibold">
                     매우 양호
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
