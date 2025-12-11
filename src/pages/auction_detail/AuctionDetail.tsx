@@ -28,30 +28,43 @@ const AuctionDetail = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState(0);
   const [timeLeft, setTimeLeft] = useState({
-    hours: 2,
-    minutes: 45,
-    seconds: 30,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
   });
   const [isWatching, setIsWatching] = useState(false);
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 실시간 입찰 내역 저장
   const [stompClient, setStompClient] = useState(null);
 
+  const calculateTimeLeft = (endTime: string) => {
+    const now = dayjs();
+    const end = dayjs(endTime);
+    const diff = end.diff(now, "second");
+
+    if (diff <= 0) {
+      return { hours: 0, minutes: 0, seconds: 0 };
+    }
+
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+
+    return { hours, minutes, seconds };
+  };
+
   // 카운트다운 타이머
   useEffect(() => {
+    if (!product?.auctionEndTime) return;
+
+    // 초기 시간 설정
+    setTimeLeft(calculateTimeLeft(product.auctionEndTime));
+
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        }
-        return prev;
-      });
+      setTimeLeft(calculateTimeLeft(product.auctionEndTime));
     }, 1000);
+
     return () => clearInterval(timer);
-  }, []);
+  }, [product?.auctionEndTime]);
 
   const loadBids = async () => {
     try {

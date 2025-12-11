@@ -15,6 +15,7 @@ export interface ProductDto {
   price: number;
   sellYN: string;
   images: imageDto;
+  auctionEndTime: string;
 }
 
 export type imageDto = {
