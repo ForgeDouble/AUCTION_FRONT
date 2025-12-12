@@ -1,8 +1,5 @@
-import type {
-  BidLogDto,
-  ProductDto,
-} from "../pages/auction_detail/AuctionDetailDto";
-import type { ApiResponse } from "../type/CommonType";
+import type { BidLogDto, ProductDto } from "./AuctionDetailDto";
+import type { ApiResponse } from "../../type/CommonType";
 
 export const fetchBids = async (
   productId: number
