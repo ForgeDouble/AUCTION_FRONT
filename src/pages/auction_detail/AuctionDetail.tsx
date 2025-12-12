@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import {
@@ -17,7 +17,7 @@ import {
   CheckCircle,
   ArrowUp,
 } from "lucide-react";
-import { fetchBids, fetchProductById } from "../../api/bidapi";
+import { fetchBids, fetchProductById } from "./AuctionDetailApi";
 import type { BidLogDto, ProductDto } from "./AuctionDetailDto";
 import dayjs from "dayjs";
 import { useParams } from "react-router-dom";
@@ -95,44 +95,49 @@ const AuctionDetail = () => {
     }
   };
 
-  // 📡 WebSocket 연결
+  // WebSocket 구독
   useEffect(() => {
     loadBids();
     loadProduct();
 
-    const socket = new SockJS("http://localhost:8080/ws");
+    const socket = new SockJS("http://localhost:8080/ws-public"); // 공개 엔드포인트
     const stomp = Stomp.over(socket);
+    stomp.heartbeat.outgoing = 10000;
+    stomp.heartbeat.incoming = 10000;
+    stomp.debug = () => {};
 
-    stomp.connect({}, () => {
-      console.log("WebSocket 연결 성공");
+    stomp.connect(
+      {}, // 인증 헤더 없음
+      () => {
+        console.log("경매 WebSocket 연결 성공");
+        setStompClient(stomp);
 
-      // 구독 (topic/auction/{id})
-      stomp.subscribe(`/topic/auction/${productId}`, (message) => {
-        const payload = JSON.parse(message.body);
-
-        const refinedPayload: BidLogDto = {
-          ...payload,
-          createdAt: dayjs(payload.createdAt).format("YYYY-MM-DD HH:mm:ss"),
-        };
-
-        console.log("📩 받은 메시지:", refinedPayload);
-
-        setBidLogs((prev) => [refinedPayload, ...prev]); // 최신 로그를 위에 추가
-      });
-    });
-
-    setStompClient(stomp);
+        // 구독
+        stomp.subscribe(`/topic/auction/${productId}`, (message) => {
+          const payload = JSON.parse(message.body);
+          const refinedPayload: BidLogDto = {
+            ...payload,
+            createdAt: dayjs(payload.createdAt).format("YYYY-MM-DD HH:mm:ss"),
+          };
+          console.log("📩 받은 메시지:", refinedPayload);
+          setBidLogs((prev) => [refinedPayload, ...prev]);
+        });
+      },
+      (error) => {
+        console.error("경매 WebSocket 연결 실패:", error);
+      }
+    );
 
     return () => {
-      if (stomp) {
+      if (stomp && stomp.connected) {
         stomp.disconnect(() => {
-          console.log("❌ WebSocket 연결 해제");
+          console.log("경매 WebSocket 연결 해제");
         });
       }
     };
   }, [productId]);
 
-  // 💰 입찰 메시지 보내기
+  // 입찰 메시지 보내기
   const sendBid = () => {
     if (stompClient && bidAmount) {
       const bid = {
