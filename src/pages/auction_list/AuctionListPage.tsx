@@ -557,8 +557,10 @@ const AuctionListPage = () => {
                           </div>
                         )}
 
-                        {/* NOTSELLED 오버레이 */}
-                        {auction.status === "NOTSELLED" && (
+                        {/* NOTSELLED, SELLED 오버레이 */}
+
+                        {(auction.status === "NOTSELLED" ||
+                          auction.status === "SELLED") && (
                           <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
                             <div className="text-center">
                               <Clock className="h-8 w-8 text-white mx-auto mb-1" />
