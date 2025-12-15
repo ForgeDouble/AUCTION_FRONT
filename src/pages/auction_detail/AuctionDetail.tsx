@@ -17,7 +17,11 @@ import {
   CheckCircle,
   ArrowUp,
 } from "lucide-react";
-import { fetchBids, fetchProductById } from "./AuctionDetailApi";
+import {
+  fetchBidsFromDB,
+  fetchBidsFromRedis,
+  fetchProductById,
+} from "./AuctionDetailApi";
 import type { BidLogDto, ProductDto } from "./AuctionDetailDto";
 import dayjs from "dayjs";
 import { useParams } from "react-router-dom";
@@ -66,9 +70,27 @@ const AuctionDetail = () => {
     return () => clearInterval(timer);
   }, [product?.auctionEndTime]);
 
-  const loadBids = async () => {
+  const loadBidsFromRedis = async () => {
     try {
-      const data = await fetchBids(productId);
+      const data = await fetchBidsFromRedis(Number(productId));
+
+      // createdAt을 변환한 새로운 배열 만들기
+      const formattedLogs = data.result.map((bid: BidLogDto) => ({
+        ...bid,
+        createdAt: dayjs(bid.createdAt).format("YYYY-MM-DD HH:mm:ss"),
+      }));
+
+      setBidLogs(formattedLogs);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  const loadBidsFromDB = async () => {
+    try {
+      const data = await fetchBidsFromDB(Number(productId));
 
       // createdAt을 변환한 새로운 배열 만들기
       const formattedLogs = data.result.map((bid: BidLogDto) => ({
@@ -95,10 +117,41 @@ const AuctionDetail = () => {
     }
   };
 
+  useEffect(() => {
+    loadProduct();
+  }, [productId]);
+
+  useEffect(() => {
+    if (!product) return;
+
+    // 진행 중인 경매 -> Redis에서 실시간 데이터 조회
+    if (product.status === "PROCEEDING") {
+      console.log("진행 중인 경매 - Redis에서 입찰 내역 조회");
+      loadBidsFromRedis();
+    }
+    // 종료된 경매 (SELLED, NOTSELLED) -> DB에서 확정된 데이터 조회
+    else if (product.status === "SELLED" || product.status === "NOTSELLED") {
+      console.log("종료된 경매 - DB에서 입찰 내역 조회");
+      loadBidsFromDB();
+    } // READY 상태는 입찰 내역이 없을 수 있음
+    else if (product.status === "READY") {
+      console.log("준비 중인 경매 - 입찰 내역 없음");
+      setBidLogs([]);
+    }
+  }, [product]);
+
   // WebSocket 구독
   useEffect(() => {
-    loadBids();
-    loadProduct();
+    // 상품 정보가 없거나 경매가 종료된 경우 WebSocket 연결 안 함
+    if (
+      !product ||
+      product.status === "SELLED" ||
+      product.status === "NOTSELLED" ||
+      product.status === "READY"
+    ) {
+      console.log("경매가 진행 중이 아니므로 WebSocket 연결하지 않음");
+      return;
+    }
 
     const socket = new SockJS("http://localhost:8080/ws-public"); // 공개 엔드포인트
     const stomp = Stomp.over(socket);
@@ -135,17 +188,32 @@ const AuctionDetail = () => {
         });
       }
     };
-  }, [productId]);
+  }, [product, productId]);
 
   // 입찰 메시지 보내기
   const sendBid = () => {
+    if (product?.status !== "PROCEEDING") {
+      alert("진행 중인 경매가 아닙니다.");
+      return;
+    }
+
     if (stompClient && bidAmount) {
+      const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        throw Error("No Token");
+        return;
+      }
+
       const bid = {
         productId: productId,
         bidAmount: bidAmount,
         isWinned: "N",
       };
-      stompClient.send("/app/bid", {}, JSON.stringify(bid)); // 서버쪽 @MessageMapping("/bid")
+      stompClient.send(
+        "/app/bid",
+        { Authorization: `Bearer ${token}` },
+        JSON.stringify(bid)
+      ); // 서버쪽 @MessageMapping("/bid")
       setBidAmount("");
     }
   };
@@ -193,7 +261,7 @@ const AuctionDetail = () => {
                   alt="경매 아이템"
                   className="w-full h-96 lg:h-[500px] object-cover"
                 />
-                {product?.status == "NOTSELLED" && (
+                {product?.status != "PROCESSING" && (
                   <div className="absolute inset-0 bg-black/70 rounded-t-xl flex items-center justify-center">
                     <div className="text-center">
                       <Clock className="h-8 w-8 text-white mx-auto mb-1" />
@@ -375,14 +443,23 @@ const AuctionDetail = () => {
 
                 <div className="flex space-x-2">
                   <button
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold"
+                    className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 ${
+                      product?.status === "PROCEEDING"
+                        ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+                        : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                    }`}
                     onClick={() => sendBid()}
+                    disabled={product?.status !== "PROCEEDING"}
                   >
-                    입찰하기
+                    {product?.status === "PROCEEDING"
+                      ? "입찰하기"
+                      : "경매 종료"}
                   </button>
-                  <button className="bg-yellow-600 text-white px-4 py-3 rounded-xl hover:bg-yellow-700 transition-all duration-300 font-bold">
-                    즉시구매
-                  </button>
+                  {product?.status === "PROCEEDING" && (
+                    <button className="bg-yellow-600 text-white px-4 py-3 rounded-xl hover:bg-yellow-700 transition-all duration-300 font-bold">
+                      즉시구매
+                    </button>
+                  )}
                 </div>
               </div>
 
