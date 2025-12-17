@@ -45,17 +45,17 @@ const AuctionListPage = () => {
   /* 부모 카테고리들 */
   const [parentCategories, setParentCategories] = useState<
     ParentCategoriesDto[]
-  >([{ categoryId: 0, categoryName: "전체", children: [] }]);
+  >([]);
   /* 사용자의 찜한 경매들 */
   const [wishlist, setWishlist] = useState<wishlistDto[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(3);
+  const [pageSize, setPageSize] = useState(9);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
 
   const navigate = useNavigate();
 
-  // 샘플 경매 데이터
+  // 샘플 경매 데이터 예시
   // const auctions = [
   //   {
   //     id: 1,
@@ -76,15 +76,6 @@ const AuctionListPage = () => {
   //     featured: true,
   //   }
   //]
-
-  const categories = [
-    { value: "all", label: "전체", count: auctions.length },
-    { value: "미술", label: "미술품", count: 1 },
-    { value: "시계", label: "시계", count: 1 },
-    { value: "패션", label: "패션", count: 1 },
-    { value: "골동품", label: "골동품", count: 1 },
-    { value: "수집품", label: "수집품", count: 2 },
-  ];
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + "원";
@@ -146,7 +137,7 @@ const AuctionListPage = () => {
   };
 
   /* 모든 상품 조회 */
-  const loadProductList = async (page = 0, size = 3) => {
+  const loadProductList = async (page = 0, size = 9) => {
     try {
       const sortParam = getSortParam(sortBy);
 
@@ -215,7 +206,25 @@ const AuctionListPage = () => {
   const loadParentCategories = async () => {
     try {
       const data = await fetchParentCategories();
-      setParentCategories((prev) => [...prev, ...data.result]);
+      const categoryResponse = data.result;
+      // 모든 카테고리의 productCount 합계 계산
+      const totalCount = categoryResponse.reduce(
+        (sum: number, cat: ParentCategoriesDto) => {
+          return sum + (cat.productCount || 0);
+        },
+        0
+      );
+
+      // "전체" 카테고리를 맨 앞에 추가
+      setParentCategories([
+        {
+          categoryId: 0,
+          categoryName: "전체",
+          productCount: totalCount,
+          children: [],
+        },
+        ...categoryResponse,
+      ]);
 
       // setParentCategories(data.result);
     } catch (error) {
@@ -366,7 +375,9 @@ const AuctionListPage = () => {
                         >
                           {category.categoryName}
                         </span>
-                        <span className="text-purple-400 text-sm">0</span>
+                        <span className="text-purple-400 text-sm">
+                          {category.productCount}
+                        </span>
                         {category.children && category.children.length > 0 && (
                           <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
                         )}
@@ -406,7 +417,7 @@ const AuctionListPage = () => {
               </div>
 
               {/* 가격 범위 */}
-              <div className="mb-6">
+              {/* <div className="mb-6">
                 <h4 className="text-white font-semibold mb-3">가격 범위</h4>
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
@@ -437,7 +448,7 @@ const AuctionListPage = () => {
                     />
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* 상태 */}
               <div className="mb-6">
@@ -547,7 +558,7 @@ const AuctionListPage = () => {
                         />
                         {/* 준비중 오버레이 */}
                         {auction.status === "READY" && (
-                          <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/70 rounded-t-xl flex items-center justify-center">
                             <div className="text-center">
                               <Clock className="h-8 w-8 text-white mx-auto mb-1" />
                               <span className="text-white text-sm font-bold">
@@ -561,7 +572,7 @@ const AuctionListPage = () => {
 
                         {(auction.status === "NOTSELLED" ||
                           auction.status === "SELLED") && (
-                          <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/70 rounded-t-xl flex items-center justify-center">
                             <div className="text-center">
                               <Clock className="h-8 w-8 text-white mx-auto mb-1" />
                               <span className="text-white text-sm font-bold">
