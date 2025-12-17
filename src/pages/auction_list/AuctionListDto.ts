@@ -20,6 +20,7 @@ export interface ProductListDto {
 export interface ParentCategoriesDto {
   categoryId: number;
   categoryName: string;
+  productCount: number;
   children: [] | ParentCategoriesDto[];
 }
 
