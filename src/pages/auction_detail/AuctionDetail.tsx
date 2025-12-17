@@ -365,10 +365,10 @@ const AuctionDetail = () => {
           <div className="space-y-6">
             {/* 경매 정보 카드 */}
             <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6">
-              <h1 className="text-3xl font-bold text-white mb-2">
+              <h1 className="text-3xl font-bold text-white mb-6">
                 {product?.productName}
               </h1>
-              <p className="text-gray-400 mb-6">1965년 오리지널 다이얼</p>
+              {/* <p className="text-gray-400 mb-6">1965년 오리지널 다이얼</p> */}
 
               {/* 현재 입찰가 */}
               <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-xl p-4 mb-6">
@@ -444,22 +444,22 @@ const AuctionDetail = () => {
                 <div className="flex space-x-2">
                   <button
                     className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 ${
-                      product?.status === "PROCEEDING"
+                      product?.status === "PROCESSING"
                         ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
                         : "bg-gray-600 text-gray-400 cursor-not-allowed"
                     }`}
                     onClick={() => sendBid()}
-                    disabled={product?.status !== "PROCEEDING"}
+                    disabled={product?.status !== "PROCESSING"}
                   >
-                    {product?.status === "PROCEEDING"
+                    {product?.status === "PROCESSING"
                       ? "입찰하기"
                       : "경매 종료"}
                   </button>
-                  {product?.status === "PROCEEDING" && (
+                  {/* {product?.status === "PROCESSING" && (
                     <button className="bg-yellow-600 text-white px-4 py-3 rounded-xl hover:bg-yellow-700 transition-all duration-300 font-bold">
                       즉시구매
                     </button>
-                  )}
+                  )} */}
                 </div>
               </div>
 
@@ -488,6 +488,8 @@ const AuctionDetail = () => {
                     className={`flex justify-between items-center p-3 rounded-lg ${
                       index === 0
                         ? "bg-green-600/20 border border-green-500/30"
+                        : index === bidLogs.length - 1
+                        ? "bg-blue-600/20 border border-blue-500/30"
                         : "bg-white/5"
                     }`}
                   >
@@ -512,6 +514,9 @@ const AuctionDetail = () => {
                           <ArrowUp className="h-3 w-3 mr-1" />
                           최고가
                         </div>
+                      )}
+                      {index === bidLogs.length - 1 && (
+                        <div className="text-blue-400 text-xs">시작가</div>
                       )}
                     </div>
                   </div>
