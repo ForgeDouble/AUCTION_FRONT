@@ -35,7 +35,7 @@ const AuctionListPage = () => {
   // const navigate = useNavigate(); // 실제 사용 시 주석 해제
   const { userEmail } = useAuth();
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
-  const [sortBy, setSortBy] = useState("ending_soon");
+  const [sortBy, setSortBy] = useState("newest");
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number>(0);
@@ -145,9 +145,8 @@ const AuctionListPage = () => {
       const params = new URLSearchParams({
         page: page.toString(),
         size: size.toString(),
-        sort: sortParam,
+        sortBy: sortParam,
       });
-
       // 카테고리 필터 추가 (전체가 아닐 때만)
       if (selectedCategory !== 0) {
         params.append("categoryId", selectedCategory.toString());
@@ -178,18 +177,19 @@ const AuctionListPage = () => {
   };
 
   /* sortBy state를 API 파라미터로 변환하는 함수 */
-  const getSortParam = (sortBy: string) => {
+  const getSortParam = (sortBy: string): string => {
     switch (sortBy) {
       case "ending_soon":
-        return "createdAt,desc";
+        return "ENDING_SOON";
+      case "most_bids":
+        return "MOST_BIDS";
       case "price_low":
-        return "price,asc";
+        return "PRICE_ASC";
       case "price_high":
-        return "price,desc";
+        return "PRICE_DESC";
       case "newest":
-        return "createdAt,desc";
       default:
-        return "createdAt,desc";
+        return "NEWEST";
     }
   };
 
@@ -487,11 +487,11 @@ const AuctionListPage = () => {
                     onChange={(e) => setSortBy(e.target.value)}
                     className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-black text-sm appearance-none pr-8"
                   >
-                    <option value="ending_soon">마감임박순</option>
+                    <option value="newest">최신순</option>
                     <option value="price_low">낮은 가격순</option>
                     <option value="price_high">높은 가격순</option>
                     <option value="most_bids">입찰 많은순</option>
-                    <option value="newest">최신순</option>
+                    <option value="ending_soon">마감임박순</option>
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
