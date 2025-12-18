@@ -71,14 +71,14 @@ export default function ChatWindow({ title, messages }: Props) {
 
             {mine ? (
               <div className="flex justify-end mb-1">
-                <div className="flex flex-col items-end max-w-[72%]">
+                <div className="flex flex-col items-end max-w-[72%] min-w-0">
                   <div className="text-[11px] text-gray-500 mb-0.5">
                     {nickname}
                   </div>
-                  <div className="rounded-2xl px-2 py-1.5 text-[13px] leading-snug shadow-sm bg-[#e8d8ff] text-gray-900"> 
+                  <div className="rounded-2xl px-2 py-1.5 text-[13px] leading-snug shadow-sm bg-[#e8d8ff] text-gray-900 max-w-full min-w-0"> 
                     {
                       isImage ? ( <a href={m.content} target="_blank" rel="noreferrer" className="block" > <img src={m.content} alt="보낸 이미지" className="max-w-[220px] max-h-[260px] rounded-xl object-cover" /> </a> ) : 
-                      ( <div className="whitespace-pre-wrap break-words">{m.content}</div> )
+                      ( <div className="whitespace-pre-wrap break-all min-w-0">{m.content}</div> )
                     } 
                     <div className="text-gray-700/70 text-[10px] mt-0.5 text-right"> {showTime} </div> 
                   </div>
