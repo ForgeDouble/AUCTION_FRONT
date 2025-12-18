@@ -35,7 +35,7 @@ const AuctionListPage = () => {
   // const navigate = useNavigate(); // 실제 사용 시 주석 해제
   const { userEmail } = useAuth();
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
-  const [sortBy, setSortBy] = useState("ending_soon");
+  const [sortBy, setSortBy] = useState("newest");
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number>(0);
@@ -45,17 +45,17 @@ const AuctionListPage = () => {
   /* 부모 카테고리들 */
   const [parentCategories, setParentCategories] = useState<
     ParentCategoriesDto[]
-  >([{ categoryId: 0, categoryName: "전체", children: [] }]);
+  >([]);
   /* 사용자의 찜한 경매들 */
   const [wishlist, setWishlist] = useState<wishlistDto[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(3);
+  const [pageSize, setPageSize] = useState(9);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
 
   const navigate = useNavigate();
 
-  // 샘플 경매 데이터
+  // 샘플 경매 데이터 예시
   // const auctions = [
   //   {
   //     id: 1,
@@ -76,15 +76,6 @@ const AuctionListPage = () => {
   //     featured: true,
   //   }
   //]
-
-  const categories = [
-    { value: "all", label: "전체", count: auctions.length },
-    { value: "미술", label: "미술품", count: 1 },
-    { value: "시계", label: "시계", count: 1 },
-    { value: "패션", label: "패션", count: 1 },
-    { value: "골동품", label: "골동품", count: 1 },
-    { value: "수집품", label: "수집품", count: 2 },
-  ];
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + "원";
@@ -146,7 +137,7 @@ const AuctionListPage = () => {
   };
 
   /* 모든 상품 조회 */
-  const loadProductList = async (page = 0, size = 3) => {
+  const loadProductList = async (page = 0, size = 9) => {
     try {
       const sortParam = getSortParam(sortBy);
 
@@ -154,9 +145,8 @@ const AuctionListPage = () => {
       const params = new URLSearchParams({
         page: page.toString(),
         size: size.toString(),
-        sort: sortParam,
+        sortBy: sortParam,
       });
-
       // 카테고리 필터 추가 (전체가 아닐 때만)
       if (selectedCategory !== 0) {
         params.append("categoryId", selectedCategory.toString());
@@ -187,18 +177,19 @@ const AuctionListPage = () => {
   };
 
   /* sortBy state를 API 파라미터로 변환하는 함수 */
-  const getSortParam = (sortBy: string) => {
+  const getSortParam = (sortBy: string): string => {
     switch (sortBy) {
       case "ending_soon":
-        return "createdAt,desc";
+        return "ENDING_SOON";
+      case "most_bids":
+        return "MOST_BIDS";
       case "price_low":
-        return "price,asc";
+        return "PRICE_ASC";
       case "price_high":
-        return "price,desc";
+        return "PRICE_DESC";
       case "newest":
-        return "createdAt,desc";
       default:
-        return "createdAt,desc";
+        return "NEWEST";
     }
   };
 
@@ -215,7 +206,25 @@ const AuctionListPage = () => {
   const loadParentCategories = async () => {
     try {
       const data = await fetchParentCategories();
-      setParentCategories((prev) => [...prev, ...data.result]);
+      const categoryResponse = data.result;
+      // 모든 카테고리의 productCount 합계 계산
+      const totalCount = categoryResponse.reduce(
+        (sum: number, cat: ParentCategoriesDto) => {
+          return sum + (cat.productCount || 0);
+        },
+        0
+      );
+
+      // "전체" 카테고리를 맨 앞에 추가
+      setParentCategories([
+        {
+          categoryId: 0,
+          categoryName: "전체",
+          productCount: totalCount,
+          children: [],
+        },
+        ...categoryResponse,
+      ]);
 
       // setParentCategories(data.result);
     } catch (error) {
@@ -366,7 +375,9 @@ const AuctionListPage = () => {
                         >
                           {category.categoryName}
                         </span>
-                        <span className="text-purple-400 text-sm">0</span>
+                        <span className="text-purple-400 text-sm">
+                          {category.productCount}
+                        </span>
                         {category.children && category.children.length > 0 && (
                           <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
                         )}
@@ -406,7 +417,7 @@ const AuctionListPage = () => {
               </div>
 
               {/* 가격 범위 */}
-              <div className="mb-6">
+              {/* <div className="mb-6">
                 <h4 className="text-white font-semibold mb-3">가격 범위</h4>
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
@@ -437,7 +448,7 @@ const AuctionListPage = () => {
                     />
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* 상태 */}
               <div className="mb-6">
@@ -476,11 +487,11 @@ const AuctionListPage = () => {
                     onChange={(e) => setSortBy(e.target.value)}
                     className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-black text-sm appearance-none pr-8"
                   >
-                    <option value="ending_soon">마감임박순</option>
+                    <option value="newest">최신순</option>
                     <option value="price_low">낮은 가격순</option>
                     <option value="price_high">높은 가격순</option>
                     <option value="most_bids">입찰 많은순</option>
-                    <option value="newest">최신순</option>
+                    <option value="ending_soon">마감임박순</option>
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
@@ -527,19 +538,14 @@ const AuctionListPage = () => {
                       ? `bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden transition-all duration-300 group ${
                           auction.status === "READY"
                             ? "opacity-50 cursor-not-allowed"
-                            : "cursor-pointer hover:transform hover:scale-105"
+                            : "hover:transform hover:scale-105"
                         }`
                       : `bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 transition-all duration-300 ${
                           auction.status === "READY"
                             ? "opacity-50 cursor-not-allowed"
-                            : "cursor-pointer hover:bg-white/15"
+                            : "hover:bg-white/15"
                         }`
                   }
-                  onClick={() => {
-                    if (auction.status !== "READY") {
-                      navigate(`/auction_detail/${auction.productId}`);
-                    }
-                  }}
                 >
                   {viewMode === "grid" ? (
                     // 그리드 뷰
@@ -552,11 +558,25 @@ const AuctionListPage = () => {
                         />
                         {/* 준비중 오버레이 */}
                         {auction.status === "READY" && (
-                          <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/70 rounded-t-xl flex items-center justify-center">
                             <div className="text-center">
                               <Clock className="h-8 w-8 text-white mx-auto mb-1" />
                               <span className="text-white text-sm font-bold">
                                 준비중
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* NOTSELLED, SELLED 오버레이 */}
+
+                        {(auction.status === "NOTSELLED" ||
+                          auction.status === "SELLED") && (
+                          <div className="absolute inset-0 bg-black/70 rounded-t-xl flex items-center justify-center">
+                            <div className="text-center">
+                              <Clock className="h-8 w-8 text-white mx-auto mb-1" />
+                              <span className="text-white text-sm font-bold">
+                                경매종료
                               </span>
                             </div>
                           </div>
@@ -652,7 +672,7 @@ const AuctionListPage = () => {
                           className={`px-6 py-2 rounded-xl transition-all duration-300 font-bold ${
                             auction.status === "READY"
                               ? "w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold cursor-not-allowed"
-                              : "w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold"
+                              : "w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold cursor-pointer"
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -662,7 +682,7 @@ const AuctionListPage = () => {
                           }}
                           disabled={auction.status === "READY"}
                         >
-                          {auction.status === "READY" ? "준비중" : "입찰하기"}
+                          {auction.status === "READY" ? "준비중" : "참여하기"}
                         </button>
                       </div>
                     </>

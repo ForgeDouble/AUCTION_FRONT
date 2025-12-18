@@ -13,5 +13,13 @@ export interface ProductDto {
   productName: string;
   productContent: string;
   price: number;
-  sellYN: string;
+  status: string;
+  images: imageDto;
+  auctionEndTime: string;
 }
+
+export type imageDto = {
+  id: number;
+  url: string;
+  position: number;
+};

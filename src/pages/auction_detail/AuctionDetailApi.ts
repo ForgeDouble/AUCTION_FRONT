@@ -1,10 +1,7 @@
-import type {
-  BidLogDto,
-  ProductDto,
-} from "../pages/auction_detail/AuctionDetailDto";
-import type { ApiResponse } from "../type/CommonType";
+import type { BidLogDto, ProductDto } from "./AuctionDetailDto";
+import type { ApiResponse } from "../../type/CommonType";
 
-export const fetchBids = async (
+export const fetchBidsFromRedis = async (
   productId: number
 ): Promise<ApiResponse<BidLogDto[]>> => {
   const response = await fetch(`http://localhost:8080/bid/redis/${productId}`, {
@@ -26,6 +23,24 @@ export const fetchProductById = async (
   productId: number
 ): Promise<ApiResponse<ProductDto>> => {
   const response = await fetch(`http://localhost:8080/product/${productId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch bids: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+export const fetchBidsFromDB = async (
+  productId: number
+): Promise<ApiResponse<BidLogDto[]>> => {
+  const response = await fetch(`http://localhost:8080/bid/all/${productId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
