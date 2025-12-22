@@ -25,6 +25,8 @@ export function createMockStats(): OverviewStats {
     reportsOpen: 7,
     realtimeUsers: 342,
     todayActiveUsers: 1523,
+    todayTradeAmount: 38500000,
+    monthlyAvgTradeAmount: 920000000,
   };
 }
 

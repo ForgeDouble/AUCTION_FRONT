@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, Link } from "react-router-dom";
 import {
   Activity,
   CalendarDays,
@@ -14,6 +14,7 @@ import {
   Users,
   Gavel,
   UserCircle2,
+  Home,
 } from "lucide-react";
 import { useAdminStore } from "./AdminContext";
 
@@ -46,9 +47,7 @@ const SideItem: React.FC<{ to: string; icon: React.ElementType; label: string; b
         <span className="font-medium">{label}</span>
       </span>
       {typeof badge === "number" && badge > 0 && (
-        <span className={"text-xs px-2 py-0.5 rounded-full " + (to ? "bg-pink-600 text-white" : "bg-white/20")}>
-          {badge}
-        </span>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-pink-600 text-white">{badge}</span>
       )}
     </NavLink>
   );
@@ -77,6 +76,16 @@ const AdminLayout: React.FC = () => {
             <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
+
+            {/* ✅ 루트(/) 이동 아이콘 */}
+            <Link
+              to="/"
+              className="w-9 h-9 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
+              title="사용자 페이지로 이동"
+            >
+              <Home className="w-5 h-5 text-gray-700" />
+            </Link>
+
             <div>
               <div className="text-sm font-bold text-gray-900">경매 관리자</div>
               <div className="text-[11px] text-gray-500">실시간 모니터링 / 신고 / 운영 일정</div>
@@ -138,6 +147,16 @@ const AdminLayout: React.FC = () => {
           </div>
 
           <div className="mt-3 space-y-1">
+            {/* ✅ 사이드바에서도 / 이동 */}
+            <NavLink
+              to="/"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition"
+              title="사용자 페이지로 이동"
+            >
+              <Home className="w-4 h-4" />
+              <span className="font-medium">홈으로</span>
+            </NavLink>
+
             <SideItem to="/admin" icon={LayoutDashboard} label="개요" />
             <SideItem to="/admin/auctions" icon={Gavel} label="경매 모니터링" />
             <SideItem to="/admin/reports" icon={Siren} label="신고 관리" badge={reportsOpenCount} />

@@ -14,6 +14,8 @@ export interface OverviewStats {
   reportsOpen: number;
   realtimeUsers: number;
   todayActiveUsers: number;
+  todayTradeAmount: number;
+  monthlyAvgTradeAmount: number;
 }
 
 export interface AuctionRow {
