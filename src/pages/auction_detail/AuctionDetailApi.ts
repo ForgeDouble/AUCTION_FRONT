@@ -54,3 +54,26 @@ export const fetchBidsFromDB = async (
 
   return response.json();
 };
+
+export const fetchIsWishlisted = async (
+  token: string | null,
+  productId: null | number
+): Promise<ApiResponse<number | null>> => {
+  const response = await fetch(
+    `http://localhost:8080/wishlist/isWishlisted/${productId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Wishlist: ${response.status}`);
+  }
+
+  return response.json();
+};
