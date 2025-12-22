@@ -20,17 +20,20 @@ import {
 import {
   fetchBidsFromDB,
   fetchBidsFromRedis,
+  fetchIsWishlisted,
   fetchProductById,
 } from "./AuctionDetailApi";
 import type { BidLogDto, ProductDto } from "./AuctionDetailDto";
 import dayjs from "dayjs";
-import { useParams } from "react-router-dom";
+import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
+import { useNumberParam } from "@/hooks/useNumberParam";
 
 const AuctionDetail = () => {
-  const { productId } = useParams<{ productId: string }>();
+  const productId = useNumberParam("productId");
   const [product, setProduct] = useState<ProductDto>();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState(0);
+  const [wishlistId, setWishlistId] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState({
     hours: 0,
     minutes: 0,
@@ -70,6 +73,7 @@ const AuctionDetail = () => {
     return () => clearInterval(timer);
   }, [product?.auctionEndTime]);
 
+  /* 입찰 정보 조회 (경매가 진행 중일 때 Redis 조회)*/
   const loadBidsFromRedis = async () => {
     try {
       const data = await fetchBidsFromRedis(Number(productId));
@@ -87,7 +91,7 @@ const AuctionDetail = () => {
       // setLoading(false);
     }
   };
-
+  /* 입찰 정보 조회(경매가 끝난 후 DB 조회) */
   const loadBidsFromDB = async () => {
     try {
       const data = await fetchBidsFromDB(Number(productId));
@@ -106,6 +110,7 @@ const AuctionDetail = () => {
     }
   };
 
+  /* 상품 조회 */
   const loadProduct = async () => {
     try {
       const data = await fetchProductById(productId);
@@ -117,8 +122,84 @@ const AuctionDetail = () => {
     }
   };
 
+  /* 위시리스트 생성 */
+  const handleCreateWishlist = async (productId: number | null) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        throw Error("No Token");
+        return;
+      }
+      if (productId === null) {
+        throw Error("No ProductId");
+        return;
+      }
+      const data = await fetchCreateWishlist(token, productId);
+      console.log(data);
+      // setParentCategories(data.result);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  /* 위시리스트 판별 */
+  const loadIsWishlisted = async (productId: null | number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        throw Error("No Token");
+        return;
+      }
+      const data = await fetchIsWishlisted(token, productId);
+      console.log(data);
+      setWishlistId(data.result);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  /* 위시리스트 삭제 */
+  const handleDeleteWishlist = async (wishlistId: number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        throw Error("No Token");
+        return;
+      }
+      const data = await fetchDeleteWishlist(token, wishlistId);
+      console.log(data);
+      // setParentCategories(data.result);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
+  /* 위시리스트 버튼 토글 함수 */
+  const handleWishlistToggle = async () => {
+    try {
+      if (wishlistId) {
+        // 찜 제거
+        await handleDeleteWishlist(wishlistId);
+        setWishlistId(null);
+      } else {
+        // 찜 추가
+        await handleCreateWishlist(productId);
+        await loadIsWishlisted(productId);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     loadProduct();
+    loadIsWishlisted(productId);
   }, [productId]);
 
   useEffect(() => {
@@ -287,15 +368,15 @@ const AuctionDetail = () => {
                 {/* 상단 우측 버튼들 */}
                 <div className="absolute top-4 right-4 flex space-x-2">
                   <button
-                    onClick={() => setIsWatching(!isWatching)}
+                    onClick={() => handleWishlistToggle()}
                     className={`p-2 rounded-full backdrop-blur-sm transition-all ${
-                      isWatching
+                      wishlistId
                         ? "bg-red-500 text-white"
                         : "bg-black/50 text-white hover:bg-black/70"
                     }`}
                   >
                     <Heart
-                      className={`h-5 w-5 ${isWatching ? "fill-current" : ""}`}
+                      className={`h-5 w-5 ${wishlistId ? "fill-current" : ""}`}
                     />
                   </button>
                   <button className="bg-black/50 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/70 transition-all">
