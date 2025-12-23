@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   CheckCircle,
   ArrowUp,
+  Check,
 } from "lucide-react";
 import {
   fetchBidsFromDB,
@@ -42,6 +43,7 @@ const AuctionDetail = () => {
   const [isWatching, setIsWatching] = useState(false);
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 실시간 입찰 내역 저장
   const [stompClient, setStompClient] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   const calculateTimeLeft = (endTime: string) => {
     const now = dayjs();
@@ -206,7 +208,7 @@ const AuctionDetail = () => {
     if (!product) return;
 
     // 진행 중인 경매 -> Redis에서 실시간 데이터 조회
-    if (product.status === "PROCEEDING") {
+    if (product.status === "PROCESSING") {
       console.log("진행 중인 경매 - Redis에서 입찰 내역 조회");
       loadBidsFromRedis();
     }
@@ -379,8 +381,19 @@ const AuctionDetail = () => {
                       className={`h-5 w-5 ${wishlistId ? "fill-current" : ""}`}
                     />
                   </button>
-                  <button className="bg-black/50 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/70 transition-all">
-                    <Share2 className="h-5 w-5" />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="bg-black/50 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/70 transition-all"
+                  >
+                    {copied ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      <Share2 className="h-5 w-5" />
+                    )}
                   </button>
                 </div>
               </div>
