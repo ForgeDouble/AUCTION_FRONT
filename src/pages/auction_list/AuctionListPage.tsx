@@ -16,8 +16,6 @@ import {
   MapPin,
 } from "lucide-react";
 import {
-  fetchCreateWishlist,
-  fetchDeleteWishlist,
   fetchParentCategories,
   fetchProducts,
   fetchWishlistByUser,
@@ -30,6 +28,7 @@ import {
 } from "./AuctionListDto";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
 
 const AuctionListPage = () => {
   // const navigate = useNavigate(); // 실제 사용 시 주석 해제
@@ -691,15 +690,15 @@ const AuctionListPage = () => {
                     <div className="flex items-center space-x-6">
                       <div className="relative">
                         <img
-                          src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400"
+                          src={auction.previewImageUrl}
                           alt={auction.productName}
                           className="w-32 h-24 object-cover rounded-xl"
                         />
-                        {true && (
+                        {/* {true && (
                           <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                             추천
                           </div>
-                        )}
+                        )} */}
                       </div>
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-white mb-2">
@@ -726,7 +725,7 @@ const AuctionListPage = () => {
                                 현재 입찰가
                               </div>
                               <div className="text-2xl font-bold text-green-400">
-                                {formatPrice(0)}
+                                {formatPrice(auction.latestBidAmount || 0)}
                               </div>
                             </div>
                             <div
