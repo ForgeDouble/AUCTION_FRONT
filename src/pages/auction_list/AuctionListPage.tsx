@@ -237,6 +237,7 @@ const AuctionListPage = () => {
     try {
       const token = localStorage.getItem("accessToken");
       if (token == null) {
+        alert("로그인이 필요합니다.");
         throw Error("No Token");
         return;
       }
@@ -255,6 +256,7 @@ const AuctionListPage = () => {
     try {
       const token = localStorage.getItem("accessToken");
       if (token == null) {
+        alert("로그인이 필요합니다.");
         throw Error("No Token");
         return;
       }
@@ -694,6 +696,30 @@ const AuctionListPage = () => {
                           alt={auction.productName}
                           className="w-32 h-24 object-cover rounded-xl"
                         />
+
+                        {/* 준비중 오버레이 */}
+                        {auction.status === "READY" && (
+                          <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
+                            <div className="text-center">
+                              <Clock className="h-8 w-8 text-white mx-auto mb-1" />
+                              <span className="text-white text-sm font-bold">
+                                준비중
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {(auction.status === "NOTSELLED" ||
+                          auction.status === "SELLED") && (
+                          <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
+                            <div className="text-center">
+                              <Clock className="h-8 w-8 text-white mx-auto mb-1" />
+                              <span className="text-white text-sm font-bold">
+                                경매종료
+                              </span>
+                            </div>
+                          </div>
+                        )}
                         {/* {true && (
                           <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                             추천
@@ -747,11 +773,44 @@ const AuctionListPage = () => {
                             </div>
                           </div>
                           <div className="flex items-center space-x-3">
-                            <button className="text-gray-400 hover:text-white transition-colors p-2">
-                              <Heart className="h-5 w-5" />
-                            </button>
-                            <button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold">
-                              입찰하기
+                            {userEmail !== auction.userEmail && (
+                              <button
+                                className="text-gray-400 hover:text-white transition-colors p-2"
+                                onClick={() =>
+                                  handleWishlistToggle(auction.productId)
+                                }
+                              >
+                                {isWishlisted(auction.productId) ? (
+                                  <Heart
+                                    fill="#ef4444"
+                                    color="#ef4444"
+                                    size={20}
+                                  />
+                                ) : (
+                                  <Heart color="#6b7280" size={20} />
+                                )}
+                              </button>
+                            )}
+
+                            <button
+                              className={`px-6 py-2 rounded-xl transition-all duration-300 font-bold ${
+                                auction.status === "READY"
+                                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold cursor-not-allowed"
+                                  : "bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold cursor-pointer"
+                              }`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (auction.status !== "READY") {
+                                  navigate(
+                                    `/auction_detail/${auction.productId}`
+                                  );
+                                }
+                              }}
+                              disabled={auction.status === "READY"}
+                            >
+                              {auction.status === "READY"
+                                ? "준비중"
+                                : "참여하기"}
                             </button>
                           </div>
                         </div>
