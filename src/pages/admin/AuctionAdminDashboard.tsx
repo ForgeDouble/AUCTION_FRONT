@@ -1,33 +1,10 @@
+//  src/pages/admin/AuctionAdminDashboard.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-LayoutDashboard,
-Gavel,
-Siren,
-CalendarDays,
-Megaphone,
-Search,
-RefreshCw,
-ShieldCheck,
-UserCircle2,
-LogOut,
-Settings,
-ChevronLeft,
-ChevronRight,
-Plus,
-CheckCircle2,
-XCircle,
-Ban,
-Eye,
-Clock,
-Activity,
-Users,
-TrendingUp,
-AlertTriangle,
-FileText,
+  LayoutDashboard,Gavel,Siren,CalendarDays,Megaphone,Search,RefreshCw,ShieldCheck,UserCircle2,LogOut,Settings,ChevronLeft,ChevronRight,Plus,
+  CheckCircle2,XCircle,Ban,Eye,Clock,Activity,Users,TrendingUp,AlertTriangle,FileText,
 } from "lucide-react";
 
-// 프로젝트에 이미 존재하면 그대로 사용 가능
-// 없다면 이 import 지우고 아래 adminEmail/adminRole 쪽만 더미로 써도 됨.
 import { useAuth } from "@/hooks/useAuth";
 
 type TabKey = "overview" | "auctions" | "reports" | "calendar" | "notices";
@@ -37,40 +14,40 @@ type ReportSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 type AuctionStatus = "NORMAL" | "HOT" | "ENDING" | "SUSPENDED";
 
 interface OverviewStats {
-todayNewUsers: number;
-todayCreatedAuctions: number;
-todayEndedAuctions: number;
-todaySoldAuctions: number;
-totalBids: number;
-ongoingAuctions: number;
-reportsOpen: number;
-realtimeUsers: number;
-todayActiveUsers: number;
+  todayNewUsers: number;
+  todayCreatedAuctions: number;
+  todayEndedAuctions: number;
+  todaySoldAuctions: number;
+  totalBids: number;
+  ongoingAuctions: number;
+  reportsOpen: number;
+  realtimeUsers: number;
+  todayActiveUsers: number;
 }
 
 interface AuctionRow {
-id: string;
-title: string;
-sellerMasked: string;
-category: string;
-currentBid: number;
-bidCount: number;
-endsAt: string; // ISO
-status: AuctionStatus;
+  id: string;
+  title: string;
+  sellerMasked: string;
+  category: string;
+  currentBid: number;
+  bidCount: number;
+  endsAt: string;
+  status: AuctionStatus;
 }
 
 interface ReportRow {
-id: string;
-type: string;
-targetType: "PRODUCT" | "CHAT" | "USER" | "COMMENT";
-targetTitle: string;
-reporterMasked: string;
-createdAt: string; // ISO
-status: ReportStatus;
-severity: ReportSeverity;
-assignedTo?: string;
-description?: string;
-evidenceUrl?: string;
+  id: string;
+  type: string;
+  targetType: "PRODUCT" | "CHAT" | "USER" | "COMMENT";
+  targetTitle: string;
+  reporterMasked: string;
+  createdAt: string;
+  status: ReportStatus;
+  severity: ReportSeverity;
+  assignedTo?: string;
+  description?: string;
+  evidenceUrl?: string;
 }
 
 interface NoticeRow {
@@ -79,7 +56,7 @@ pinned: boolean;
 title: string;
 body: string;
 author: string;
-createdAt: string; // ISO
+createdAt: string;
 acknowledged: boolean;
 }
 

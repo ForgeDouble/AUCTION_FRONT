@@ -1,3 +1,4 @@
+//  src/pages/admin/pages/AdminDashboard.tsx
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { AdminProvider } from "../AdminContext";

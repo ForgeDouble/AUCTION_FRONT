@@ -1,3 +1,4 @@
+// src/pages/admin/components/AdminCharts.tsx
 import React, { useMemo } from "react";
 
 export interface LinePoint {

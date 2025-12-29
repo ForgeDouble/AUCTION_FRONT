@@ -1,3 +1,4 @@
+//  src/pages/admin/pages/AdminAuctionsPage.tsx
 import React, { useMemo } from "react";
 import { Ban, Eye, XCircle } from "lucide-react";
 import { useAdminStore } from "../AdminContext";

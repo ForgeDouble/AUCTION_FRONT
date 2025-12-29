@@ -1,3 +1,4 @@
+// src/pages/admin/components/MiniLineChart.tsx
 import React, { useMemo } from "react";
 
 export type MiniLinePoint = { label: string; value: number };

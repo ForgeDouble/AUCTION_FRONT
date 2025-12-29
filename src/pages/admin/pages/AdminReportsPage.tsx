@@ -1,3 +1,4 @@
+//  src/pages/admin/pages/AdminReportsPage.tsx
 import React, { useMemo, useState } from "react";
 import { Ban, CheckCircle2, UserCircle2, XCircle } from "lucide-react";
 import { useAdminStore } from "../AdminContext";

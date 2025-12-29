@@ -1,3 +1,4 @@
+//  src/pages/admin/AdminLayout.tsx
 import React from "react";
 import { NavLink, Outlet, Link } from "react-router-dom";
 import {

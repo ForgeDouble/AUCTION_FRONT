@@ -1,3 +1,4 @@
+//  src/pages/admin/AdminTypes.ts
 export type TabKey = "overview" | "auctions" | "reports" | "calendar" | "notices";
 
 export type ReportStatus = "대기" | "처리중" | "완료" | "반려";
