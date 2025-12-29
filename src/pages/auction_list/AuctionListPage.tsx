@@ -47,6 +47,8 @@ const AuctionListPage = () => {
   >([]);
   /* 사용자의 찜한 경매들 */
   const [wishlist, setWishlist] = useState<wishlistDto[]>([]);
+  /* 경매 상태 필터 */
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(9);
   const [totalPages, setTotalPages] = useState(0);
@@ -75,6 +77,17 @@ const AuctionListPage = () => {
   //     featured: true,
   //   }
   //]
+
+  /** 상태 체크박스 핸들러 */
+  const handleStatusChange = (status: string) => {
+    setSelectedStatuses((prev) => {
+      if (prev.includes(status)) {
+        return prev.filter((s) => s !== status);
+      } else {
+        return [...prev, status];
+      }
+    });
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + "원";
@@ -162,6 +175,12 @@ const AuctionListPage = () => {
       }
       if (priceRange[1] < 10000000) {
         params.append("maxPrice", priceRange[1].toString());
+      }
+
+      if (selectedStatuses.length > 0) {
+        selectedStatuses.forEach((status) => {
+          params.append("statuses", status);
+        });
       }
 
       const data = await fetchProducts(params); // fetchProducts 수정 필요
@@ -287,7 +306,7 @@ const AuctionListPage = () => {
   // sortBy 변경 시 첫 페이지로 이동하며 재조회
   useEffect(() => {
     loadProductList(0, pageSize);
-  }, [sortBy, selectedCategory, searchQuery]);
+  }, [sortBy, selectedCategory, selectedStatuses, searchQuery]);
 
   useEffect(() => {
     loadProductList(0, pageSize);
@@ -456,12 +475,51 @@ const AuctionListPage = () => {
                 <h4 className="text-white font-semibold mb-3">경매 상태</h4>
                 <div className="space-y-2">
                   <label className="flex items-center cursor-pointer">
-                    <input type="checkbox" className="mr-3 text-purple-500" />
+                    <input
+                      type="checkbox"
+                      className="mr-3 text-purple-500"
+                      checked={selectedStatuses.includes("READY")}
+                      onChange={() => handleStatusChange("READY")}
+                    />
+                    <span className="text-gray-300">준비중</span>
+                  </label>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mr-3 text-purple-500"
+                      checked={selectedStatuses.includes("PROCESSING")}
+                      onChange={() => handleStatusChange("PROCESSING")}
+                    />
                     <span className="text-gray-300">진행중</span>
                   </label>
                   <label className="flex items-center cursor-pointer">
-                    <input type="checkbox" className="mr-3 text-purple-500" />
-                    <span className="text-gray-300">마감임박</span>
+                    <input
+                      type="checkbox"
+                      className="mr-3 text-purple-500"
+                      checked={
+                        selectedStatuses.includes("NOTSELLED") ||
+                        selectedStatuses.includes("SELLED")
+                      }
+                      onChange={() => {
+                        if (
+                          selectedStatuses.includes("NOTSELLED") ||
+                          selectedStatuses.includes("SELLED")
+                        ) {
+                          setSelectedStatuses((prev) =>
+                            prev.filter(
+                              (s) => s !== "NOTSELLED" && s !== "SELLED"
+                            )
+                          );
+                        } else {
+                          setSelectedStatuses((prev) => [
+                            ...prev,
+                            "NOTSELLED",
+                            "SELLED",
+                          ]);
+                        }
+                      }}
+                    />
+                    <span className="text-gray-300">경매종료</span>
                   </label>
                 </div>
               </div>
