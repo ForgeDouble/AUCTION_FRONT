@@ -19,6 +19,39 @@ export interface OverviewStats {
   monthlyAvgTradeAmount: number;
 }
 
+/*
+AdminOverviewResponse 매핑
+GET /admin/overview
+*/
+export interface AdminOverviewResponse extends OverviewStats {
+  todayActivityHourly: Array<{ hour: number; users: number }>;
+
+  statusReady: number;
+  statusProcessing: number;
+  statusSelled: number;
+  statusNotselled: number;
+}
+
+/*
+AdminDashboardDto 매핑
+GET /admin/dashboard
+*/
+export interface AdminDashboardDto {
+admin: { email: string; nick: string; role: string };
+stats: {
+todayNewUsers: number;
+todayNewAuctions: number;
+todayEndedAuctions: number;
+totalBids: number;
+ongoingAuctions: number;
+reports: number;
+realtimeUsers: number;
+todayActiveUsers: number;
+};
+todayHourlyUsers: Array<{ time: string; users: number }>;
+money: { todayTotalAmount: number; monthlyAverageAmount: number };
+}
+
 export interface AuctionRow {
   id: string;
   title: string;
@@ -26,7 +59,7 @@ export interface AuctionRow {
   category: string;
   currentBid: number;
   bidCount: number;
-  endsAt: string; // ISO
+  endsAt: string;
   status: AuctionStatus;
 }
 
@@ -36,7 +69,7 @@ export interface ReportRow {
   targetType: "PRODUCT" | "CHAT" | "USER" | "COMMENT";
   targetTitle: string;
   reporterMasked: string;
-  createdAt: string; // ISO
+  createdAt: string;
   status: ReportStatus;
   severity: ReportSeverity;
   assignedTo?: string;
@@ -50,7 +83,7 @@ export interface NoticeRow {
   title: string;
   body: string;
   author: string;
-  createdAt: string; // ISO
+  createdAt: string;
   acknowledged: boolean;
 }
 
