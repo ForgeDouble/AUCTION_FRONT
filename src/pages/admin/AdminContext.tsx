@@ -1,4 +1,4 @@
-//  src/pages/admin/AdminContext.tsx
+// src/pages/admin/AdminContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type {
   AuctionRow,
@@ -9,27 +9,16 @@ import type {
   ReportSeverity,
   ReportStatus,
 } from "./adminTypes";
-import {
-  createMockAuctions,
-  createMockEvents,
-  createMockNotices,
-  createMockReports,
-  createMockStats,
-} from "./adminMockData";
+import { adminApi } from "./adminApi";
 
 function nowIso(): string {
   return new Date().toISOString();
 }
 
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n));
-}
-
-// 프로젝트에 useAuth 있으면 쓰고, 없으면 안전하게 fallback
+// 표시용 JWT payload 파싱(검증 X)
 function safeGetAdminProfile(): { email: string; nick: string; role: string } {
   const token = localStorage.getItem("accessToken");
   const fallback = { email: "admin@example.com", nick: "관리자", role: "ADMIN" };
-
   if (!token) return fallback;
 
   const parts = token.split(".");
@@ -55,10 +44,27 @@ function safeGetAdminProfile(): { email: string; nick: string; role: string } {
   }
 }
 
+const EMPTY_STATS: OverviewStats = {
+  todayNewUsers: 0,
+  todayCreatedAuctions: 0,
+  todayEndedAuctions: 0,
+  todaySoldAuctions: 0,
+  totalBids: 0,
+  ongoingAuctions: 0,
+  reportsOpen: 0,
+  realtimeUsers: 0,
+  todayActiveUsers: 0,
+  todayTradeAmount: 0,
+  monthlyAvgTradeAmount: 0,
+};
+
 export interface AdminStore {
   adminEmail: string;
   adminNick: string;
   adminRole: string;
+
+  loading: boolean;
+  error: string | null;
 
   query: string;
   setQuery: (v: string) => void;
@@ -67,31 +73,22 @@ export interface AdminStore {
   refreshAll: () => Promise<void>;
 
   stats: OverviewStats;
-  setStats: React.Dispatch<React.SetStateAction<OverviewStats>>;
 
   auctions: AuctionRow[];
-  setAuctions: React.Dispatch<React.SetStateAction<AuctionRow[]>>;
-
   reports: ReportRow[];
-  setReports: React.Dispatch<React.SetStateAction<ReportRow[]>>;
-
   notices: NoticeRow[];
-  setNotices: React.Dispatch<React.SetStateAction<NoticeRow[]>>;
-
   events: CalendarEventRow[];
-  setEvents: React.Dispatch<React.SetStateAction<CalendarEventRow[]>>;
 
-  // actions
-  suspendAuction: (auctionId: string) => void;
-  forceEndAuction: (auctionId: string) => void;
+  suspendAuction: (auctionId: string, reason?: string) => Promise<void>;
+  forceEndAuction: (auctionId: string, reason?: string) => Promise<void>;
 
-  assignReport: (reportId: string, assignee: string) => void;
-  resolveReport: (reportId: string, next: ReportStatus) => void;
+  assignReport: (reportId: string, assignee: string) => Promise<void>;
+  resolveReport: (reportId: string, next: ReportStatus) => Promise<void>;
 
-  markNoticeAck: (noticeId: string) => void;
-  addNotice: (title: string, body: string) => void;
+  markNoticeAck: (noticeId: string) => Promise<void>;
+  addNotice: (title: string, body: string) => Promise<void>;
 
-  addEvent: (e: Omit<CalendarEventRow, "id">) => void;
+  addEvent: (e: Omit<CalendarEventRow, "id">) => Promise<void>;
 
   pendingNoticesCount: number;
   reportsOpenCount: number;
@@ -114,93 +111,151 @@ export function useAdminStore(): AdminStore {
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const profile = useMemo(() => safeGetAdminProfile(), []);
   const [query, setQuery] = useState<string>("");
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<string>(nowIso());
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string>("");
 
-  const [stats, setStats] = useState<OverviewStats>(() => createMockStats());
-  const [auctions, setAuctions] = useState<AuctionRow[]>(() => createMockAuctions());
-  const [reports, setReports] = useState<ReportRow[]>(() => createMockReports());
-  const [notices, setNotices] = useState<NoticeRow[]>(() => createMockNotices(profile.nick));
-  const [events, setEvents] = useState<CalendarEventRow[]>(() => createMockEvents());
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [stats, setStats] = useState<OverviewStats>(EMPTY_STATS);
+  const [auctions, setAuctions] = useState<AuctionRow[]>([]);
+  const [reports, setReports] = useState<ReportRow[]>([]);
+  const [notices, setNotices] = useState<NoticeRow[]>([]);
+  const [events, setEvents] = useState<CalendarEventRow[]>([]);
 
   const [reportStatusFilter, setReportStatusFilter] = useState<ReportStatus | "ALL">("ALL");
   const [reportSeverityFilter, setReportSeverityFilter] = useState<ReportSeverity | "ALL">("ALL");
 
-  // 실시간 접속 샘플 흔들림 (백엔드 붙이면 제거)
+  const refreshAll = async (): Promise<void> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [s, a, n, e, r] = await Promise.all([
+        adminApi.getOverview(),
+        adminApi.getAuctions(),
+        adminApi.getNotices(),
+        adminApi.getEvents(),
+        adminApi.getReports({ q: query, status: reportStatusFilter, severity: reportSeverityFilter }),
+      ]);
+
+      setStats(s);
+      setAuctions(a);
+      setNotices(n);
+      setEvents(e);
+      setReports(r);
+
+      setLastUpdatedAt(nowIso());
+    } catch (err: any) {
+      const msg =
+        typeof err?.message === "string"
+          ? err.message
+          : "관리자 API 호출에 실패했습니다. (CORS/토큰/권한/URL 확인)";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const t = window.setInterval(() => {
-      setStats((s) => {
-        const delta = Math.floor((Math.random() - 0.45) * 18);
-        const next = clamp(s.realtimeUsers + delta, 0, 999999);
-        return { ...s, realtimeUsers: next };
-      });
-    }, 2500);
-    return () => window.clearInterval(t);
+    refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const refreshAll = async (): Promise<void> => {
-    // TODO: 백엔드 붙이면 여기서 fetch로 교체
-    setLastUpdatedAt(nowIso());
+  // actions: optimistic + 실패 롤백
+  const suspendAuction = async (auctionId: string, reason?: string): Promise<void> => {
+    const prev = auctions;
+    setAuctions((p) => p.map((a) => (a.id === auctionId ? { ...a, status: "SUSPENDED" } : a)));
+
+    try {
+      await adminApi.suspendAuction(auctionId, reason || "관리자 임시차단");
+    } catch (e) {
+      setAuctions(prev);
+      throw e;
+    }
   };
 
-  const suspendAuction = (auctionId: string): void => {
-    setAuctions((prev) => prev.map((a) => (a.id === auctionId ? { ...a, status: "SUSPENDED" } : a)));
-  };
+  const forceEndAuction = async (auctionId: string, reason?: string): Promise<void> => {
+    const prevA = auctions;
+    const prevS = stats;
 
-  const forceEndAuction = (auctionId: string): void => {
-    setAuctions((prev) => prev.filter((a) => a.id !== auctionId));
+    setAuctions((p) => p.filter((a) => a.id !== auctionId));
     setStats((s) => ({
       ...s,
       todayEndedAuctions: s.todayEndedAuctions + 1,
       ongoingAuctions: Math.max(0, s.ongoingAuctions - 1),
     }));
+
+    try {
+      await adminApi.forceEndAuction(auctionId, reason || "관리자 강제종료");
+    } catch (e) {
+      setAuctions(prevA);
+      setStats(prevS);
+      throw e;
+    }
   };
 
-  const assignReport = (reportId: string, assignee: string): void => {
-    setReports((prev) =>
-      prev.map((r) =>
+  const assignReport = async (reportId: string, assignee: string): Promise<void> => {
+    const prev = reports;
+    setReports((p) =>
+      p.map((r) =>
         r.id === reportId
           ? { ...r, assignedTo: assignee, status: r.status === "대기" ? "처리중" : r.status }
           : r
       )
     );
+    try {
+      await adminApi.assignReport(reportId, assignee);
+    } catch (e) {
+      setReports(prev);
+      throw e;
+    }
   };
 
-  const resolveReport = (reportId: string, next: ReportStatus): void => {
-    setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, status: next } : r)));
+  const resolveReport = async (reportId: string, next: ReportStatus): Promise<void> => {
+    const prev = reports;
+    setReports((p) => p.map((r) => (r.id === reportId ? { ...r, status: next } : r)));
+    try {
+      await adminApi.resolveReport(reportId, next);
+    } catch (e) {
+      setReports(prev);
+      throw e;
+    }
   };
 
-  const markNoticeAck = (noticeId: string): void => {
-    setNotices((prev) => prev.map((n) => (n.id === noticeId ? { ...n, acknowledged: true } : n)));
+  const markNoticeAck = async (noticeId: string): Promise<void> => {
+    const prev = notices;
+    setNotices((p) => p.map((n) => (n.id === noticeId ? { ...n, acknowledged: true } : n)));
+    try {
+      await adminApi.ackNotice(noticeId);
+    } catch (e) {
+      setNotices(prev);
+      throw e;
+    }
   };
 
-  const addNotice = (title: string, body: string): void => {
-    const n: NoticeRow = {
-      id: "N-" + Math.floor(1000 + Math.random() * 9000),
-      pinned: false,
-      title: title.trim(),
-      body: body.trim(),
-      author: profile.nick,
-      createdAt: nowIso(),
-      acknowledged: false,
-    };
-    setNotices((prev) => [n, ...prev]);
+  const addNotice = async (title: string, body: string): Promise<void> => {
+    const created = await adminApi.addNotice(title, body);
+    setNotices((p) => [created, ...p]);
   };
 
-  const addEvent = (e: Omit<CalendarEventRow, "id">): void => {
-    const newEvent: CalendarEventRow = {
-      id: "E-" + Math.floor(1000 + Math.random() * 9000),
-      ...e,
-    };
-    setEvents((prev) => [newEvent, ...prev]);
+  const addEvent = async (e: Omit<CalendarEventRow, "id">): Promise<void> => {
+    const created = await adminApi.addEvent(e);
+    setEvents((p) => [created, ...p]);
   };
 
   const pendingNoticesCount = useMemo(() => notices.filter((n) => !n.acknowledged).length, [notices]);
-  const reportsOpenCount = useMemo(() => reports.filter((r) => r.status === "대기" || r.status === "처리중").length, [reports]);
+  const reportsOpenCount = useMemo(
+    () => reports.filter((r) => r.status === "대기" || r.status === "처리중").length,
+    [reports]
+  );
 
   const value: AdminStore = {
     adminEmail: profile.email,
     adminNick: profile.nick,
     adminRole: profile.role,
+
+    loading,
+    error,
 
     query,
     setQuery,
@@ -209,29 +264,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refreshAll,
 
     stats,
-    setStats,
-
     auctions,
-    setAuctions,
-
     reports,
-    setReports,
-
     notices,
-    setNotices,
-
     events,
-    setEvents,
 
     suspendAuction,
     forceEndAuction,
-
     assignReport,
     resolveReport,
-
     markNoticeAck,
     addNotice,
-
     addEvent,
 
     pendingNoticesCount,
@@ -239,7 +282,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     reportStatusFilter,
     setReportStatusFilter,
-
     reportSeverityFilter,
     setReportSeverityFilter,
   };
