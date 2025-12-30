@@ -15,6 +15,7 @@ import {
   Users,
   MapPin,
 } from "lucide-react";
+import dayjs from "dayjs";
 import {
   fetchParentCategories,
   fetchProducts,
@@ -49,6 +50,11 @@ const AuctionListPage = () => {
   const [wishlist, setWishlist] = useState<wishlistDto[]>([]);
   /* 경매 상태 필터 */
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  // 각 경매의 남은 시간을 관리하는 state
+  const [timers, setTimers] = useState<
+    Record<number, { hours: number; minutes: number; seconds: number }>
+  >({});
+
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(9);
   const [totalPages, setTotalPages] = useState(0);
@@ -91,6 +97,23 @@ const AuctionListPage = () => {
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + "원";
+  };
+
+  /** 타이머 핸들러 */
+  const calculateTimeLeft = (endTime: string) => {
+    const now = dayjs();
+    const end = dayjs(endTime);
+    const diff = end.diff(now, "second");
+
+    if (diff <= 0) {
+      return { hours: 0, minutes: 0, seconds: 0 };
+    }
+
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+
+    return { hours, minutes, seconds };
   };
 
   const getStatusColor = (status) => {
@@ -302,62 +325,56 @@ const AuctionListPage = () => {
       // setLoading(false);
     }
   };
-
-  // sortBy 변경 시 첫 페이지로 이동하며 재조회
-  useEffect(() => {
-    loadProductList(0, pageSize);
-  }, [sortBy, selectedCategory, selectedStatuses, searchQuery]);
-
   useEffect(() => {
     loadProductList(0, pageSize);
     loadParentCategories();
     loadWishlistByUser();
   }, []);
 
+  // 모든 경매의 타이머 업데이트
+  useEffect(() => {
+    if (auctions.length === 0) return;
+
+    // 초기 시간 설정
+    const initialTimers: Record<
+      number,
+      { hours: number; minutes: number; seconds: number }
+    > = {};
+    auctions.forEach((auction) => {
+      if (auction.auctionEndTime) {
+        initialTimers[auction.productId] = calculateTimeLeft(
+          auction.auctionEndTime
+        );
+      }
+    });
+    setTimers(initialTimers);
+
+    // 1초마다 업데이트
+    const timer = setInterval(() => {
+      const updatedTimers: Record<
+        number,
+        { hours: number; minutes: number; seconds: number }
+      > = {};
+      auctions.forEach((auction) => {
+        if (auction.auctionEndTime) {
+          updatedTimers[auction.productId] = calculateTimeLeft(
+            auction.auctionEndTime
+          );
+        }
+      });
+      setTimers(updatedTimers);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [auctions]);
+
+  // sortBy 변경 시 첫 페이지로 이동하며 재조회
+  useEffect(() => {
+    loadProductList(0, pageSize);
+  }, [sortBy, selectedCategory, selectedStatuses, searchQuery]);
+
   return (
     <div className="min-h-screen bg-slate-800">
-      {/* 헤더 */}
-      {/* <header className="bg-black/20 backdrop-blur-lg border-b border-white/10 sticky top-15 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            // 로고
-            <div
-              className="flex items-center space-x-3 cursor-pointer"
-              onClick={handleLogoClick}
-            >
-              <Gavel className="h-8 w-8 text-purple-400" />
-              <span className="text-2xl font-bold text-white hover:text-purple-300 transition-colors">
-                AuctionHub
-              </span>
-            </div>
-
-            // 검색바
-            <div className="flex-1 max-w-2xl mx-8">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  placeholder="원하는 아이템을 검색해보세요..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
-                />
-              </div>
-            </div>
-
-            // 사용자메뉴
-            <div className="flex items-center space-x-4">
-              <button className="text-gray-300 hover:text-white transition-colors">
-                <Heart className="h-6 w-6" />
-              </button>
-              <button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300">
-                로그인
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>  */}
-
       <div className="max-w-7xl mx-auto px-4 py-20">
         {/* 페이지 헤더 */}
         <div className="mb-8">
@@ -649,21 +666,24 @@ const AuctionListPage = () => {
                         )} */}
 
                         {/* 상태 뱃지 - 오른쪽 상단 */}
+
                         <div
                           className={`absolute top-4 right-4 ${getStatusColor(
                             "진행중"
                           )} text-white px-3 py-1 rounded-full text-xs font-bold flex items-center`}
                         >
-                          <Clock className="h-3 w-3 mr-1" />0
+                          <Clock className="h-3 w-3 mr-1" />
+                          {timers[auction.productId]
+                            ? `${timers[auction.productId].hours}:${String(
+                                timers[auction.productId].minutes
+                              ).padStart(2, "0")}:${String(
+                                timers[auction.productId].seconds
+                              ).padStart(2, "0")}`
+                            : "0:00:00"}
                         </div>
 
                         {/* 하단 정보 영역 */}
                         <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-                          {/* 조회수 - 왼쪽 하단 */}
-                          <div className="bg-black/50 text-white px-2 py-1 rounded-lg text-xs flex items-center">
-                            <Eye className="h-3 w-3 mr-1" />0
-                          </div>
-
                           {/* 하트 버튼 - 오른쪽 하단 */}
                           {userEmail !== auction.userEmail && (
                             <button
@@ -793,14 +813,6 @@ const AuctionListPage = () => {
                             <MapPin className="h-4 w-4 mr-1" />
                             "지역이름"
                           </div>
-                          <div className="flex items-center text-gray-400 text-sm">
-                            <Users className="h-4 w-4 mr-1" />
-                            0명 참여
-                          </div>
-                          <div className="flex items-center text-gray-400 text-sm">
-                            <Eye className="h-4 w-4 mr-1" />
-                            0명 관심
-                          </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-6">
@@ -817,7 +829,14 @@ const AuctionListPage = () => {
                                 "진행중"
                               )} text-white px-3 py-1 rounded-full text-sm font-bold flex items-center`}
                             >
-                              <Clock className="h-4 w-4 mr-1" />0
+                              <Clock className="h-4 w-4 mr-1" />
+                              {timers[auction.productId]
+                                ? `${timers[auction.productId].hours}:${String(
+                                    timers[auction.productId].minutes
+                                  ).padStart(2, "0")}:${String(
+                                    timers[auction.productId].seconds
+                                  ).padStart(2, "0")}`
+                                : "0:00:00"}
                             </div>
                             <div className="flex items-center gap-2 mb-4 text-xs text-gray-400">
                               {auction.path.map((category) => (
