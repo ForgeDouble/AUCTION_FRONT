@@ -1,4 +1,3 @@
-//  src/pages/admin/AdminTypes.ts
 export type TabKey = "overview" | "auctions" | "reports" | "calendar" | "notices";
 
 export type ReportStatus = "대기" | "처리중" | "완료" | "반려";
@@ -15,14 +14,11 @@ export interface OverviewStats {
   reportsOpen: number;
   realtimeUsers: number;
   todayActiveUsers: number;
+
   todayTradeAmount: number;
   monthlyAvgTradeAmount: number;
 }
 
-/*
-AdminOverviewResponse 매핑
-GET /admin/overview
-*/
 export interface AdminOverviewResponse extends OverviewStats {
   todayActivityHourly: Array<{ hour: number; users: number }>;
 
@@ -30,26 +26,6 @@ export interface AdminOverviewResponse extends OverviewStats {
   statusProcessing: number;
   statusSelled: number;
   statusNotselled: number;
-}
-
-/*
-AdminDashboardDto 매핑
-GET /admin/dashboard
-*/
-export interface AdminDashboardDto {
-admin: { email: string; nick: string; role: string };
-stats: {
-todayNewUsers: number;
-todayNewAuctions: number;
-todayEndedAuctions: number;
-totalBids: number;
-ongoingAuctions: number;
-reports: number;
-realtimeUsers: number;
-todayActiveUsers: number;
-};
-todayHourlyUsers: Array<{ time: string; users: number }>;
-money: { todayTotalAmount: number; monthlyAverageAmount: number };
 }
 
 export interface AuctionRow {

@@ -8,14 +8,14 @@ export interface LinePoint {
 
 export interface MultiLineSeries {
   name: string;
-  colorClass: string; // tailwind text color class
+  colorClass: string;
   points: LinePoint[];
 }
 
 export interface DonutSegment {
   label: string;
   value: number;
-  colorClass: string; // tailwind stroke color class
+  colorClass: string;
 }
 
 export interface BarPoint {
