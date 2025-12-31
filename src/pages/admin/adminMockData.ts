@@ -1,20 +1,13 @@
 // src/pages/admin/adminMockData.ts
-import type {
-  AuctionRow,
-  CalendarEventRow,
-  NoticeRow,
-  OverviewStats,
-  ReportRow,
-} from "./adminTypes";
-
+import type { AdminOverviewResponse, AuctionRow, CalendarEventRow, NoticeRow, ReportRow } from "./adminTypes";
 function yyyyMmDd(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
+const y = d.getFullYear();
+const m = String(d.getMonth() + 1).padStart(2, "0");
+const dd = String(d.getDate()).padStart(2, "0");
+return `${y}-${m}-${dd}`;
 }
 
-export function createMockStats(): OverviewStats {
+export function createMockStats(): AdminOverviewResponse {
   return {
     todayNewUsers: 48,
     todayCreatedAuctions: 23,
@@ -27,6 +20,24 @@ export function createMockStats(): OverviewStats {
     todayActiveUsers: 1523,
     todayTradeAmount: 38500000,
     monthlyAvgTradeAmount: 920000000,
+
+    todayActivityHourly: [
+      { hour: 0, users: 45 },
+      { hour: 3, users: 23 },
+      { hour: 6, users: 67 },
+      { hour: 9, users: 189 },
+      { hour: 12, users: 312 },
+      { hour: 15, users: 278 },
+      { hour: 18, users: 398 },
+      { hour: 21, users: 342 },
+    ],
+
+    statusReady: 12,
+    statusProcessing: 34,
+    statusSelled: 56,
+    statusNotselled: 78,
+
+
   };
 }
 

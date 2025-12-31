@@ -1,10 +1,11 @@
 //  src/pages/admin/pages/AdminReportsPage.tsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Ban, CheckCircle2, UserCircle2, XCircle } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import { SectionTitle } from "../components/AdminUi";
 import { severityBadge, statusBadge } from "../components/badges";
 import type { ReportRow, ReportStatus } from "../adminTypes";
+
 
 function formatKST(iso: string): string {
   const d = new Date(iso);
@@ -17,6 +18,7 @@ function formatKST(iso: string): string {
 }
 
 const AdminReportsPage: React.FC = () => {
+  
   const {
     reports,
     query,
@@ -32,7 +34,9 @@ const AdminReportsPage: React.FC = () => {
   } = useAdminStore();
 
   const [selectedId, setSelectedId] = useState<string>(reports[0]?.id ?? "");
-
+  useEffect(() => {
+  if (!selectedId && reports[0]?.id) setSelectedId(reports[0].id);
+  }, [reports, selectedId]);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return reports.filter((r) => {

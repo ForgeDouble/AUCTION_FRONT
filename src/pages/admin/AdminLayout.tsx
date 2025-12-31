@@ -78,7 +78,6 @@ const AdminLayout: React.FC = () => {
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
 
-            {/* ✅ 루트(/) 이동 아이콘 */}
             <Link
               to="/"
               className="w-9 h-9 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
@@ -148,7 +147,6 @@ const AdminLayout: React.FC = () => {
           </div>
 
           <div className="mt-3 space-y-1">
-            {/* ✅ 사이드바에서도 / 이동 */}
             <NavLink
               to="/"
               className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition"
