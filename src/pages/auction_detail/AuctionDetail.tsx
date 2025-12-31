@@ -275,7 +275,7 @@ const AuctionDetail = () => {
 
   // 입찰 메시지 보내기
   const sendBid = () => {
-    if (product?.status !== "PROCEEDING") {
+    if (product?.status !== "PROCESSING") {
       alert("진행 중인 경매가 아닙니다.");
       return;
     }
