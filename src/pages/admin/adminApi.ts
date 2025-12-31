@@ -1,144 +1,194 @@
 import type {
-AdminOverviewResponse,
-AuctionRow,
-CalendarEventRow,
-NoticeCategory,
-NoticeRow,
-ReportRow,
-ReportSeverity,
-ReportStatus,
+  AuctionRow,
+  CalendarEventRow,
+  NoticeCategory,
+  NoticeRow,
+  AdminOverviewResponse,
+  ReportRow,
+  ReportSeverity,
+  ReportStatus,
 } from "./adminTypes";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
 
 function getToken(): string | null {
-return localStorage.getItem("accessToken");
+  return localStorage.getItem("accessToken");
 }
 
-type ApiError = { path: string; status: number; message: string };
+type ApiError = { status: number; message: string };
 
-function unwrapCommon<T>(json: any): T {
-if (json && typeof json === "object") {
-if ("data" in json) return json.data as T; // 혹시 data 형태인 경우
-if ("result" in json) return json.result as T; // 네 백엔드 CommonResDto는 result
-}
-return json as T;
+// 서버 CommonResDto 대응
+type CommonResDto<T> = {
+  status_code?: number;
+  status_message?: string;
+  result?: T;
+
+  // 혹시 camelCase로 오는 경우까지 안전 처리(옵션)
+  statusCode?: number;
+  statusMessage?: string;
+};
+type NoticePageResponse = {
+  items: any[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+// result 언랩을 “타입 유지”하면서 강제로 명확히
+function unwrap<T>(raw: CommonResDto<T> | T): T {
+  if (raw && typeof raw === "object" && "result" in (raw as any)) {
+    return (raw as CommonResDto<T>).result as T;
+  }
+  return raw as T;
 }
 
-async function parseErrorMessage(res: Response): Promise<string> {
-const text = await res.text().catch(() => "");
-if (!text) return `HTTP ${res.status}`;
-try {
-const j = JSON.parse(text);
-if (j?.error_message) return String(j.error_message);
-if (j?.message) return String(j.message);
-if (j?.status_message) return String(j.status_message);
-return text;
-} catch {
-return text;
-}
+// 공지 페이지 타입(백엔드 NoticePageResponse)
+type NoticePage = {
+  items: any[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+function normalizeNotice(x: any) {
+  return {
+    id: Number(x.id),
+    category: String(x.category ?? "ETC") as any,
+    title: String(x.title ?? ""),
+    content: String(x.content ?? ""),
+    pinned: Boolean(x.pinned),
+    importance: Number(x.importance ?? 50),
+    authorUserId: Number(x.authorUserId ?? 0),
+    authorEmail: String(x.authorEmail ?? ""),
+    authorNickname: String(x.authorNickname ?? ""),
+    createdAt: String(x.createdAt ?? new Date().toISOString()),
+    updatedAt: String(x.updatedAt ?? x.createdAt ?? new Date().toISOString()),
+  };
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-if (!BASE) throw new Error("VITE_API_BASE is not set");
+  const token = getToken();
 
-const token = getToken();
-const res = await fetch(BASE + path, {
-...init,
-headers: {
-...(init?.headers || {}),
-"Content-Type": "application/json",
-...(token ? { Authorization: `Bearer ${token}` } : {}),
-},
-});
+  const res = await fetch((BASE ?? "") + path, {
+    ...init,
+    headers: {
+      ...(init?.headers || {}),
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
 
-if (!res.ok) {
-const msg = await parseErrorMessage(res);
-const err: ApiError = { path, status: res.status, message: msg };
-throw err;
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    const msg = text?.trim() ? text : `HTTP ${res.status}`;
+    throw { status: res.status, message: msg } satisfies ApiError;
+  }
+
+  if (res.status === 204) return undefined as unknown as T;
+  return (await res.json()) as T;
 }
-
-if (res.status === 204) return undefined as unknown as T;
-
-const json = await res.json().catch(() => null);
-return unwrapCommon<T>(json);
-}
-
-type NoticePageResponse = {
-items: NoticeRow[];
-page: number;
-size: number;
-totalElements: number;
-totalPages: number;
-};
-
-export type NoticeListParams = {
-category?: NoticeCategory;
-pinned?: boolean;
-q?: string;
-from?: string; // YYYY-MM-DD
-to?: string; // YYYY-MM-DD
-page?: number;
-size?: number;
-};
-
-export type NoticeCreatePayload = {
-category?: NoticeCategory;
-title: string;
-content: string;
-pinned?: boolean;
-importance?: number;
-};
-
-export type NoticeUpdatePayload = {
-category?: NoticeCategory;
-title?: string;
-content?: string;
-pinned?: boolean;
-importance?: number;
-};
 
 export const adminApi = {
-// (다른 탭은 아직 백엔드 없을 수 있으니 그대로 두되, refreshAll에서 allSettled로 감쌀 예정)
-getOverview: () => request<AdminOverviewResponse>("/admin/overview"),
-getAuctions: () => request<AuctionRow[]>("/admin/auctions"),
-getReports: (params: { q?: string; status?: ReportStatus | "ALL"; severity?: ReportSeverity | "ALL" }) => {
-const sp = new URLSearchParams();
-if (params.q) sp.set("q", params.q);
-if (params.status && params.status !== "ALL") sp.set("status", params.status);
-if (params.severity && params.severity !== "ALL") sp.set("severity", params.severity);
-const qs = sp.toString();
-return request<ReportRow[]>(`/admin/reports${qs ? `?${qs}` : ""}`);
-},
-getEvents: () => request<CalendarEventRow[]>("/admin/calendar/events"),
+  getOverview: () =>
+    request<CommonResDto<AdminOverviewResponse>>("/admin/overview").then((r) => unwrap<AdminOverviewResponse>(r)),
 
-// 공지(Notice)
-getNotices: async (params?: NoticeListParams): Promise<NoticePageResponse> => {
-const p = params || {};
-const sp = new URLSearchParams();
-if (p.category) sp.set("category", p.category);
-if (typeof p.pinned === "boolean") sp.set("pinned", String(p.pinned));
-if (p.q) sp.set("q", p.q);
-if (p.from) sp.set("from", p.from);
-if (p.to) sp.set("to", p.to);
-sp.set("page", String(p.page ?? 0));
-sp.set("size", String(p.size ?? 20));
+  getAuctions: () =>
+    request<CommonResDto<AuctionRow[]>>("/admin/auctions").then((r) => unwrap<AuctionRow[]>(r)),
 
-const qs = sp.toString();
-return request<NoticePageResponse>(`/admin/notices${qs ? `?${qs}` : ""}`);
+  suspendAuction: (auctionId: string, reason: string) =>
+    request<CommonResDto<void>>(`/admin/auctions/${encodeURIComponent(auctionId)}/suspend`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }).then((r) => unwrap<void>(r)),
 
+  forceEndAuction: (auctionId: string, reason: string) =>
+    request<CommonResDto<void>>(`/admin/auctions/${encodeURIComponent(auctionId)}/force-end`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }).then((r) => unwrap<void>(r)),
 
-},
+  getReports: (params: { q?: string; status?: ReportStatus | "ALL"; severity?: ReportSeverity | "ALL" }) => {
+    const sp = new URLSearchParams();
+    if (params.q) sp.set("q", params.q);
+    if (params.status && params.status !== "ALL") sp.set("status", params.status);
+    if (params.severity && params.severity !== "ALL") sp.set("severity", params.severity);
+    const qs = sp.toString();
 
-// 지금은 “필수 아님” (create 후 바로 detail 때리면 너처럼 500을 맞을 수 있어서)
-getNoticeDetail: (id: number) => request<NoticeRow>(`/admin/notices/${id}`),
+    return request<CommonResDto<ReportRow[]>>(`/admin/reports${qs ? `?${qs}` : ""}`).then((r) => unwrap<ReportRow[]>(r));
+  },
 
-createNotice: (payload: NoticeCreatePayload) =>
-request<number>("/admin/notices", { method: "POST", body: JSON.stringify(payload) }),
+  assignReport: (reportId: string, assignee: string) =>
+    request<CommonResDto<void>>(`/admin/reports/${encodeURIComponent(reportId)}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ assignee }),
+    }).then((r) => unwrap<void>(r)),
 
-updateNotice: (id: number, payload: NoticeUpdatePayload) =>
-request<void>(`/admin/notices/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  resolveReport: (reportId: string, next: ReportStatus) =>
+    request<CommonResDto<void>>(`/admin/reports/${encodeURIComponent(reportId)}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ status: next }),
+    }).then((r) => unwrap<void>(r)),
 
-deleteNotice: (id: number) =>
-request<void>(`/admin/notices/${id}`, { method: "DELETE" }),
+  // 공지 목록(페이지)
+  getNotices: async (params?: { page?: number; size?: number; category?: string; pinned?: boolean; q?: string }) => {
+    const sp = new URLSearchParams();
+    sp.set("page", String(params?.page ?? 0));
+    sp.set("size", String(params?.size ?? 50));
+    if (params?.category) sp.set("category", params.category);
+    if (typeof params?.pinned === "boolean") sp.set("pinned", String(params.pinned));
+    if (params?.q) sp.set("q", params.q);
+
+    const raw = await request<CommonResDto<NoticePageResponse> | NoticePageResponse>(`/admin/notices?${sp.toString()}`);
+    const page = unwrap<NoticePageResponse>(raw);
+    const items = Array.isArray(page?.items) ? page.items : [];
+
+    return items.map(normalizeNotice);
+  },
+
+  // 공지 생성: 백엔드는 id만 내려줌
+  createNotice: (payload: {
+    category: NoticeCategory;
+    title: string;
+    content: string;
+    pinned?: boolean;
+    importance?: number;
+  }) =>
+    request<CommonResDto<number>>("/admin/notices", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).then((r) => Number(unwrap<number>(r))),
+
+  getNoticeDetail: (id: number) =>
+    request<CommonResDto<any>>(`/admin/notices/${id}`)
+      .then((r) => unwrap<any>(r))
+      .then(normalizeNotice),
+
+  updateNotice: (
+    id: number,
+    payload: {
+      category?: NoticeCategory;
+      title?: string;
+      content?: string;
+      pinned?: boolean;
+      importance?: number;
+    }
+  ) =>
+    request<CommonResDto<void>>(`/admin/notices/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }).then((r) => unwrap<void>(r)),
+
+  deleteNotice: (id: number) =>
+    request<CommonResDto<void>>(`/admin/notices/${id}`, { method: "DELETE" }).then((r) => unwrap<void>(r)),
+
+  // 캘린더
+  getEvents: () =>
+    request<CommonResDto<CalendarEventRow[]>>("/admin/calendar/events").then((r) => unwrap<CalendarEventRow[]>(r)),
+
+  addEvent: (payload: Omit<CalendarEventRow, "id">) =>
+    request<CommonResDto<CalendarEventRow>>("/admin/calendar/events", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).then((r) => unwrap<CalendarEventRow>(r)),
 };

@@ -99,7 +99,7 @@ const AdminNoticesPage: React.FC = () => {
   };
 
   const submitEdit = () => {
-    if (!editingId || !editForm) return;
+    if (editingId === null || !editForm) return;
     if (!editForm.title.trim() || !editForm.content.trim()) return;
 
     updateNotice(editingId, {
@@ -118,7 +118,7 @@ const AdminNoticesPage: React.FC = () => {
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
         <SectionTitle title="인수인계 / 공지" />
 
-        {editingId && editForm && (
+        {editingId !== null && editForm && (
           <div className="mb-4 p-3 rounded-xl bg-violet-50 border border-violet-100">
             <div className="text-sm font-semibold text-violet-900">공지 수정</div>
 
@@ -197,7 +197,7 @@ const AdminNoticesPage: React.FC = () => {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] px-2 py-1 rounded-full bg-white border border-gray-200 text-gray-700">
-                      {categoryLabel(n.category)}
+                      {categoryLabel((n.category ?? "ETC") as NoticeCategory)}
                     </span>
 
                     {n.pinned ? (
@@ -215,8 +215,13 @@ const AdminNoticesPage: React.FC = () => {
                   <div className="mt-2 text-sm font-semibold text-gray-900 break-words">{n.title}</div>
 
                   <div className="mt-1 text-[11px] text-gray-500">
-                    by {n.authorNickname} · {formatKST(n.createdAt)}
+                    by {n.authorNickname?.trim() ? n.authorNickname : (n.authorEmail?.trim() ? n.authorEmail : "알 수 없음")} · {formatKST(n.createdAt)}
                     {n.updatedAt && n.updatedAt !== n.createdAt ? <span> · 수정 {formatKST(n.updatedAt)}</span> : null}
+                  </div>
+
+                  
+                  <div className="mt-2 text-sm text-gray-800 whitespace-pre-wrap break-words">
+                    {n.content?.trim() ? n.content : "(내용 없음)"}
                   </div>
                 </div>
 
