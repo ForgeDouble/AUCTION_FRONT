@@ -254,7 +254,17 @@ function UserMenu(props: {
             type="button"
             onClick={() => {
               setOpen(false);
-              navigate("/wishlist");
+              navigate("/mypage/profile");
+            }}
+            className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50"
+          >
+            마이페이지
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              navigate("/mypage/wishlist");
             }}
             className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50"
           >
@@ -264,7 +274,7 @@ function UserMenu(props: {
             type="button"
             onClick={() => {
               setOpen(false);
-              navigate("/mypage/auctions");
+              navigate("/mypage/bidlist");
             }}
             className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50"
           >
@@ -274,12 +284,13 @@ function UserMenu(props: {
             type="button"
             onClick={() => {
               setOpen(false);
-              navigate("/mypage");
+              navigate("/mypage/auctionlist");
             }}
             className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50"
           >
-            마이페이지
+            나의 게시물
           </button>
+
           <div className="border-t border-slate-200" />
           <button
             type="button"
