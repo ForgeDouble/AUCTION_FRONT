@@ -3,6 +3,7 @@ export type TabKey = "overview" | "auctions" | "reports" | "calendar" | "notices
 export type ReportStatus = "대기" | "처리중" | "완료" | "반려";
 export type ReportSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type AuctionStatus = "NORMAL" | "HOT" | "ENDING" | "SUSPENDED";
+export type NoticeCategory = "HANDOVER" | "SYSTEM" | "POLICY" | "ETC";
 
 export interface OverviewStats {
   todayNewUsers: number;
@@ -54,13 +55,19 @@ export interface ReportRow {
 }
 
 export interface NoticeRow {
-  id: string;
-  pinned: boolean;
+  id: number;
+  category: NoticeCategory;
   title: string;
-  body: string;
-  author: string;
+  content: string;
+  pinned: boolean;
+  importance: number;
+
+  authorUserId: number;
+  authorEmail: string;
+  authorNickname: string;
+
   createdAt: string;
-  acknowledged: boolean;
+  updatedAt: string;
 }
 
 export interface CalendarEventRow {

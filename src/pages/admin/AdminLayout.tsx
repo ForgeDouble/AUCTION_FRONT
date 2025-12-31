@@ -1,4 +1,4 @@
-//  src/pages/admin/AdminLayout.tsx
+// src/pages/admin/AdminLayout.tsx
 import React from "react";
 import { NavLink, Outlet, Link } from "react-router-dom";
 import {
@@ -64,13 +64,12 @@ const AdminLayout: React.FC = () => {
     lastUpdatedAt,
     refreshAll,
     stats,
-    pendingNoticesCount,
+    noticesCount,
     reportsOpenCount,
   } = useAdminStore();
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top */}
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200">
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -131,9 +130,7 @@ const AdminLayout: React.FC = () => {
         </div>
       </div>
 
-      {/* Body */}
       <div className="max-w-[1600px] mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
-        {/* Sidebar */}
         <div className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm h-fit">
           <div className="flex items-center gap-3 p-2 rounded-xl bg-gray-50 border border-gray-100">
             <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center">
@@ -160,7 +157,7 @@ const AdminLayout: React.FC = () => {
             <SideItem to="/admin/auctions" icon={Gavel} label="경매 모니터링" />
             <SideItem to="/admin/reports" icon={Siren} label="신고 관리" badge={reportsOpenCount} />
             <SideItem to="/admin/calendar" icon={CalendarDays} label="운영 캘린더" />
-            <SideItem to="/admin/notices" icon={Megaphone} label="인수인계/공지" badge={pendingNoticesCount} />
+            <SideItem to="/admin/notices" icon={Megaphone} label="인수인계/공지" badge={noticesCount} />
           </div>
 
           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
@@ -189,7 +186,6 @@ const AdminLayout: React.FC = () => {
           </div>
         </div>
 
-        {/* Main outlet */}
         <Outlet />
       </div>
     </div>
