@@ -1,10 +1,11 @@
 // src/pages/admin/pages/AdminNoticesPage.tsx
 import React, { useMemo, useState } from "react";
-import { Pencil, Trash2, Pin } from "lucide-react";
+import { Pencil, Trash2, Pin, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import { SectionTitle } from "../components/AdminUi";
 import type { NoticeCategory, NoticeRow } from "../adminTypes";
 import { ImportanceBlocks } from "../components/ImportanceBlocks";
+
 
 function formatKST(iso: string): string {
   const d = new Date(iso);
@@ -27,7 +28,7 @@ function categoryLabel(c: NoticeCategory): string {
 }
 
 const AdminNoticesPage: React.FC = () => {
-  const { notices, query, addNotice, updateNotice, deleteNotice } = useAdminStore();
+  const {notices, query, addNotice, updateNotice, deleteNotice, noticePage, noticeTotalPages, noticeTotalElements, goNoticePage, } = useAdminStore();
 
   const [createForm, setCreateForm] = useState({
     category: "HANDOVER" as NoticeCategory,
@@ -46,22 +47,85 @@ const AdminNoticesPage: React.FC = () => {
     importance: number;
   }>(null);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const base = q
-      ? notices.filter((n) => {
-          const t = n.title.toLowerCase();
-          const c = n.content.toLowerCase();
-          const a = (n.authorNickname || "").toLowerCase();
-          return t.includes(q) || c.includes(q) || a.includes(q);
-        })
-      : notices;
+  // const filtered = useMemo(() => {
+  //   const q = query.trim().toLowerCase();
+  //   const base = q
+  //     ? notices.filter((n) => {
+  //         const t = n.title.toLowerCase();
+  //         const c = n.content.toLowerCase();
+  //         const a = (n.authorNickname || "").toLowerCase();
+  //         return t.includes(q) || c.includes(q) || a.includes(q);
+  //       })
+  //     : notices;
 
-    return base.slice().sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  }, [notices, query]);
+  //   return base.slice().sort((a, b) => {
+  //     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+  //     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  //   });
+  // }, [notices, query]);
+  const pageButtons = useMemo(() => {
+    const total = Math.max(1, noticeTotalPages);
+    const cur = Math.max(0, Math.min(noticePage, total - 1));
+    const start = Math.max(0, cur - 2);
+    const end = Math.min(total - 1, cur + 2);
+    const arr: number[] = [];
+    for (let i = start; i <= end; i++) arr.push(i);
+    return arr;
+  }, [noticePage, noticeTotalPages]);
+  const Pager = (
+    <div className="mb-3 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between gap-3">
+      <div className="text-[11px] text-gray-600">
+        총 {noticeTotalElements.toLocaleString()}건 · {noticePage + 1}/{Math.max(1, noticeTotalPages)}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => goNoticePage(noticePage - 1)}
+          disabled={noticePage <= 0}
+          className={
+            "px-2 py-1 rounded-lg border text-sm flex items-center gap-1 " +
+            (noticePage <= 0
+              ? "border-gray-200 text-gray-300 bg-white cursor-not-allowed"
+              : "border-gray-200 text-gray-700 bg-white hover:bg-gray-50")
+          }
+          title="이전"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        <div className="flex items-center gap-1">
+          {pageButtons.map((p) => (
+            <button
+              key={p}
+              onClick={() => goNoticePage(p)}
+              className={
+                "min-w-[32px] px-2 py-1 rounded-lg border text-[12px] " +
+                (p === noticePage
+                  ? "border-violet-600 bg-violet-600 text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50")
+              }
+            >
+              {p + 1}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => goNoticePage(noticePage + 1)}
+          disabled={noticePage + 1 >= Math.max(1, noticeTotalPages)}
+          className={
+            "px-2 py-1 rounded-lg border text-sm flex items-center gap-1 " +
+            (noticePage + 1 >= Math.max(1, noticeTotalPages)
+              ? "border-gray-200 text-gray-300 bg-white cursor-not-allowed"
+              : "border-gray-200 text-gray-700 bg-white hover:bg-gray-50")
+          }
+          title="다음"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
 
   const startEdit = (n: NoticeRow) => {
     setEditingId(n.id);
@@ -118,7 +182,7 @@ const AdminNoticesPage: React.FC = () => {
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-4">
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
         <SectionTitle title="인수인계 / 공지" />
-
+        {noticeTotalPages > 1 ? Pager : null}
         {editingId !== null && editForm && (
           <div className="mb-4 p-3 rounded-xl bg-violet-50 border border-violet-100">
             <div className="text-sm font-semibold text-violet-900">공지 수정</div>
@@ -192,7 +256,7 @@ const AdminNoticesPage: React.FC = () => {
         )}
 
         <div className="space-y-2">
-          {filtered.map((n) => (
+          {notices.map((n) => (
             <div key={n.id} className="p-3 rounded-xl bg-gray-50 border border-gray-100">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -251,7 +315,8 @@ const AdminNoticesPage: React.FC = () => {
             </div>
           ))}
 
-          {filtered.length === 0 && <div className="py-10 text-center text-gray-500">공지 검색 결과가 없습니다.</div>}
+          {notices.length === 0 && <div className="py-10 text-center text-gray-500">공지 검색 결과가 없습니다.</div>}
+           {/* s */}
         </div>
       </div>
 

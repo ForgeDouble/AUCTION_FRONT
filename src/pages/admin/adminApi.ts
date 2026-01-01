@@ -27,31 +27,22 @@ type CommonResDto<T> = {
   statusMessage?: string;
 };
 type NoticePageResponse = {
-  items: Array<{
-  id: string | number;
-  pinned: boolean;
-  title: string;
-
-  body?: string;
-  content?: string;
-
-  author?: string;
-  authorNickname?: string;
-
-  createdAt?: string;
-  updatedAt?: string;
-
-  category?: string;
-  importance?: number;
-  acknowledged?: boolean;
-
-
-  }>;
+  items: any[];
   page: number;
   size: number;
   totalElements: number;
   totalPages: number;
 };
+
+export type NoticePage = {
+  items: NoticeRow[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+
 
 function unwrap<T>(raw: CommonResDto<T> | T): T {
   if (raw && typeof raw === "object" && "result" in (raw as any)) {
@@ -69,28 +60,30 @@ function unwrap<T>(raw: CommonResDto<T> | T): T {
 // };
 
 function normalizeNotice(x: any) {
-  const category = (x.category ?? "ETC") as any;
-  const content = String(x.content ?? x.body ?? "");
-  const authorNickname = String(x.authorNickname ?? x.author ?? "");
+  // 베이스 값
+  // const category = (x.category ?? "ETC") as any;
+  // const content = String(x.content ?? x.body ?? "");
+  // const authorNickname = String(x.authorNickname ?? x.author ?? "");
 
   const createdAt = String(x.createdAt ?? new Date().toISOString());
-  const updatedAt = String(x.updatedAt ?? x.createdAt ?? createdAt);
+  // const updatedAt = String(x.updatedAt ?? x.createdAt ?? createdAt);
 
   return {
     id: Number(x.id),
-    category,
+    category: (x.noticeCategory ?? x.category ?? "HANDOVER") as any,
+
     title: String(x.title ?? ""),
-    content,
+    content: String(x.content ?? x.body ?? ""),
+
     pinned: Boolean(x.pinned),
     importance: Number(x.importance ?? 50),
 
     authorUserId: Number(x.authorUserId ?? 0),
     authorEmail: String(x.authorEmail ?? ""),
-    authorNickname,
+    authorNickname: String(x.authorNickname ?? x.author ?? ""),
 
-    createdAt,
-    updatedAt,
-
+    createdAt: String(x.createdAt ?? new Date().toISOString()),
+    updatedAt: String(x.updatedAt ?? x.createdAt ?? new Date().toISOString()),
   };
 }
 
@@ -117,6 +110,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const adminApi = {
+  getNoticesPage: async (params?: { page?: number; size?: number; category?: string; pinned?: boolean; q?: string }) => {
+    const sp = new URLSearchParams();
+    sp.set("page", String(params?.page ?? 0));
+    sp.set("size", String(params?.size ?? 10));
+
+    if (params?.category) sp.set("category", params.category);
+    if (typeof params?.pinned === "boolean") sp.set("pinned", String(params.pinned));
+    if (params?.q) sp.set("q", params.q);
+
+    const raw = await request<CommonResDto<NoticePageResponse>>(`/admin/notices?${sp.toString()}`);
+    const pageRes = unwrap<NoticePageResponse>(raw);
+
+    return {
+      items: (pageRes.items ?? []).map(normalizeNotice),
+      page: pageRes.page ?? 0,
+      size: pageRes.size ?? (params?.size ?? 10),
+      totalElements: pageRes.totalElements ?? 0,
+      totalPages: pageRes.totalPages ?? 1,
+    } as NoticePage;
+  },
+
+
   getOverview: () =>
     request<CommonResDto<AdminOverviewResponse>>("/admin/overview").then((r) => unwrap<AdminOverviewResponse>(r)),
 

@@ -5,6 +5,7 @@ import type {
   AuctionRow,
   CalendarEventRow,
   NoticeRow,
+  NoticeCategory,
   ReportRow,
   ReportSeverity,
   ReportStatus,
@@ -52,8 +53,15 @@ export interface AdminStore {
   adminEmail: string;
   adminNick: string;
   adminRole: string;
-noticesCount: number;
+  noticesCount: number;
   query: string;
+
+  noticePage: number;
+  noticeSize: number;
+  noticeTotalPages: number;
+  noticeTotalElements: number;
+  goNoticePage: (page: number) => void;
+
   setQuery: (v: string) => void;
 
   lastUpdatedAt: string;
@@ -68,7 +76,7 @@ noticesCount: number;
   reports: ReportRow[];
   setReports: React.Dispatch<React.SetStateAction<ReportRow[]>>;
 
-  // ✅ 공지
+  
   notices: NoticeRow[];
   setNotices: React.Dispatch<React.SetStateAction<NoticeRow[]>>;
 
@@ -81,7 +89,7 @@ noticesCount: number;
   assignReport: (reportId: string, assignee: string) => void;
   resolveReport: (reportId: string, next: ReportStatus) => void;
 
-  // ✅ 공지 CRUD
+  
   addNotice: (payload: {
     category: NoticeCategory;
     title: string;
@@ -124,6 +132,7 @@ export function useAdminStore(): AdminStore {
 }
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  
   const profile = useMemo(() => safeGetAdminProfile(), []);
   const [query, setQuery] = useState<string>("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>(nowIso());
@@ -134,6 +143,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [notices, setNotices] = useState<NoticeRow[]>([]);
 
+  const [noticePage, setNoticePage] = useState(0);
+  const [noticeSize, setNoticeSize] = useState(10);
+  const [noticeTotalPages, setNoticeTotalPages] = useState(1);
+  const [noticeTotalElements, setNoticeTotalElements] = useState(0);
+
   const [events, setEvents] = useState<CalendarEventRow[]>(() => createMockEvents());
 
   const [reportStatusFilter, setReportStatusFilter] = useState<ReportStatus | "ALL">("ALL");
@@ -142,20 +156,26 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const USE_MOCK_JITTER = true;
 
   useEffect(() => {
-    if (!USE_MOCK_JITTER) return;
-    const t = window.setInterval(() => {
-      setStats((s) => {
-        const delta = Math.floor((Math.random() - 0.45) * 18);
-        const next = clamp(s.realtimeUsers + delta, 0, 999999);
-        return { ...s, realtimeUsers: next };
-      });
-    }, 2500);
-    return () => window.clearInterval(t);
-  }, []);
+    const t = window.setTimeout(() => {
+      void fetchNoticesPage(0, noticeSize);
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [query]);
 
-  const refreshNotices = async (): Promise<void> => {
-    const list = await adminApi.getNotices({ page: 0, size: 50 });
-    setNotices(list);
+  const fetchNoticesPage = async (pg: number, sz: number): Promise<void> => {
+    const qv = query.trim();
+
+    const res = await adminApi.getNoticesPage({
+      page: pg,
+      size: sz,
+      q: qv ? qv : undefined,
+    });
+
+    setNotices(res.items);
+    setNoticePage(res.page);
+    setNoticeSize(res.size);
+    setNoticeTotalPages(Math.max(1, res.totalPages));
+    setNoticeTotalElements(res.totalElements);
   };
 
   const refreshAll = async (): Promise<void> => {
@@ -163,19 +183,20 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       adminApi.getOverview(),
       adminApi.getAuctions(),
       adminApi.getReports({ status: reportStatusFilter, severity: reportSeverityFilter }),
-      adminApi.getNotices({ page: 0, size: 50 }),
+
       adminApi.getEvents(),
     ]);
 
-    const [ovR, auctR, repR, notiR, evR] = results;
+    const [ovR, auctR, repR, evR] = results;
 
     if (ovR.status === "fulfilled") setStats(ovR.value);
     if (auctR.status === "fulfilled") setAuctions(auctR.value);
     if (repR.status === "fulfilled") setReports(repR.value);
-    if (notiR.status === "fulfilled") setNotices(notiR.value);
     if (evR.status === "fulfilled") setEvents(evR.value);
 
+    await fetchNoticesPage(noticePage, noticeSize);
     setLastUpdatedAt(nowIso());
+    
   };
 
   useEffect(() => {
@@ -249,7 +270,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     (async () => {
       try {
         await adminApi.createNotice(payload);
-        await refreshNotices();
+        await fetchNoticesPage(0, noticeSize);
       } catch (e) {
         console.error(e);
         alert("공지 등록에 실패했습니다.");
@@ -261,7 +282,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     (async () => {
       try {
         await adminApi.updateNotice(id, payload);
-        await refreshNotices();
+        await fetchNoticesPage(noticePage, noticeSize);
       } catch (e) {
         console.error(e);
         alert("공지 수정에 실패했습니다.");
@@ -273,7 +294,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     (async () => {
       try {
         await adminApi.deleteNotice(id);
-        await refreshNotices();
+
+        const nextPage = noticePage > 0 && notices.length === 1 ? noticePage - 1 : noticePage;
+        await fetchNoticesPage(nextPage, noticeSize);
       } catch (e) {
         console.error(e);
         alert("공지 삭제에 실패했습니다.");
@@ -298,11 +321,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     () => reports.filter((r) => r.status === "대기" || r.status === "처리중").length,
     [reports]
   );
-const noticesCount = useMemo(() => notices.length, [notices]);
+  const goNoticePage = (page: number) => {
+    const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
+    void fetchNoticesPage(pg, noticeSize);
+  };
+
+  const noticesCount = useMemo(() => noticeTotalElements, [noticeTotalElements]);
   const value: AdminStore = {
     adminEmail: profile.email,
     adminNick: profile.nick,
     adminRole: profile.role,
+
+    noticePage,
+    noticeSize,
+    noticeTotalPages,
+    noticeTotalElements,
+    goNoticePage,
 
     query,
     setQuery,
