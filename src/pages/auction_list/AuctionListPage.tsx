@@ -1,18 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
+import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import {
-  Gavel,
-  Search,
   Filter,
   Clock,
   Heart,
-  Eye,
   Star,
   ChevronDown,
   Grid3X3,
   List,
-  TrendingUp,
-  Calendar,
-  Users,
   MapPin,
 } from "lucide-react";
 import dayjs from "dayjs";
@@ -24,7 +19,6 @@ import {
 import {
   type ProductListDto,
   type ParentCategoriesDto,
-  type categoryDto,
   type wishlistDto,
 } from "./AuctionListDto";
 import { useNavigate } from "react-router-dom";
@@ -36,7 +30,7 @@ const AuctionListPage = () => {
   const { userEmail } = useAuth();
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
   const [sortBy, setSortBy] = useState("newest");
-  const [filterOpen, setFilterOpen] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number>(0);
   const [priceRange, setPriceRange] = useState([0, 10000000]);
@@ -628,7 +622,7 @@ const AuctionListPage = () => {
                     <>
                       <div className="relative">
                         <img
-                          src={auction.previewImageUrl}
+                          src={auction.previewImageUrl || placeholderImg}
                           alt={auction.productName}
                           className="w-full h-48 object-cover"
                         />
@@ -770,7 +764,7 @@ const AuctionListPage = () => {
                     <div className="flex items-center space-x-6">
                       <div className="relative">
                         <img
-                          src={auction.previewImageUrl}
+                          src={auction.previewImageUrl || placeholderImg}
                           alt={auction.productName}
                           className="w-32 h-24 object-cover rounded-xl"
                         />

@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
+import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import {
   Heart,
   Share2,
@@ -339,7 +340,7 @@ const AuctionDetail = () => {
                   src={
                     images[currentImageIndex]?.url
                       ? images[currentImageIndex]?.url
-                      : null
+                      : placeholderImg
                   }
                   alt="경매 아이템"
                   className="w-full h-96 lg:h-[500px] object-cover"
