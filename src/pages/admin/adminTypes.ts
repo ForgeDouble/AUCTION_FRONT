@@ -111,6 +111,7 @@ export interface CalendarEventRow {
   time?: string; // HH:mm
   title: string;
   tag?: "운영" | "장애" | "정산" | "점검" | "기타";
+  memo?: string | null;
 }
 
 // 상품 차단 목록 AdminBlockedProductDto

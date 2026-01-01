@@ -115,7 +115,11 @@ export interface AdminStore {
   // 캘린더
   events: CalendarEventRow[];
   setEvents: React.Dispatch<React.SetStateAction<CalendarEventRow[]>>;
-  addEvent: (e: Omit<CalendarEventRow, "id">) => void;
+  refreshEvents: () => Promise<void>;
+  addEvent: (e: Omit<CalendarEventRow, "id">) => Promise<void>;
+  updateEvent: (id: string, payload: Partial<Omit<CalendarEventRow, "id">>) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  moveEventDate: (id: string, newDate: string) => Promise<void>;
 
   // 뱃지 관련(카운팅)
   noticesCount: number;
@@ -149,6 +153,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // 캘린더 관련 더미
   const [events, setEvents] = useState<CalendarEventRow[]>([]);
+  
 
   const [notices, setNotices] = useState<NoticeRow[]>([]);
   const [noticePage, setNoticePage] = useState(0);
@@ -184,6 +189,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const list = await adminApi.getBlockedProducts();
       setBlockedProducts(list);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  const refreshEvents = async (): Promise<void> => {
+    try {
+      const list = await adminApi.getEvents();
+      setEvents(list);
     } catch (e) {
       console.error(e);
     }
@@ -313,17 +326,33 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     })();
   };
-  const addEvent = (e: Omit<CalendarEventRow, "id">): void => {
-    (async () => {
-      try {
-        const created = await adminApi.addEvent(e);
-        setEvents((prev) => [created, ...prev]);
-      } catch (err) {
-        console.error(err);
-        alert("일정 추가에 실패했습니다.");
-      }
-    })();
+  const addEvent: AdminStore["addEvent"] = async (e) => {
+    const payload = {
+      date: e.date,
+      time: e.time,
+      title: e.title,
+      tag: e.tag ?? "기타",
+      memo: (e as any).memo ?? null,
+    };
+    const created = await adminApi.addEvent(payload as any);
+    setEvents((prev) => [created, ...prev]);
   };
+
+  const updateEvent: AdminStore["updateEvent"] = async (id, payload) => {
+    const updated = await adminApi.updateEvent(id, payload as any);
+    setEvents((prev) => prev.map((x) => (x.id === id ? updated : x)));
+  };
+
+  const deleteEvent: AdminStore["deleteEvent"] = async (id) => {
+    await adminApi.deleteEvent(id);
+    setEvents((prev) => prev.filter((x) => x.id !== id));
+  };
+
+  const moveEventDate: AdminStore["moveEventDate"] = async (id, newDate) => {
+    await adminApi.moveEventDate(id, newDate);
+    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, date: newDate } : e)));
+  };
+
   const goNoticePage = (page: number) => {
     const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
     void fetchNoticesPage(pg, noticeSize);
@@ -382,7 +411,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     events,
     setEvents,
+    refreshEvents,
     addEvent,
+    updateEvent,
+    deleteEvent,
+    moveEventDate,
 
     noticesCount,
     pinnedNoticesCount,

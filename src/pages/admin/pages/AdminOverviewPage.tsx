@@ -205,7 +205,7 @@ const AdminOverviewPage: React.FC = () => {
                   </div>
 
                   <div className="mt-1 text-[11px] text-gray-500">
-                    P {g.pendingCount} / A {g.acceptedCount} / R {g.rejectedCount} · last {formatKST(g.lastReportedAt || "")}
+                    P {g.pendingCount} / A {g.acceptedCount} / R {g.rejectedCount} ·  {formatKST(g.lastReportedAt || "")}
                   </div>
                 </div>
               );

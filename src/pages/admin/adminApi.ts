@@ -311,5 +311,22 @@ export const adminApi = {
     request<CommonResDto<CalendarEventRow>>("/admin/calendar/events", {
       method: "POST",
       body: JSON.stringify(payload),
-    }).then((r) => unwrap<CalendarEventRow>(r)),
+  }).then((r) => unwrap<CalendarEventRow>(r)),
+
+  updateEvent: (eventId: string, payload: Omit<CalendarEventRow, "id">) =>
+    request<CommonResDto<CalendarEventRow>>(`/admin/calendar/events/${encodeURIComponent(eventId)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+  }).then((r) => unwrap<CalendarEventRow>(r)),
+
+  deleteEvent: (eventId: string) =>
+    request<CommonResDto<void>>(`/admin/calendar/events/${encodeURIComponent(eventId)}`, {
+      method: "DELETE",
+  }).then((r) => unwrap<void>(r)),
+
+  moveEventDate: (id: string, newDate: string) =>
+    request<CommonResDto<CalendarEventRow>>(`/admin/calendar/events/${encodeURIComponent(id)}/date`, {
+      method: "PATCH",
+      body: JSON.stringify({ date: newDate }),
+  }).then((r) => unwrap<CalendarEventRow>(r)),
 };
