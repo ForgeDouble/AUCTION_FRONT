@@ -132,7 +132,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [auctions, setAuctions] = useState<AuctionRow[]>(() => createMockAuctions());
   const [reports, setReports] = useState<ReportRow[]>(() => createMockReports());
 
-  // ✅ 공지는 mock 제거: 빈 배열로 시작
   const [notices, setNotices] = useState<NoticeRow[]>([]);
 
   const [events, setEvents] = useState<CalendarEventRow[]>(() => createMockEvents());
@@ -294,7 +293,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     })();
   };
 
-  // ✅ badge는 “확인” 개념이 없어졌으니, 고정(pinned) 건수로 표시(원하면 바꿔줘)
   const pinnedNoticesCount = useMemo(() => notices.filter((n) => n.pinned).length, [notices]);
   const reportsOpenCount = useMemo(
     () => reports.filter((r) => r.status === "대기" || r.status === "처리중").length,

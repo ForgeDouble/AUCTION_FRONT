@@ -220,9 +220,9 @@ const AdminNoticesPage: React.FC = () => {
                   </div>
 
                   
-                  <div className="mt-2 text-sm text-gray-800 whitespace-pre-wrap break-words">
+                  {/* <div className="mt-2 text-sm text-gray-800 whitespace-pre-wrap break-words">
                     {n.content?.trim() ? n.content : "(내용 없음)"}
-                  </div>
+                  </div> */}
                 </div>
 
                 <div className="shrink-0 inline-flex items-center gap-2">

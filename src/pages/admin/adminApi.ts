@@ -23,18 +23,36 @@ type CommonResDto<T> = {
   status_message?: string;
   result?: T;
 
-  // 혹시 camelCase로 오는 경우까지 안전 처리(옵션)
   statusCode?: number;
   statusMessage?: string;
 };
 type NoticePageResponse = {
-  items: any[];
+  items: Array<{
+  id: string | number;
+  pinned: boolean;
+  title: string;
+
+  body?: string;
+  content?: string;
+
+  author?: string;
+  authorNickname?: string;
+
+  createdAt?: string;
+  updatedAt?: string;
+
+  category?: string;
+  importance?: number;
+  acknowledged?: boolean;
+
+
+  }>;
   page: number;
   size: number;
   totalElements: number;
   totalPages: number;
 };
-// result 언랩을 “타입 유지”하면서 강제로 명확히
+
 function unwrap<T>(raw: CommonResDto<T> | T): T {
   if (raw && typeof raw === "object" && "result" in (raw as any)) {
     return (raw as CommonResDto<T>).result as T;
@@ -42,28 +60,37 @@ function unwrap<T>(raw: CommonResDto<T> | T): T {
   return raw as T;
 }
 
-// 공지 페이지 타입(백엔드 NoticePageResponse)
-type NoticePage = {
-  items: any[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
-};
+// type NoticePage = {
+//   items: any[];
+//   page: number;
+//   size: number;
+//   totalElements: number;
+//   totalPages: number;
+// };
 
 function normalizeNotice(x: any) {
+  const category = (x.category ?? "ETC") as any;
+  const content = String(x.content ?? x.body ?? "");
+  const authorNickname = String(x.authorNickname ?? x.author ?? "");
+
+  const createdAt = String(x.createdAt ?? new Date().toISOString());
+  const updatedAt = String(x.updatedAt ?? x.createdAt ?? createdAt);
+
   return {
     id: Number(x.id),
-    category: String(x.category ?? "ETC") as any,
+    category,
     title: String(x.title ?? ""),
-    content: String(x.content ?? ""),
+    content,
     pinned: Boolean(x.pinned),
     importance: Number(x.importance ?? 50),
+
     authorUserId: Number(x.authorUserId ?? 0),
     authorEmail: String(x.authorEmail ?? ""),
-    authorNickname: String(x.authorNickname ?? ""),
-    createdAt: String(x.createdAt ?? new Date().toISOString()),
-    updatedAt: String(x.updatedAt ?? x.createdAt ?? new Date().toISOString()),
+    authorNickname,
+
+    createdAt,
+    updatedAt,
+
   };
 }
 
@@ -139,14 +166,14 @@ export const adminApi = {
     if (typeof params?.pinned === "boolean") sp.set("pinned", String(params.pinned));
     if (params?.q) sp.set("q", params.q);
 
-    const raw = await request<CommonResDto<NoticePageResponse> | NoticePageResponse>(`/admin/notices?${sp.toString()}`);
-    const page = unwrap<NoticePageResponse>(raw);
-    const items = Array.isArray(page?.items) ? page.items : [];
+    const data = await request<CommonResDto<NoticePageResponse> | NoticePageResponse>(`/admin/notices?${sp.toString()}`);
+    const page = unwrap<NoticePageResponse>(data);
 
+    const items = Array.isArray(page?.items) ? page.items : [];
     return items.map(normalizeNotice);
   },
 
-  // 공지 생성: 백엔드는 id만 내려줌
+
   createNotice: (payload: {
     category: NoticeCategory;
     title: string;
