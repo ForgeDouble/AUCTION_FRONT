@@ -4,6 +4,7 @@ import { Pencil, Trash2, Pin } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import { SectionTitle } from "../components/AdminUi";
 import type { NoticeCategory, NoticeRow } from "../adminTypes";
+import { ImportanceBlocks } from "../components/ImportanceBlocks";
 
 function formatKST(iso: string): string {
   const d = new Date(iso);
@@ -207,9 +208,8 @@ const AdminNoticesPage: React.FC = () => {
                       </span>
                     ) : null}
 
-                    <span className="text-[11px] px-2 py-1 rounded-full bg-white border border-gray-200 text-gray-700">
-                      중요도 {n.importance}
-                    </span>
+                    <span className="text-[11px] px-2 py-1 rounded-full bg-white border border-gray-200 text-gray-800 inline-flex items-center gap-2"> 
+                      <ImportanceBlocks value={n.importance} /> </span>
                   </div>
 
                   <div className="mt-2 text-sm font-semibold text-gray-900 break-words">{n.title}</div>
