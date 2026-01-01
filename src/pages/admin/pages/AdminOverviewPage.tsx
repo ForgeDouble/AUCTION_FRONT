@@ -3,7 +3,7 @@ import React, { useMemo } from "react";
 import { Activity, AlertTriangle, CheckCircle2, Clock, FileText, Gavel, TrendingUp, Users, Wallet } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import { StatCard, SectionTitle } from "../components/AdminUi";
-import { auctionBadge } from "../components/badges";
+import { auctionBadge, categoryBadge, pendingRiskBadge } from "../components/badges";
 import { SimpleDonutChart, SimpleMultiLineChart, type DonutSegment, type MultiLineSeries } from "../components/AdminCharts";
 
 function formatKST(iso: string): string {
@@ -21,12 +21,22 @@ function money(v: number): string {
 }
 
 const AdminOverviewPage: React.FC = () => {
-  const { stats, auctions, reports } = useAdminStore();
+  const { stats, auctions, reportGroups } = useAdminStore();
 
   const topAuctions = useMemo(() => auctions.slice(0, 5), [auctions]);
-  const topReports = useMemo(() => reports.slice(0, 5), [reports]);
 
-  // 최근 7일 생성/종료 샘플
+  const topReportGroups = useMemo(() => {
+    return reportGroups
+      .slice()
+      .sort((a, b) => {
+        const at = a.lastReportedAt ? new Date(a.lastReportedAt).getTime() : 0;
+        const bt = b.lastReportedAt ? new Date(b.lastReportedAt).getTime() : 0;
+        return bt - at;
+      })
+      .slice(0, 5);
+  }, [reportGroups]);
+
+  // 최근 7일 생성/종료 샘플(더미)
   const auctionTrendSeries: MultiLineSeries[] = useMemo(() => {
     const labels = ["12/15", "12/16", "12/17", "12/18", "12/19", "12/20", "12/21"];
     const created = [48, 55, 42, 23, 61, 44, 39];
@@ -46,7 +56,7 @@ const AdminOverviewPage: React.FC = () => {
     ];
   }, []);
 
-  // 카테고리 분포 샘플(도넛)
+  // 카테고리 분포 샘플(도넛 차트)
   const categorySegments: DonutSegment[] = useMemo(() => {
     return [
       { label: "전자제품", value: 345, colorClass: "text-violet-600" },
@@ -57,7 +67,7 @@ const AdminOverviewPage: React.FC = () => {
     ];
   }, []);
 
-  // ✅ 금일 사용자 주 사용 시간대 (선형 차트로 변경)
+  // 금일 사용자 주 사용 시간대 (선 차트)
   const todayActiveHourLine: MultiLineSeries[] = useMemo(() => {
     const labels = ["00", "03", "06", "09", "12", "15", "18", "21"];
     const users = [45, 23, 67, 189, 312, 278, 398, 342];
@@ -70,7 +80,7 @@ const AdminOverviewPage: React.FC = () => {
     ];
   }, []);
 
-  // ✅ 월별 거래 금액(샘플) + 평균 표시
+  // 월별 거래 금액(샘플) + 평균 표시
   const monthlyTradeSeries: MultiLineSeries[] = useMemo(() => {
     const labels = ["7월", "8월", "9월", "10월", "11월", "12월"];
     const amount = [860000000, 940000000, 910000000, 980000000, 1100000000, 920000000];
@@ -98,7 +108,7 @@ const AdminOverviewPage: React.FC = () => {
         <StatCard title="실시간 접속" value={stats.realtimeUsers.toLocaleString()} icon={Activity} hint="웹/앱 합산" />
       </div>
 
-      {/* ✅ 거래 금액 모니터링 (추가) */}
+      {/* ✅ 거래 금액 모니터링(아직 연결 안됨)  */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <SectionTitle title="거래 금액 모니터링" right={<span className="text-[11px] text-gray-500">샘플(백엔드 연결 예정)</span>} />
@@ -123,14 +133,14 @@ const AdminOverviewPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 월별 거래 금액 추이 */}
+        {/*✅ 월별 거래 금액 추이(아직 연결 안됨) */}
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm xl:col-span-2">
           <SectionTitle title="월별 거래 금액 추이" right={<span className="text-[11px] text-gray-500">최근 6개월(샘플)</span>} />
           <SimpleMultiLineChart series={monthlyTradeSeries} height={190} yLabel="KRW" />
         </div>
       </div>
 
-      {/* 그래프 섹션 */}
+      {/*✅ 그래프 섹션(아직 연결 안됨) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <SectionTitle title="최근 7일 경매 생성/종료 추이" right={<span className="text-[11px] text-gray-500">샘플</span>} />
@@ -143,13 +153,13 @@ const AdminOverviewPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ✅ 금일 사용 시간대(선형) */}
+      {/*✅ 금일 사용 시간대(선형) . (아직 연결 안됨) */}
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
         <SectionTitle title="금일 사용자 주 사용 시간대" right={<span className="text-[11px] text-gray-500">시간대별 접속/활동(샘플)</span>} />
         <SimpleMultiLineChart series={todayActiveHourLine} height={190} yLabel="users" />
       </div>
 
-      {/* 리스트 */}
+      {/* ✅ 리스트 ( 아직 연결 안됨 ) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <SectionTitle title="진행중 경매(상위)" right={<span className="text-[11px] text-gray-500">경매 탭에서 상세</span>} />
@@ -178,16 +188,29 @@ const AdminOverviewPage: React.FC = () => {
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <SectionTitle title="최근 신고(상위)" right={<span className="text-[11px] text-gray-500">신고 탭에서 처리</span>} />
           <div className="space-y-2">
-            {topReports.map((r) => (
-              <div key={r.id} className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-gray-900">{r.type}</div>
-                  <div className="text-[11px] text-gray-400">#{r.id}</div>
+            {topReportGroups.map((g) => {
+              const cat = categoryBadge(g.category);
+              const risk = pendingRiskBadge(g.pendingCount);
+              return (
+                <div key={`${g.targetUserId}-${g.category}`} className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-semibold text-gray-900">
+                      {(g.targetNickname && g.targetNickname.trim()) ? g.targetNickname : (g.targetName || "대상 유저")}
+                      <span className="text-[11px] text-gray-400 ml-2">#{g.targetUserId}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={"text-[11px] px-2 py-0.5 rounded-full border " + cat.cls}>{cat.label}</span>
+                      <span className={"text-[11px] px-2 py-0.5 rounded-full border " + risk.cls}>{risk.label}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-1 text-[11px] text-gray-500">
+                    P {g.pendingCount} / A {g.acceptedCount} / R {g.rejectedCount} · last {formatKST(g.lastReportedAt || "")}
+                  </div>
                 </div>
-                <div className="mt-1 text-[11px] text-gray-500 truncate">{r.targetTitle}</div>
-                <div className="mt-1 text-[11px] text-gray-500">{r.reporterMasked} · {formatKST(r.createdAt)}</div>
-              </div>
-            ))}
+              );
+            })}
+
           </div>
         </div>
       </div>

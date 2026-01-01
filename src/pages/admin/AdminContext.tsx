@@ -6,20 +6,22 @@ import type {
   CalendarEventRow,
   NoticeRow,
   NoticeCategory,
-  ReportRow,
-  ReportSeverity,
-  ReportStatus,
+  AdminReportGroupRow,
+  ReportCategory,
+  SpringPage,
+  AdminReportItemRow,
+  BlockedProductRow,
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
-import { createMockAuctions, createMockEvents, createMockReports, createMockStats } from "./adminMockData";
+import { createMockAuctions, createMockEvents, createMockReportGroups, createMockStats } from "./adminMockData";
 
 function nowIso(): string {
   return new Date().toISOString();
 }
 
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n));
-}
+// function clamp(n: number, min: number, max: number): number {
+//   return Math.max(min, Math.min(max, n));
+// }
 
 function safeGetAdminProfile(): { email: string; nick: string; role: string } {
   const token = localStorage.getItem("accessToken");
@@ -53,15 +55,8 @@ export interface AdminStore {
   adminEmail: string;
   adminNick: string;
   adminRole: string;
-  noticesCount: number;
+
   query: string;
-
-  noticePage: number;
-  noticeSize: number;
-  noticeTotalPages: number;
-  noticeTotalElements: number;
-  goNoticePage: (page: number) => void;
-
   setQuery: (v: string) => void;
 
   lastUpdatedAt: string;
@@ -73,23 +68,31 @@ export interface AdminStore {
   auctions: AuctionRow[];
   setAuctions: React.Dispatch<React.SetStateAction<AuctionRow[]>>;
 
-  reports: ReportRow[];
-  setReports: React.Dispatch<React.SetStateAction<ReportRow[]>>;
+  // 신고(유저)
+  reportGroups: AdminReportGroupRow[];
+  setReportGroups: React.Dispatch<React.SetStateAction<AdminReportGroupRow[]>>;
 
-  
+  fetchGroupReports: (targetUserId: number, category: ReportCategory, page: number, size: number) => Promise<SpringPage<AdminReportItemRow>>;
+  resolveReportGroup: (targetUserId: number, category: ReportCategory, payload: { accept: boolean; adminContent?: string; suspendDays?: number }) => Promise<void>;
+  adminSuspendUser: (targetUserId: number, days: number, reason?: string) => Promise<void>;
+  adminLiftAll: (targetUserId: number, reason?: string) => Promise<void>;
+
+  // 신고(상품)
+  blockedProducts: BlockedProductRow[];
+  setBlockedProducts: React.Dispatch<React.SetStateAction<BlockedProductRow[]>>;
+  refreshBlockedProducts: () => Promise<void>;
+  liftBlockedProduct: (payload: { productId: number; reason?: string; resetCounter?: boolean }) => Promise<void>;
+
+  // 공지(인수인계)
   notices: NoticeRow[];
   setNotices: React.Dispatch<React.SetStateAction<NoticeRow[]>>;
 
-  events: CalendarEventRow[];
-  setEvents: React.Dispatch<React.SetStateAction<CalendarEventRow[]>>;
+  noticePage: number;
+  noticeSize: number;
+  noticeTotalPages: number;
+  noticeTotalElements: number;
+  goNoticePage: (page: number) => void;
 
-  suspendAuction: (auctionId: string) => void;
-  forceEndAuction: (auctionId: string) => void;
-
-  assignReport: (reportId: string, assignee: string) => void;
-  resolveReport: (reportId: string, next: ReportStatus) => void;
-
-  
   addNotice: (payload: {
     category: NoticeCategory;
     title: string;
@@ -97,7 +100,6 @@ export interface AdminStore {
     pinned?: boolean;
     importance?: number;
   }) => void;
-
   updateNotice: (
     id: number,
     payload: {
@@ -108,19 +110,21 @@ export interface AdminStore {
       importance?: number;
     }
   ) => void;
-
   deleteNotice: (id: number) => void;
 
+  // 캘린더
+  events: CalendarEventRow[];
+  setEvents: React.Dispatch<React.SetStateAction<CalendarEventRow[]>>;
   addEvent: (e: Omit<CalendarEventRow, "id">) => void;
 
+  // 뱃지 관련(카운팅)
+  noticesCount: number;
   pinnedNoticesCount: number;
   reportsOpenCount: number;
 
-  reportStatusFilter: ReportStatus | "ALL";
-  setReportStatusFilter: (v: ReportStatus | "ALL") => void;
-
-  reportSeverityFilter: ReportSeverity | "ALL";
-  setReportSeverityFilter: (v: ReportSeverity | "ALL") => void;
+  // 경매 조치
+  suspendAuction: (auctionId: string) => void;
+  forceEndAuction: (auctionId: string) => void;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -132,28 +136,27 @@ export function useAdminStore(): AdminStore {
 }
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  
   const profile = useMemo(() => safeGetAdminProfile(), []);
   const [query, setQuery] = useState<string>("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>(nowIso());
 
+  // 옥션 관련 더미
   const [stats, setStats] = useState<AdminOverviewResponse>(() => createMockStats());
   const [auctions, setAuctions] = useState<AuctionRow[]>(() => createMockAuctions());
-  const [reports, setReports] = useState<ReportRow[]>(() => createMockReports());
+  
+  // 신고 관련 더미
+  const [reportGroups, setReportGroups] = useState<AdminReportGroupRow[]>(() => createMockReportGroups());
+
+  // 캘린더 관련 더미
+  const [events, setEvents] = useState<CalendarEventRow[]>(() => createMockEvents());
 
   const [notices, setNotices] = useState<NoticeRow[]>([]);
-
   const [noticePage, setNoticePage] = useState(0);
   const [noticeSize, setNoticeSize] = useState(10);
   const [noticeTotalPages, setNoticeTotalPages] = useState(1);
   const [noticeTotalElements, setNoticeTotalElements] = useState(0);
 
-  const [events, setEvents] = useState<CalendarEventRow[]>(() => createMockEvents());
-
-  const [reportStatusFilter, setReportStatusFilter] = useState<ReportStatus | "ALL">("ALL");
-  const [reportSeverityFilter, setReportSeverityFilter] = useState<ReportSeverity | "ALL">("ALL");
-
-  const USE_MOCK_JITTER = true;
+   const [blockedProducts, setBlockedProducts] = useState<BlockedProductRow[]>([]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -177,21 +180,31 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setNoticeTotalPages(Math.max(1, res.totalPages));
     setNoticeTotalElements(res.totalElements);
   };
+  const refreshBlockedProducts = async (): Promise<void> => {
+    try {
+      const list = await adminApi.getBlockedProducts();
+      setBlockedProducts(list);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const refreshAll = async (): Promise<void> => {
     const results = await Promise.allSettled([
       adminApi.getOverview(),
       adminApi.getAuctions(),
-      adminApi.getReports({ status: reportStatusFilter, severity: reportSeverityFilter }),
-
+      adminApi.getReportGroups(),
+      adminApi.getBlockedProducts(),
       adminApi.getEvents(),
+    
     ]);
 
-    const [ovR, auctR, repR, evR] = results;
+    const [ovR, auctR, groupR, blockedR, evR] = results;
 
     if (ovR.status === "fulfilled") setStats(ovR.value);
     if (auctR.status === "fulfilled") setAuctions(auctR.value);
-    if (repR.status === "fulfilled") setReports(repR.value);
+    if (groupR.status === "fulfilled") setReportGroups(groupR.value);
+    if (blockedR.status === "fulfilled") setBlockedProducts(blockedR.value);
     if (evR.status === "fulfilled") setEvents(evR.value);
 
     await fetchNoticesPage(noticePage, noticeSize);
@@ -201,7 +214,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     void refreshAll();
-  }, [reportStatusFilter, reportSeverityFilter]);
+  }, []);
 
   const suspendAuction = (auctionId: string): void => {
     (async () => {
@@ -238,32 +251,31 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     })();
   };
 
-  const assignReport = (reportId: string, assignee: string): void => {
-    (async () => {
-      try {
-        await adminApi.assignReport(reportId, assignee);
-        setReports((prev) =>
-          prev.map((r) =>
-            r.id === reportId ? { ...r, assignedTo: assignee, status: r.status === "대기" ? "처리중" : r.status } : r
-          )
-        );
-      } catch (e) {
-        console.error(e);
-        alert("신고 배정에 실패했습니다.");
-      }
-    })();
+ const fetchGroupReports: AdminStore["fetchGroupReports"] = async (targetUserId, category, page, size) => {
+    return await adminApi.getGroupReports(targetUserId, category, page, size);
   };
 
-  const resolveReport = (reportId: string, next: ReportStatus): void => {
-    (async () => {
-      try {
-        await adminApi.resolveReport(reportId, next);
-        setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, status: next } : r)));
-      } catch (e) {
-        console.error(e);
-        alert("신고 처리에 실패했습니다.");
-      }
-    })();
+  const resolveReportGroup: AdminStore["resolveReportGroup"] = async (targetUserId, category, payload) => {
+    await adminApi.resolveReportGroup(targetUserId, category, payload);
+    const refreshed = await adminApi.getReportGroups();
+    setReportGroups(refreshed);
+  };
+
+  const adminSuspendUser: AdminStore["adminSuspendUser"] = async (targetUserId, days, reason) => {
+    await adminApi.adminSuspendUser(targetUserId, days, reason);
+    const refreshed = await adminApi.getReportGroups();
+    setReportGroups(refreshed);
+  };
+
+  const adminLiftAll: AdminStore["adminLiftAll"] = async (targetUserId, reason) => {
+    await adminApi.adminLiftAll(targetUserId, reason);
+    const refreshed = await adminApi.getReportGroups();
+    setReportGroups(refreshed);
+  };
+
+  const liftBlockedProduct: AdminStore["liftBlockedProduct"] = async (payload) => {
+    await adminApi.liftBlockedProduct(payload);
+    await refreshBlockedProducts();
   };
 
   const addNotice: AdminStore["addNotice"] = (payload) => {
@@ -277,7 +289,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     })();
   };
-
   const updateNotice: AdminStore["updateNotice"] = (id, payload) => {
     (async () => {
       try {
@@ -289,7 +300,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     })();
   };
-
   const deleteNotice: AdminStore["deleteNotice"] = (id) => {
     (async () => {
       try {
@@ -303,7 +313,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     })();
   };
-
   const addEvent = (e: Omit<CalendarEventRow, "id">): void => {
     (async () => {
       try {
@@ -315,28 +324,23 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     })();
   };
-
-  const pinnedNoticesCount = useMemo(() => notices.filter((n) => n.pinned).length, [notices]);
-  const reportsOpenCount = useMemo(
-    () => reports.filter((r) => r.status === "대기" || r.status === "처리중").length,
-    [reports]
-  );
   const goNoticePage = (page: number) => {
     const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
     void fetchNoticesPage(pg, noticeSize);
   };
 
+  // 뱃지 관련 카운팅 함수
+  const pinnedNoticesCount = useMemo(() => notices.filter((n) => n.pinned).length, [notices]);
   const noticesCount = useMemo(() => noticeTotalElements, [noticeTotalElements]);
+
+  const reportsOpenCount = useMemo(() => {
+    return reportGroups.reduce((acc, g) => acc + (g.pendingCount || 0), 0);
+  }, [reportGroups]);
+  
   const value: AdminStore = {
     adminEmail: profile.email,
     adminNick: profile.nick,
     adminRole: profile.role,
-
-    noticePage,
-    noticeSize,
-    noticeTotalPages,
-    noticeTotalElements,
-    goNoticePage,
 
     query,
     setQuery,
@@ -350,36 +354,42 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     auctions,
     setAuctions,
 
-    reports,
-    setReports,
+    reportGroups,
+    setReportGroups,
+
+    fetchGroupReports,
+    resolveReportGroup,
+    adminSuspendUser,
+    adminLiftAll,
+
+    blockedProducts,
+    setBlockedProducts,
+    refreshBlockedProducts,
+    liftBlockedProduct,
 
     notices,
     setNotices,
 
-    events,
-    setEvents,
+    noticePage,
+    noticeSize,
+    noticeTotalPages,
+    noticeTotalElements,
+    goNoticePage,
 
-    suspendAuction,
-    forceEndAuction,
-
-    assignReport,
-    resolveReport,
-    noticesCount,
     addNotice,
     updateNotice,
     deleteNotice,
 
+    events,
+    setEvents,
     addEvent,
 
+    noticesCount,
     pinnedNoticesCount,
     reportsOpenCount,
 
-    reportStatusFilter,
-    setReportStatusFilter,
-
-    reportSeverityFilter,
-    setReportSeverityFilter,
-    
+    suspendAuction,
+    forceEndAuction,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -316,7 +316,7 @@ const AdminNoticesPage: React.FC = () => {
           ))}
 
           {notices.length === 0 && <div className="py-10 text-center text-gray-500">공지 검색 결과가 없습니다.</div>}
-           {/* s */}
+           {/* {noticeTotalPages > 1 ? Pager : null} */}
         </div>
       </div>
 
@@ -326,7 +326,7 @@ const AdminNoticesPage: React.FC = () => {
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <div className="text-[11px] text-gray-500 mb-1">카테고리</div>
+              <div className="text-[11px] text-gray-500 mb-s1">카테고리</div>
               <select
                 value={createForm.category}
                 onChange={(e) => setCreateForm((p) => ({ ...p, category: e.target.value as NoticeCategory }))}

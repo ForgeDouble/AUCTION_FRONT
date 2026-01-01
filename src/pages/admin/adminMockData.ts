@@ -1,4 +1,12 @@
-import type { AdminOverviewResponse, AuctionRow, CalendarEventRow, ReportRow } from "./adminTypes";
+// src/pages/admin/adminMockData.ts
+import type {
+  AdminOverviewResponse,
+  AuctionRow,
+  AdminReportGroupRow,
+  AdminReportItemRow,
+  CalendarEventRow,
+  ReportCategory,
+} from "./adminTypes";
 
 function yyyyMmDd(d: Date): string {
   const y = d.getFullYear();
@@ -18,6 +26,7 @@ export function createMockStats(): AdminOverviewResponse {
     reportsOpen: 7,
     realtimeUsers: 342,
     todayActiveUsers: 1523,
+
     todayTradeAmount: 38500000,
     monthlyAvgTradeAmount: 920000000,
 
@@ -36,8 +45,6 @@ export function createMockStats(): AdminOverviewResponse {
     statusProcessing: 34,
     statusSelled: 56,
     statusNotselled: 78,
-
-
   };
 }
 
@@ -86,34 +93,53 @@ export function createMockAuctions(): AuctionRow[] {
   ];
 }
 
-export function createMockReports(): ReportRow[] {
+export function createMockReportGroups(): AdminReportGroupRow[] {
+  const now = Date.now();
+  const mk = (userId: number, nick: string, cat: ReportCategory, pending: number): AdminReportGroupRow => ({
+    targetUserId: userId,
+    targetName: "홍길동",
+    targetNickname: nick,
+    category: cat,
+    pendingCount: pending,
+    acceptedCount: 1,
+    rejectedCount: 0,
+    viewOnly: pending >= 5,
+    suspendedUntil: null,
+    warning: pending >= 3 ? 1 : 0,
+    lastReportedAt: new Date(now - userId * 60_000).toISOString(),
+  });
+
   return [
-  {
-    id: "R-2001",
-    type: "부적절한 상품",
-    targetType: "PRODUCT",
-    targetTitle: "아이폰 14 Pro(박스 미개봉)",
-    reporterMasked: "user***",
-    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-    status: "대기",
-    severity: "HIGH",
-    assignedTo: "",
-    description: "금지 품목 의심. 상세 설명이 과도하게 모호합니다.",
-    evidenceUrl: "",
-  },
-  {
-    id: "R-2002",
-    type: "사기 의심",
-    targetType: "USER",
-    targetTitle: "seller*** (판매자 계정)",
-    reporterMasked: "buyer***",
-    createdAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    status: "처리중",
-    severity: "CRITICAL",
-    assignedTo: "ops-1",
-    description: "동일 사진 반복 / 외부 연락 유도 문구가 있음.",
-    evidenceUrl: "",
-  },
+    mk(101, "seller***", "SCAM", 5),
+    mk(102, "spammy***", "SPAM", 3),
+    mk(103, "abuse***", "ABUSE", 1),
+  ];
+}
+
+export function createMockGroupReports(): AdminReportItemRow[] {
+  return [
+    {
+      id: 9001,
+      status: "PENDING",
+      content: "외부 연락 유도 문구가 있음.",
+      createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+      processedAt: null,
+      adminContent: null,
+      reporterId: 201,
+      reporterName: "김철수",
+      reporterNickname: "buyer***",
+    },
+    {
+      id: 9002,
+      status: "PENDING",
+      content: "동일 사진 반복 사용.",
+      createdAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+      processedAt: null,
+      adminContent: null,
+      reporterId: 202,
+      reporterName: "이영희",
+      reporterNickname: "user***",
+    },
   ];
 }
 

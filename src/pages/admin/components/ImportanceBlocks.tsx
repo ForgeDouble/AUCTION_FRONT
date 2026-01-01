@@ -1,5 +1,7 @@
 import React from "react";
 
+// 인수인계 중요도 부분 컴포넌트
+
 function clamp(n: number, min: number, max: number) {
     return Math.max(min, Math.min(max, n));
 }
