@@ -1,13 +1,25 @@
 // src/pages/admin/components/AdminUi.tsx
 import React from "react";
 
-export const SectionTitle: React.FC<{ title: string; right?: React.ReactNode }> = ({ title, right }) => {
-  return (
-    <div className="flex items-center justify-between mb-3">
-      <div className="text-sm font-semibold text-gray-900">{title}</div>
-      {right ? <div>{right}</div> : null}
-    </div>
-  );
+type SectionTitleProps = {
+title: string;
+sub?: React.ReactNode;
+right?: React.ReactNode;
+};
+
+export const SectionTitle: React.FC<SectionTitleProps> = ({ title, sub, right }) => {
+return (
+<div className="flex items-start justify-between gap-3">
+<div className="min-w-0">
+<div className="text-sm font-bold text-gray-900">{title}</div>
+{sub ? <div className="mt-0.5 text-[11px] text-gray-500">{sub}</div> : null}
+</div>
+
+  {right ? <div className="shrink-0">{right}</div> : null}
+</div>
+
+
+);
 };
 
 export const StatCard: React.FC<{

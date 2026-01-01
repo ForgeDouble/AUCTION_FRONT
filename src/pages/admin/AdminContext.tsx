@@ -13,7 +13,7 @@ import type {
   BlockedProductRow,
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
-import { createMockAuctions, createMockEvents, createMockReportGroups, createMockStats } from "./adminMockData";
+import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -148,7 +148,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [reportGroups, setReportGroups] = useState<AdminReportGroupRow[]>(() => createMockReportGroups());
 
   // 캘린더 관련 더미
-  const [events, setEvents] = useState<CalendarEventRow[]>(() => createMockEvents());
+  const [events, setEvents] = useState<CalendarEventRow[]>([]);
 
   const [notices, setNotices] = useState<NoticeRow[]>([]);
   const [noticePage, setNoticePage] = useState(0);

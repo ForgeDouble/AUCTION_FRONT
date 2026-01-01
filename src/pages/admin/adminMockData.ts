@@ -4,7 +4,7 @@ import type {
   AuctionRow,
   AdminReportGroupRow,
   AdminReportItemRow,
-  CalendarEventRow,
+  // CalendarEventRow,
   ReportCategory,
 } from "./adminTypes";
 
@@ -143,10 +143,10 @@ export function createMockGroupReports(): AdminReportItemRow[] {
   ];
 }
 
-export function createMockEvents(): CalendarEventRow[] {
-  const today = new Date();
-  return [
-    { id: "E-4001", date: yyyyMmDd(today), time: "10:30", title: "운영: 신고 처리 회의", tag: "운영" },
-    { id: "E-4002", date: yyyyMmDd(today), time: "14:00", title: "점검: 검색 인덱스 점검", tag: "점검" },
-  ];
-}
+// export function createMockEvents(): CalendarEventRow[] {
+//   const today = new Date();
+//   return [
+//     { id: "E-4001", date: yyyyMmDd(today), time: "10:30", title: "운영: 신고 처리 회의", tag: "운영" },
+//     { id: "E-4002", date: yyyyMmDd(today), time: "14:00", title: "점검: 검색 인덱스 점검", tag: "점검" },
+//   ];
+// }

@@ -171,7 +171,7 @@ const AdminCalendarPage: React.FC = () => {
         <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
           <div className="text-xs font-semibold text-gray-900 flex items-center gap-2">
             <CalendarDays className="w-4 h-4" />
-            <span>다가오는 일정(검색 반영)</span>
+            <span>다가오는 일정</span>
           </div>
           <div className="mt-2 space-y-2">
             {filteredEvents
