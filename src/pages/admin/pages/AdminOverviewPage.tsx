@@ -21,7 +21,7 @@ function money(v: number): string {
 }
 
 const AdminOverviewPage: React.FC = () => {
-  const { stats, auctions, reportGroups } = useAdminStore();
+  const { stats, auctions, reportGroups, categoryDistribution } = useAdminStore();
 
   const topAuctions = useMemo(() => auctions.slice(0, 5), [auctions]);
 
@@ -58,14 +58,27 @@ const AdminOverviewPage: React.FC = () => {
 
   // 카테고리 분포 샘플(도넛 차트)
   const categorySegments: DonutSegment[] = useMemo(() => {
-    return [
-      { label: "전자제품", value: 345, colorClass: "text-violet-600" },
-      { label: "의류/패션", value: 278, colorClass: "text-blue-600" },
-      { label: "가구/인테리어", value: 189, colorClass: "text-emerald-600" },
-      { label: "도서/문구", value: 167, colorClass: "text-orange-600" },
-      { label: "기타", value: 234, colorClass: "text-gray-600" },
+    const base = [
+      { label: "전자제품", colorClass: "text-violet-600" },
+      { label: "패션/잡화", colorClass: "text-blue-600" },
+      { label: "생활/가전", colorClass: "text-emerald-600" },
+      { label: "취미/레저", colorClass: "text-orange-600" },
+      { label: "컬렉터블", colorClass: "text-pink-600" },
+      { label: "자동차/오토바이", colorClass: "text-gray-700" },
+      { label: "도서/음반/영화", colorClass: "text-indigo-600" },
     ];
-  }, []);
+
+    const map = new Map<string, number>();
+    for (const row of categoryDistribution) {
+      if (!row?.category) continue;
+      map.set(row.category, Number(row.count ?? 0));
+    }
+    return base.map((b) => ({
+      label: b.label,
+      value: map.get(b.label) ?? 0,
+      colorClass: b.colorClass,
+    }));
+  }, [categoryDistribution]);
 
   // 금일 사용자 주 사용 시간대 (선 차트)
   const todayActiveHourLine: MultiLineSeries[] = useMemo(() => {

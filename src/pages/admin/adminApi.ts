@@ -10,6 +10,7 @@ import type {
   ReportCategory,
   SpringPage,
   BlockedProductRow,
+  CategoryDistributionRow,
 } from "./adminTypes";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -126,6 +127,13 @@ function normalizeBlockedProduct(x: any): BlockedProductRow {
   };
 }
 
+function normalizeCategoryDistribution(x: any): CategoryDistributionRow {
+  return {
+    category: String(x.category ?? x.categoryName ?? x.name ?? ""),
+    count: Number(x.count ?? x.value ?? 0),
+  };
+}
+
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
@@ -191,7 +199,7 @@ export const adminApi = {
     } as SpringPage<AdminReportItemRow>;
   },
 
-  // ✅ 신고(유저) - 그룹 처리(승인/기각)
+  // 신고(유저) - 그룹 처리(승인/기각)
   resolveReportGroup: (targetUserId: number, category: ReportCategory, payload: { accept: boolean; adminContent?: string; suspendDays?: number }) =>
     request<CommonResDto<void>>(`/report/admin/resolve/${targetUserId}/${category}`, {
       method: "POST",
@@ -266,7 +274,11 @@ export const adminApi = {
     const items = Array.isArray(page?.items) ? page.items : [];
     return items.map(normalizeNotice);
   },
-
+  getCategoryDistribution: async () => {
+    const raw = await request<CommonResDto<any[]>>("/admin/category-distribution");
+    const arr = unwrap<any[]>(raw) ?? [];
+    return arr.map(normalizeCategoryDistribution);
+  },
 
   createNotice: (payload: {
     category: NoticeCategory;

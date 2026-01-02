@@ -116,7 +116,10 @@ export const SimpleMultiLineChart: React.FC<{
       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-gray-600">
         {series.map((s) => (
           <div key={s.name} className="flex items-center gap-2">
-            <span className={"w-2.5 h-2.5 rounded-full " + s.colorClass.replace("text-", "bg-")} />
+            <span
+              className={"w-2.5 h-2.5 rounded-full shrink-0 " + s.colorClass}
+              style={{ backgroundColor: "currentColor" }}
+            />
             <span>{s.name}</span>
           </div>
         ))}
@@ -180,7 +183,10 @@ export const SimpleDonutChart: React.FC<{
           return (
             <div key={s.label} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
-                <span className={"w-3 h-3 rounded-full " + s.colorClass.replace("text-", "bg-")} />
+                <span
+                  className={"w-3 h-3 rounded-full shrink-0 " + s.colorClass}
+                  style={{ backgroundColor: "currentColor" }}
+                />
                 <span className="text-gray-800">{s.label}</span>
               </div>
               <div className="text-gray-600 text-[12px]">

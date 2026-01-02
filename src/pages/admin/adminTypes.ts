@@ -122,3 +122,8 @@ export interface BlockedProductRow {
   blockedAt?: string | null;
   blockedReason?: string | null;
 }
+
+export type CategoryDistributionRow = {
+  category: string;
+  count: number;
+};

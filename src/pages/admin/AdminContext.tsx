@@ -11,6 +11,7 @@ import type {
   SpringPage,
   AdminReportItemRow,
   BlockedProductRow,
+  CategoryDistributionRow,
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
 import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
@@ -129,6 +130,10 @@ export interface AdminStore {
   // 경매 조치
   suspendAuction: (auctionId: string) => void;
   forceEndAuction: (auctionId: string) => void;
+
+  // 카테고리 확인용(overview)
+  categoryDistribution: CategoryDistributionRow[];
+  setCategoryDistribution: React.Dispatch<React.SetStateAction<CategoryDistributionRow[]>>;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -154,14 +159,15 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // 캘린더 관련 더미
   const [events, setEvents] = useState<CalendarEventRow[]>([]);
   
-
   const [notices, setNotices] = useState<NoticeRow[]>([]);
   const [noticePage, setNoticePage] = useState(0);
   const [noticeSize, setNoticeSize] = useState(10);
   const [noticeTotalPages, setNoticeTotalPages] = useState(1);
   const [noticeTotalElements, setNoticeTotalElements] = useState(0);
 
-   const [blockedProducts, setBlockedProducts] = useState<BlockedProductRow[]>([]);
+  const [blockedProducts, setBlockedProducts] = useState<BlockedProductRow[]>([]);
+
+  const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistributionRow[]>([]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -209,16 +215,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       adminApi.getReportGroups(),
       adminApi.getBlockedProducts(),
       adminApi.getEvents(),
-    
+      adminApi.getCategoryDistribution(),
     ]);
 
-    const [ovR, auctR, groupR, blockedR, evR] = results;
+    const [ovR, auctR, groupR, blockedR, evR, catR] = results;
 
     if (ovR.status === "fulfilled") setStats(ovR.value);
     if (auctR.status === "fulfilled") setAuctions(auctR.value);
     if (groupR.status === "fulfilled") setReportGroups(groupR.value);
     if (blockedR.status === "fulfilled") setBlockedProducts(blockedR.value);
     if (evR.status === "fulfilled") setEvents(evR.value);
+    if (catR.status === "fulfilled") setCategoryDistribution(catR.value);
 
     await fetchNoticesPage(noticePage, noticeSize);
     setLastUpdatedAt(nowIso());
@@ -423,6 +430,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     suspendAuction,
     forceEndAuction,
+
+    categoryDistribution,
+    setCategoryDistribution,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
