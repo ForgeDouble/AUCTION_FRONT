@@ -14,11 +14,15 @@ import { ChatProvider } from "./contexts/ChatProvider";
 import ChatListPopup from "./pages/chat/ChatListPopup";
 import ChatRoomPopup from "@/pages/chat/ChatRoomPopup";
 import { FcmNotificationCenter } from "./components/fcm/FcmNotificationCenter";
+
+import AdminDashboard from "@/pages/admin/pages/AdminDashboard";
+
 import MyWishlist from "./pages/mypage/wishlist/MyWishlist";
 
 import MyBidlist from "./pages/mypage/bidlist/MyBidlist";
 import MyAuctionlist from "./pages/mypage/auctionlist/MyAuctionlist";
 import MyProfile from "./pages/mypage/profile/MyProfile";
+
 
 function App() {
   // fcm 로그 확인용
@@ -31,11 +35,12 @@ function App() {
   return (
     <AuthProvider>
       <ChatProvider>
+        
         <FcmNotificationCenter />
         <Routes>
           {/* 팝업 전용: Navbar 없이 렌더링 */}
           <Route path="/chat-popup" element={<ChatListPopup />} />
-
+          <Route path="/admin/*" element={<AdminDashboard />} />
           {/* 일반 페이지는 Navbar 래핑 */}
           <Route element={<Navbar />}>
             <Route path="/" element={<Home />} />
@@ -52,6 +57,10 @@ function App() {
             <Route path="/sell_product" element={<SellProductPage />} />
             <Route path="/register" element={<RegisterPage />} />
             {/* <Route path="/chat" element={<Chat />} /> */}
+
+            {/* <Route path="/admin" element={<AuctionAdminDashboard />} /> */}
+
+
           </Route>
           <Route path="/chat-list" element={<ChatListPopup />} />
           <Route path="/chat" element={<ChatRoomPopup />} />
@@ -60,5 +69,4 @@ function App() {
     </AuthProvider>
   );
 }
-
 export default App;
