@@ -15,6 +15,8 @@ export interface ProductListDto {
   path: categoryDto[];
   latestBidAmount: number | null;
   bidCount: number;
+  createdAt: string;
+  auctionEndTime: string;
 }
 
 export interface ParentCategoriesDto {

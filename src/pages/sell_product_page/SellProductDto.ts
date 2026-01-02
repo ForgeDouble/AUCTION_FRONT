@@ -12,3 +12,9 @@ export interface ProductCreateDto {
   price: number;
   status: Status;
 }
+
+export interface ParentCategoriesDto {
+  categoryId: number;
+  categoryName: string;
+  children: [] | ParentCategoriesDto[];
+}
