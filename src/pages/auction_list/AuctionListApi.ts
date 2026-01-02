@@ -29,13 +29,16 @@ export const fetchProducts = async (
 export const fetchParentCategories = async (): Promise<
   ApiResponse<ParentCategoriesDto[]>
 > => {
-  const response = await fetch(`http://localhost:8080/category/with_children`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include", // 필요하면 쿠키 포함
-  });
+  const response = await fetch(
+    `http://localhost:8080/category/with_children_and_count`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include", // 필요하면 쿠키 포함
+    }
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to fetch bids: ${response.status}`);
