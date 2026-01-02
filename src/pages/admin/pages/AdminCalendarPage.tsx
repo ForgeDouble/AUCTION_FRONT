@@ -22,6 +22,37 @@ function addDays(d: Date, n: number): Date {
   return x;
 }
 
+function tagStyle(tag?: CalendarEventRow["tag"]) {
+  const t = tag ?? "기타";
+  switch (t) {
+    case "운영":
+      return {
+        pill: "bg-blue-50 text-blue-700 border-blue-200",
+        bar: "bg-blue-500",
+      };
+    case "장애":
+      return {
+        pill: "bg-red-50 text-red-700 border-red-200",
+        bar: "bg-red-500",
+      };
+    case "정산":
+      return {
+        pill: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        bar: "bg-emerald-500",
+      };
+    case "점검":
+      return {
+        pill: "bg-amber-50 text-amber-800 border-amber-200",
+        bar: "bg-amber-500",
+      };
+    default:
+      return {
+        pill: "bg-gray-50 text-gray-700 border-gray-200",
+        bar: "bg-gray-500",
+      };
+  }
+}
+
 const AdminCalendarPage: React.FC = () => {
 const {events, addEvent, updateEvent, deleteEvent, moveEventDate, query, } = useAdminStore();
 
@@ -196,14 +227,14 @@ return (
     <SectionTitle
       title="운영 캘린더"
       right={
-      <div className="flex items-center gap-2">
-      <button
-        onClick={() => setAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-        className="px-2 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
-        title="이전 달"
-      >
-      <ChevronLeft className="w-4 h-4" />
-      </button>
+    <div className="flex items-center gap-2">
+    <button
+      onClick={() => setAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+      className="px-2 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
+      title="이전 달"
+    >
+    <ChevronLeft className="w-4 h-4" />
+    </button>
 
         <div className="text-sm font-semibold text-gray-900 w-[120px] text-center">{monthLabel}</div>
 
@@ -267,27 +298,41 @@ return (
           </div>
 
           <div className="mt-2 space-y-1">
-            {dayEvents.slice(0, 2).map((e) => (
-              <div
-                key={e.id}
-                draggable
-                onDragStart={(ev) => onDragStartEvent(ev, e.id)}
-                onClick={(ev) => {
-                  ev.stopPropagation();
-                  setSelectedId(e.id);
-                }}
-                className={
-                  "text-[11px] px-2 py-1 rounded-lg border bg-white hover:bg-gray-50 truncate " +
-                  (selectedId === e.id ? "border-violet-300" : "border-gray-100")
-                }
-                title="클릭: 상세/메모 / 드래그: 날짜 변경"
-              >
-                <span className="text-gray-900 font-semibold">
-                  {e.time ? `${e.time} ` : ""}
-                </span>
-                <span className="text-gray-700">{e.title}</span>
-              </div>
-            ))}
+            {dayEvents.slice(0, 2).map((e) => {
+              const ts = tagStyle(e.tag);
+              return (
+                <div
+                  key={e.id}
+                  draggable
+                  onDragStart={(ev) => onDragStartEvent(ev, e.id)}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    setSelectedId(e.id);
+                  }}
+                  className={
+                    "relative text-[11px] pl-3 pr-2 py-1.5 rounded-lg border bg-white hover:bg-gray-50 truncate " +
+                    (selectedId === e.id ? "border-violet-300" : "border-gray-100")
+                  }
+                  title="클릭: 상세/메모 / 드래그: 날짜 변경"
+                >
+                  {/* 왼쪽 북마크 바 */}
+                  <span className={"absolute left-1 top-1 bottom-1 w-1 rounded-full " + ts.bar} />
+
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {/* 태그 칩 */}
+                    <span className={"shrink-0 px-1.5 py-0.5 rounded-md border text-[10px] " + ts.pill}>
+                      {e.tag || "기타"}
+                    </span>
+
+                    <span className="text-gray-900 font-semibold shrink-0">
+                      {e.time ? `${e.time}` : ""}
+                    </span>
+
+                    <span className="text-gray-700 truncate">{e.title}</span>
+                  </div>
+                </div>
+              );
+            })}
 
             {dayEvents.length > 2 && (
               <div className="text-[10px] text-gray-400">+{dayEvents.length - 2} 더보기</div>
@@ -302,25 +347,41 @@ return (
     <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
       <div className="text-xs font-semibold text-gray-900 flex items-center gap-2">
         <CalendarDays className="w-4 h-4" />
-        <span>다가오는 일정(2주 이내 · 검색 반영)</span>
+        <span>예정 일정</span>
       </div>
 
       <div className="mt-2 space-y-2">
-        {upcomingEvents.slice(0, 12).map((e) => (
-          <button
-            key={e.id}
-            onClick={() => setSelectedId(e.id)}
-            className={
-              "w-full text-left p-2 rounded-xl bg-white border hover:bg-gray-50 " +
-              (selectedId === e.id ? "border-violet-300" : "border-gray-100")
-            }
-          >
-            <div className="text-sm font-semibold text-gray-900 truncate">{e.title}</div>
-            <div className="text-[11px] text-gray-500">
-              {e.date} {e.time || ""} · {e.tag || "기타"}
-            </div>
-          </button>
-        ))}
+        {upcomingEvents.slice(0, 12).map((e) => {
+          const ts = tagStyle(e.tag);
+          return (
+            <button
+              key={e.id}
+              onClick={() => setSelectedId(e.id)}
+              className={
+                "w-full text-left p-2 rounded-xl bg-white border hover:bg-gray-50 " +
+                (selectedId === e.id ? "border-violet-300" : "border-gray-100")
+              }
+            >
+              <div className="flex items-start gap-2">
+                {/* 왼쪽 컬러 바 */}
+                <div className={"mt-1 w-1.5 h-10 rounded-full " + ts.bar} />
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={"px-2 py-0.5 rounded-md border text-[10px] " + ts.pill}>
+                      {e.tag || "기타"}
+                    </span>
+                    <div className="text-sm font-semibold text-gray-900 truncate">{e.title}</div>
+                  </div>
+
+                  <div className="mt-0.5 text-[11px] text-gray-500">
+                    {e.date} {e.time || ""}
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
 
         {upcomingEvents.length === 0 && <div className="text-sm text-gray-500 py-4">2주 이내 일정이 없습니다.</div>}
       </div>
@@ -342,9 +403,19 @@ return (
         <div className="mt-3 p-3 rounded-xl bg-white border border-gray-100">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <div className="text-[11px] text-gray-500">
-                {selected.date} {selected.time || ""} · {selected.tag || "기타"}
-              </div>
+              {(() => {
+                const ts = tagStyle(selected.tag);
+                return (
+                  <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                    <span className={"px-2 py-0.5 rounded-md border text-[10px] " + ts.pill}>
+                      {selected.tag || "기타"}
+                    </span>
+                    <span>
+                      {selected.date} {selected.time || ""}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <button
