@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Clock, CheckCircle, XCircle, TrendingUp } from "lucide-react";
 import { fetchBidsByUser } from "../MyPageApi";
 import { useNavigate } from "react-router-dom";
+import type { BidListDto } from "../MyPageDto";
 
 const MyBidlist = () => {
   const [bids, setBids] = useState<BidListDto[]>([]);
