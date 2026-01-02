@@ -1,42 +1,38 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Upload, X, DollarSign, Package, Image } from "lucide-react";
 import {
-  Upload,
-  X,
-  Plus,
-  DollarSign,
-  Package,
-  Clock,
-  ImageIcon,
-} from "lucide-react";
-
-import { Status, type ProductCreateDto } from "./SellProductDto";
-import { fetchCreateProduct } from "./SellProductApi";
-
-// Category mapping
-const categoryMap: { [key: string]: number } = {
-  electronics: 1,
-  fashion: 2,
-  home: 3,
-  sports: 4,
-  books: 5,
-  etc: 6,
-};
-
+  Status,
+  type ParentCategoriesDto,
+  type ProductCreateDto,
+} from "./SellProductDto";
+import CategorySelector from "@/components/fcm/category_selector/CategorySelector";
+import { fetchCreateProduct, fetchParentCategories } from "./SellProductApi";
 
 const SellProductPage = () => {
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState<any[]>([]);
+  const [parentCategories, setParentCategories] = useState<
+    ParentCategoriesDto[]
+  >([]);
   const [formData, setFormData] = useState({
     productName: "",
-    category: "",
+    categoryId: null as number | null,
     price: "",
-
-    description: "",
+    productContent: "",
   });
   const [loading, setLoading] = useState(false);
 
+  /* 부모 카테고리 조회 */
+  const loadParentCategories = async () => {
+    try {
+      const data = await fetchParentCategories();
+      setParentCategories(data.result);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
     const newImages = files.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       url: URL.createObjectURL(file),
@@ -45,12 +41,11 @@ const SellProductPage = () => {
     setImages((prev) => [...prev, ...newImages].slice(0, 10));
   };
 
-  const removeImage = (id) => {
+  const removeImage = (id: string) => {
     setImages((prev) => prev.filter((img) => img.id !== id));
   };
 
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (images.length === 0) {
@@ -58,13 +53,18 @@ const SellProductPage = () => {
       return;
     }
 
+    if (!formData.categoryId) {
+      alert("카테고리를 선택해주세요.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const productData: ProductCreateDto = {
-        categoryId: categoryMap[formData.category],
+        categoryId: formData.categoryId,
         productName: formData.productName,
-        productContent: formData.description,
+        productContent: formData.productContent,
         price: Number(formData.price),
         status: Status.READY,
       };
@@ -83,9 +83,9 @@ const SellProductPage = () => {
       // 폼 초기화
       setFormData({
         productName: "",
-        category: "",
+        categoryId: null,
         price: "",
-        description: "",
+        productContent: "",
       });
       setImages([]);
     } catch (error) {
@@ -94,13 +94,18 @@ const SellProductPage = () => {
     } finally {
       setLoading(false);
     }
-
   };
 
-  const handleChange = (e) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  useEffect(() => {
+    loadParentCategories();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 py-8 px-4 pt-20">
@@ -120,10 +125,8 @@ const SellProductPage = () => {
           {/* 이미지 업로드 섹션 */}
           <div>
             <label className="flex items-center text-lg font-semibold text-gray-800 mb-4">
-              <ImageIcon className="mr-2 text-purple-600" size={24} />
-
+              <Image className="mr-2 text-purple-600" size={24} />
               상품 이미지 (최대 10장) *
-
             </label>
 
             <div className="grid grid-cols-5 gap-4">
@@ -179,9 +182,7 @@ const SellProductPage = () => {
             <div className="md:col-span-2">
               <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
                 <Package className="mr-2 text-purple-600" size={18} />
-
                 상품명 *
-
               </label>
               <input
                 type="text"
@@ -197,35 +198,26 @@ const SellProductPage = () => {
             {/* 카테고리 */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-
                 카테고리 *
-
               </label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                required
-              >
-                <option value="">선택하세요</option>
-                <option value="electronics">전자기기</option>
-                <option value="fashion">패션/의류</option>
-                <option value="home">생활/가전</option>
-                <option value="sports">스포츠/레저</option>
-                <option value="books">도서</option>
-                <option value="etc">기타</option>
-              </select>
+              <CategorySelector
+                categories={parentCategories}
+                selectedCategoryId={formData.categoryId}
+                onSelectCategory={(categoryId, categoryName) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    categoryId,
+                    categoryName,
+                  }));
+                }}
+              />
             </div>
-
 
             {/* 시작 가격 */}
             <div>
               <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
                 <DollarSign className="mr-2 text-purple-600" size={18} />
-
                 시작 가격 *
-
               </label>
               <div className="relative">
                 <input
@@ -234,9 +226,7 @@ const SellProductPage = () => {
                   value={formData.price}
                   onChange={handleChange}
                   placeholder="0"
-
                   min="0"
-
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
@@ -245,18 +235,16 @@ const SellProductPage = () => {
                 </span>
               </div>
             </div>
-
           </div>
 
           {/* 상품 설명 */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               상품 설명 *
-
             </label>
             <textarea
-              name="description"
-              value={formData.description}
+              name="productContent"
+              value={formData.productContent}
               onChange={handleChange}
               placeholder="상품에 대해 자세히 설명해주세요"
               rows={6}
@@ -278,7 +266,6 @@ const SellProductPage = () => {
               <li>• 정확한 상품 정보를 입력해주세요</li>
               <li>• 실물과 동일한 사진을 업로드해주세요</li>
               <li>• 경매 시작 후에는 취소가 불가능합니다</li>
-              <li>• 낙찰 후 3일 이내 배송을 권장합니다</li>
             </ul>
           </div>
 
@@ -289,7 +276,6 @@ const SellProductPage = () => {
               onClick={() => window.history.back()}
               className="flex-1 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all"
               disabled={loading}
-
             >
               취소
             </button>
@@ -299,7 +285,6 @@ const SellProductPage = () => {
               className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "등록 중..." : "상품 등록하기"}
-
             </button>
           </div>
         </form>
