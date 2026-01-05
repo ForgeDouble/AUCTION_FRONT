@@ -290,7 +290,7 @@ export const adminApi = {
   },
 
   getTodayActiveHours: async () => {
-    const raw = await request<CommonResDto<any[]>>("/admin/metrics/active-hours/today");
+    const raw = await request<CommonResDto<any[]>>("/admin/metrics/active-hours");
     const arr = unwrap<any[]>(raw) ?? [];
     return arr.map(normalizeActiveHourBucket);
   },
