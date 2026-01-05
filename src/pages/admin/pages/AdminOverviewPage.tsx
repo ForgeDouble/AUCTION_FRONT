@@ -83,18 +83,34 @@ const AdminOverviewPage: React.FC = () => {
   // 금일 사용자 주 사용 시간대 (선 차트)
   const todayActiveHourLine: MultiLineSeries[] = useMemo(() => {
     const labels = ["00", "03", "06", "09", "12", "15", "18", "21"];
+    const starts = [0, 3, 6, 9, 12, 15, 18, 21];
 
-    const map = new Map<string, number>();
+    const map = new Map<number, number>();
     for (const row of todayActiveHours ?? []) {
-      if (!row?.hour) continue;
-      map.set(row.hour, Number(row.count ?? 0));
+      const h = Number(row.hour);
+      const c = Number(row.count ?? 0);
+      if (!Number.isFinite(h)) continue;
+      map.set(h, (map.get(h) ?? 0) + (Number.isFinite(c) ? c : 0));
     }
+
+    const bucketValue = (start: number) => {
+      let sum = 0;
+      for (let h = start; h < start + 3; h++) {
+        sum += map.get(h) ?? 0;
+      }
+      return sum;
+    };
+
+    const points = starts.map((s, i) => ({
+      label: labels[i],
+      value: bucketValue(s),
+    }));
 
     return [
       {
         name: "접속/활동",
         colorClass: "text-violet-600",
-        points: labels.map((l) => ({ label: l, value: map.get(l) ?? 0 })),
+        points,
       },
     ];
   }, [todayActiveHours]);
