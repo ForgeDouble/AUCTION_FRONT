@@ -21,7 +21,7 @@ function money(v: number): string {
 }
 
 const AdminOverviewPage: React.FC = () => {
-  const { stats, auctions, reportGroups, categoryDistribution } = useAdminStore();
+  const { stats, auctions, reportGroups, categoryDistribution, todayActiveHours  } = useAdminStore();
 
   const topAuctions = useMemo(() => auctions.slice(0, 5), [auctions]);
 
@@ -83,15 +83,22 @@ const AdminOverviewPage: React.FC = () => {
   // 금일 사용자 주 사용 시간대 (선 차트)
   const todayActiveHourLine: MultiLineSeries[] = useMemo(() => {
     const labels = ["00", "03", "06", "09", "12", "15", "18", "21"];
-    const users = [45, 23, 67, 189, 312, 278, 398, 342];
+
+    const map = new Map<string, number>();
+    for (const row of todayActiveHours ?? []) {
+      if (!row?.hour) continue;
+      map.set(row.hour, Number(row.count ?? 0));
+    }
+
     return [
       {
         name: "접속/활동",
         colorClass: "text-violet-600",
-        points: labels.map((l, i) => ({ label: l, value: users[i] })),
+        points: labels.map((l) => ({ label: l, value: map.get(l) ?? 0 })),
       },
     ];
-  }, []);
+  }, [todayActiveHours]);
+
 
   // 월별 거래 금액(샘플) + 평균 표시
   const monthlyTradeSeries: MultiLineSeries[] = useMemo(() => {
@@ -161,7 +168,7 @@ const AdminOverviewPage: React.FC = () => {
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="카테고리 분포 (원형)" right={<span className="text-[11px] text-gray-500">샘플</span>} />
+          <SectionTitle title="카테고리 분포 (원형)" right={<span className="text-[11px] text-gray-500">  </span>} />
           <SimpleDonutChart segments={categorySegments} size={180} thickness={16} />
         </div>
       </div>

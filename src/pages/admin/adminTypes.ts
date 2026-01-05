@@ -127,3 +127,9 @@ export type CategoryDistributionRow = {
   category: string;
   count: number;
 };
+
+export type ActiveHourBucketRow = {
+  hour: string;
+  count: number;
+};
+

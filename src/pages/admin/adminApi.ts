@@ -11,6 +11,7 @@ import type {
   SpringPage,
   BlockedProductRow,
   CategoryDistributionRow,
+  ActiveHourBucketRow,
 } from "./adminTypes";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -130,6 +131,14 @@ function normalizeBlockedProduct(x: any): BlockedProductRow {
 function normalizeCategoryDistribution(x: any): CategoryDistributionRow {
   return {
     category: String(x.category ?? x.categoryName ?? x.name ?? ""),
+    count: Number(x.count ?? x.value ?? 0),
+  };
+}
+
+function normalizeActiveHourBucket(x: any): ActiveHourBucketRow {
+  const h = String(x.hour ?? x.label ?? "00").padStart(2, "0");
+  return {
+    hour: h,
     count: Number(x.count ?? x.value ?? 0),
   };
 }
@@ -278,6 +287,12 @@ export const adminApi = {
     const raw = await request<CommonResDto<any[]>>("/admin/category-distribution");
     const arr = unwrap<any[]>(raw) ?? [];
     return arr.map(normalizeCategoryDistribution);
+  },
+
+  getTodayActiveHours: async () => {
+    const raw = await request<CommonResDto<any[]>>("/admin/metrics/active-hours/today");
+    const arr = unwrap<any[]>(raw) ?? [];
+    return arr.map(normalizeActiveHourBucket);
   },
 
   createNotice: (payload: {

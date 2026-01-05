@@ -12,6 +12,7 @@ import type {
   AdminReportItemRow,
   BlockedProductRow,
   CategoryDistributionRow,
+  ActiveHourBucketRow,
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
 import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
@@ -134,6 +135,11 @@ export interface AdminStore {
   // 카테고리 확인용(overview)
   categoryDistribution: CategoryDistributionRow[];
   setCategoryDistribution: React.Dispatch<React.SetStateAction<CategoryDistributionRow[]>>;
+  refreshCategoryDistribution: () => Promise<void>;
+
+  todayActiveHours: ActiveHourBucketRow[];
+  setTodayActiveHours: React.Dispatch<React.SetStateAction<ActiveHourBucketRow[]>>;
+  refreshTodayActiveHours: () => Promise<void>;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -168,6 +174,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [blockedProducts, setBlockedProducts] = useState<BlockedProductRow[]>([]);
 
   const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistributionRow[]>([]);
+  const [todayActiveHours, setTodayActiveHours] = useState<ActiveHourBucketRow[]>([]);
+
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -208,6 +216,25 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const refreshCategoryDistribution = async (): Promise<void> => {
+    try {
+      const list = await adminApi.getCategoryDistribution();
+      setCategoryDistribution(list);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const refreshTodayActiveHours = async (): Promise<void> => {
+    try {
+      const list = await adminApi.getTodayActiveHours();
+      setTodayActiveHours(list);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  
   const refreshAll = async (): Promise<void> => {
     const results = await Promise.allSettled([
       adminApi.getOverview(),
@@ -216,9 +243,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       adminApi.getBlockedProducts(),
       adminApi.getEvents(),
       adminApi.getCategoryDistribution(),
+      adminApi.getTodayActiveHours(),
     ]);
 
-    const [ovR, auctR, groupR, blockedR, evR, catR] = results;
+    const [ovR, auctR, groupR, blockedR, evR, catR, hourR] = results;
 
     if (ovR.status === "fulfilled") setStats(ovR.value);
     if (auctR.status === "fulfilled") setAuctions(auctR.value);
@@ -226,6 +254,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (blockedR.status === "fulfilled") setBlockedProducts(blockedR.value);
     if (evR.status === "fulfilled") setEvents(evR.value);
     if (catR.status === "fulfilled") setCategoryDistribution(catR.value);
+    if (hourR.status === "fulfilled") setTodayActiveHours(hourR.value);
 
     await fetchNoticesPage(noticePage, noticeSize);
     setLastUpdatedAt(nowIso());
@@ -433,6 +462,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     categoryDistribution,
     setCategoryDistribution,
+    refreshCategoryDistribution,
+
+    todayActiveHours,
+    setTodayActiveHours,
+    refreshTodayActiveHours,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
