@@ -179,7 +179,7 @@ const AdminOverviewPage: React.FC = () => {
       {/*✅ 그래프 섹션(아직 연결 안됨) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="최근 7일 경매 생성/종료 추이" right={<span className="text-[11px] text-gray-500">샘플</span>} />
+          <SectionTitle title="최근 7일 경매 생성/종료 추이" right={<span className="text-[11px] text-gray-500">(샘플)</span>} />
           <SimpleMultiLineChart series={auctionTrendSeries} height={190} yLabel="count" />
         </div>
 
@@ -191,7 +191,7 @@ const AdminOverviewPage: React.FC = () => {
 
       {/*✅ 금일 사용 시간대(선형) . (아직 연결 안됨) */}
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-        <SectionTitle title="금일 사용자 주 사용 시간대" right={<span className="text-[11px] text-gray-500">시간대별 접속/활동(샘플)</span>} />
+        <SectionTitle title="금일 사용자 주 사용 시간대" right={<span className="text-[11px] text-gray-500">시간대별 접속/활동</span>} />
         <SimpleMultiLineChart series={todayActiveHourLine} height={190} yLabel="users" />
       </div>
 

@@ -65,7 +65,7 @@ const AdminAuctionsPage: React.FC = () => {
                   </td>
                   <td className="py-3 pr-2 text-gray-700">{a.sellerMasked}</td>
                   <td className="py-3 pr-2 text-gray-700">{a.category}</td>
-                  <td className="py-3 pr-2 text-right font-bold text-gray-900">₩{money(a.currentBid)}</td>
+                  <td className="py-3 pr-2 text-right font-bold text-gray-900">₩ {money(a.currentBid)}</td>
                   <td className="py-3 pr-2 text-right text-gray-700">{a.bidCount}</td>
                   <td className="py-3 pr-2 text-gray-700">{formatKST(a.endsAt)}</td>
                   <td className="py-3 pr-2">

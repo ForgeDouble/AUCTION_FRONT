@@ -15,7 +15,7 @@ import type {
   ActiveHourBucketRow,
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
-import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
+// import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -52,7 +52,30 @@ function safeGetAdminProfile(): { email: string; nick: string; role: string } {
     return fallback;
   }
 }
+function emptyAdminStats(): AdminOverviewResponse {
+  return {
+  todayNewUsers: 0,
+  todayCreatedAuctions: 0,
+  todayEndedAuctions: 0,
+  todaySoldAuctions: 0,
+  totalBids: 0,
+  ongoingAuctions: 0,
+  reportsOpen: 0,
+  realtimeUsers: 0,
+  todayActiveUsers: 0,
 
+  todayTradeAmount: 0,
+  monthlyAvgTradeAmount: 0,
+
+  todayActivityHourly: [],
+  statusReady: 0,
+  statusProcessing: 0,
+  statusSelled: 0,
+  statusNotselled: 0,
+
+
+  };
+}
 export interface AdminStore {
   adminEmail: string;
   adminNick: string;
@@ -156,11 +179,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>(nowIso());
 
   // 옥션 관련 더미
-  const [stats, setStats] = useState<AdminOverviewResponse>(() => createMockStats());
-  const [auctions, setAuctions] = useState<AuctionRow[]>(() => createMockAuctions());
-  
-  // 신고 관련 더미
-  const [reportGroups, setReportGroups] = useState<AdminReportGroupRow[]>(() => createMockReportGroups());
+  const [stats, setStats] = useState<AdminOverviewResponse>(() => emptyAdminStats());
+  const [auctions, setAuctions] = useState<AuctionRow[]>([]);
+  const [reportGroups, setReportGroups] = useState<AdminReportGroupRow[]>([]);
 
   // 캘린더 관련 더미
   const [events, setEvents] = useState<CalendarEventRow[]>([]);
