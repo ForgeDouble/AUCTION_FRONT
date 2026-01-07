@@ -39,6 +39,7 @@ export function auctionBadge(status?: string) {
     READY: { label: "대기", cls: "bg-gray-50 text-gray-700 border-gray-200" },
     PROCESSING: { label: "진행중", cls: "bg-gray-50 text-gray-700 border-gray-200" },
     SELLED: { label: "낙찰", cls: "bg-gray-50 text-gray-700 border-gray-200" },
+    SUSPENDED: { label: "임시정지", cls: "bg-gray-50 text-gray-700 border-gray-200"},
     NOTSELLED: { label: "유찰", cls: "bg-gray-50 text-gray-700 border-gray-200" },
     BLOCKED: { label: "차단", cls: "bg-gray-50 text-gray-700 border-gray-200" },
   };

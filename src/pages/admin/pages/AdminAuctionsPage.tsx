@@ -67,6 +67,21 @@ const AdminAuctionsPage: React.FC = () => {
           <tbody>
             {filtered.map((a) => {
               const b = auctionBadge(a.status);
+
+              const status = String(a.status);
+              const isEnded = status === "SELLED" || status === "NOTSELLED";
+
+              const isBlocked =
+                status === "BLOCKED" ||
+                Boolean((a as any).blocked) ||
+                Boolean((a as any).isBlocked);
+
+              const disableActions = isEnded || isBlocked;
+
+              const btnBase = "px-2 py-2 rounded-xl border border-gray-200";
+              const btnAble = "hover:bg-gray-50";
+              const btnDisabled = "opacity-40 cursor-not-allowed";
+
               return (
                 <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="py-3 pr-2 text-[12px] text-gray-600">{a.id}</td>
@@ -79,28 +94,45 @@ const AdminAuctionsPage: React.FC = () => {
                   <td className="py-3 pr-2 text-right text-gray-700">{a.bidCount}</td>
                   <td className="py-3 pr-2 text-gray-700">{formatKST(a.endsAt)}</td>
                   <td className="py-3 pr-2">
-                    <span className={"text-[11px] px-2 py-1 rounded-full border " + b.cls}>{b.label}</span>
+                    <span className={"text-[11px] px-2 py-1 rounded-full border " + (b?.cls ?? "border-gray-200 text-gray-600")}>
+                      {b?.label ?? "UNKNOWN"}
+                    </span>
                   </td>
+
                   <td className="py-3 text-right">
                     <div className="inline-flex items-center gap-2">
+                      {/* 보기 */}
                       <button
-                        onClick={() => openDetailPopup(a.id)}
-                        className="px-2 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
+                        type="button"
+                        onClick={() =>
+                          navigate(`/auction_detail/${a.id}`, {
+                            state: { backgroundLocation: location },
+                          })
+                        }
+                        className={btnBase + " " + btnAble}
                         title="보기"
                       >
                         <Eye className="w-4 h-4 text-gray-700" />
                       </button>
+
+                      {/* 임시차단 : 종료/차단이면 비활성 */}
                       <button
+                        type="button"
                         onClick={() => suspendAuction(a.id)}
-                        className="px-2 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
-                        title="임시차단"
+                        disabled={disableActions}
+                        className={btnBase + " " + (disableActions ? btnDisabled : btnAble)}
+                        title={isBlocked ? "이미 차단된 경매" : isEnded ? "종료된 경매" : "임시차단"}
                       >
                         <Ban className="w-4 h-4 text-gray-700" />
                       </button>
+
+                      {/* 강제종료 : 종료/차단이면 비활성 */}
                       <button
+                        type="button"
                         onClick={() => forceEndAuction(a.id)}
-                        className="px-2 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
-                        title="강제종료"
+                        disabled={disableActions}
+                        className={btnBase + " " + (disableActions ? btnDisabled : btnAble)}
+                        title={isBlocked ? "이미 차단된 경매" : isEnded ? "종료된 경매" : "강제종료"}
                       >
                         <XCircle className="w-4 h-4 text-gray-700" />
                       </button>
