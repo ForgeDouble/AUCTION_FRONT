@@ -1,5 +1,5 @@
 //  src/pages/admin/pages/AdminAuctionsPage.tsx
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Ban, Eye, XCircle } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import { SectionTitle } from "../components/AdminUi";
@@ -26,11 +26,8 @@ const AdminAuctionsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const openDetailPopup = (productId: string | number) => {
-    navigate(`/auction_detail/${productId}`, {
-      state: { backgroundLocation: location },
-    });
-  };
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -45,9 +42,48 @@ const AdminAuctionsPage: React.FC = () => {
     });
   }, [auctions, query]);
 
+  useEffect(() => {
+    setPage(0);
+  }, [query, auctions]);
+
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+
+  const pageList = useMemo(() => {
+    const windowSize = 5;
+    let start = Math.max(0, safePage - Math.floor(windowSize / 2));
+    let end = Math.min(totalPages - 1, start + windowSize - 1);
+    start = Math.max(0, end - windowSize + 1);
+
+    const arr: number[] = [];
+    for (let i = start; i <= end; i++) arr.push(i);
+    return arr;
+  }, [safePage, totalPages]);
+
+  const paged = useMemo(() => {
+    const start = safePage * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, safePage, pageSize]);
+
+  const btnBase = "px-2 py-2 rounded-xl border border-gray-200";
+  const btnAble = "hover:bg-gray-50";
+  const btnDisabled = "opacity-40 cursor-not-allowed";
+
+  // const openDetailPopup = (productId: string | number) => {
+  //   navigate(`/auction_detail/${productId}`, {
+  //     state: { backgroundLocation: location },
+  //   });
+  // };
+
+
+
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-      <SectionTitle title="경매 모니터링" right={<span className="text-[11px] text-gray-500">검색은 상단에서</span>} />
+      <SectionTitle
+        title="경매 모니터링"
+        right={<span className="text-[11px] text-gray-500">검색은 상단에서</span>}
+      />
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -65,7 +101,7 @@ const AdminAuctionsPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((a) => {
+            {paged.map((a) => {
               const b = auctionBadge(a.status);
 
               const status = String(a.status);
@@ -78,10 +114,6 @@ const AdminAuctionsPage: React.FC = () => {
 
               const disableActions = isEnded || isBlocked;
 
-              const btnBase = "px-2 py-2 rounded-xl border border-gray-200";
-              const btnAble = "hover:bg-gray-50";
-              const btnDisabled = "opacity-40 cursor-not-allowed";
-
               return (
                 <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="py-3 pr-2 text-[12px] text-gray-600">{a.id}</td>
@@ -90,11 +122,20 @@ const AdminAuctionsPage: React.FC = () => {
                   </td>
                   <td className="py-3 pr-2 text-gray-700">{a.sellerMasked}</td>
                   <td className="py-3 pr-2 text-gray-700">{a.category}</td>
-                  <td className="py-3 pr-2 text-right font-bold text-gray-900">₩ {money(a.currentBid)}</td>
+
+                  <td className="py-3 pr-2 text-right font-bold text-gray-900">
+                    ₩ {money(a.currentBid)}
+                  </td>
+
                   <td className="py-3 pr-2 text-right text-gray-700">{a.bidCount}</td>
                   <td className="py-3 pr-2 text-gray-700">{formatKST(a.endsAt)}</td>
                   <td className="py-3 pr-2">
-                    <span className={"text-[11px] px-2 py-1 rounded-full border " + (b?.cls ?? "border-gray-200 text-gray-600")}>
+                    <span
+                      className={
+                        "text-[11px] px-2 py-1 rounded-full border " +
+                        (b?.cls ?? "border-gray-200 text-gray-600")
+                      }
+                    >
                       {b?.label ?? "UNKNOWN"}
                     </span>
                   </td>
@@ -141,7 +182,8 @@ const AdminAuctionsPage: React.FC = () => {
                 </tr>
               );
             })}
-            {filtered.length === 0 && (
+
+            {paged.length === 0 && (
               <tr>
                 <td colSpan={9} className="py-10 text-center text-gray-500">
                   검색 결과가 없습니다.
@@ -151,6 +193,99 @@ const AdminAuctionsPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* ====== 페이징 처리 ====== */}
+      {totalItems > 0 && (
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-[12px] text-gray-600">
+            총 {totalItems}개 · {safePage + 1}/{totalPages} 페이지
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              className="h-8 rounded-lg border border-gray-200 px-2 text-[12px]"
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(0);
+              }}
+            >
+              <option value={10}>10개</option>
+              <option value={20}>20개</option>
+              <option value={50}>50개</option>
+              <option value={100}>100개</option>
+            </select>
+
+            <button
+              type="button"
+              disabled={safePage === 0}
+              onClick={() => setPage(0)}
+              className={
+                "h-8 px-3 rounded-lg border text-[12px] " +
+                (safePage === 0 ? "opacity-40 cursor-not-allowed border-gray-200" : "border-gray-200 hover:bg-gray-50")
+              }
+            >
+              처음
+            </button>
+
+            <button
+              type="button"
+              disabled={safePage === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              className={
+                "h-8 px-3 rounded-lg border text-[12px] " +
+                (safePage === 0 ? "opacity-40 cursor-not-allowed border-gray-200" : "border-gray-200 hover:bg-gray-50")
+              }
+            >
+              이전
+            </button>
+
+            {pageList.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPage(p)}
+                className={
+                  "min-w-[32px] h-8 px-2 rounded-lg border text-[12px] " +
+                  (p === safePage
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : "border-gray-200 text-gray-700 hover:bg-gray-50")
+                }
+              >
+                {p + 1}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              disabled={safePage >= totalPages - 1}
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              className={
+                "h-8 px-3 rounded-lg border text-[12px] " +
+                (safePage >= totalPages - 1
+                  ? "opacity-40 cursor-not-allowed border-gray-200"
+                  : "border-gray-200 hover:bg-gray-50")
+              }
+            >
+              다음
+            </button>
+
+            <button
+              type="button"
+              disabled={safePage >= totalPages - 1}
+              onClick={() => setPage(totalPages - 1)}
+              className={
+                "h-8 px-3 rounded-lg border text-[12px] " +
+                (safePage >= totalPages - 1
+                  ? "opacity-40 cursor-not-allowed border-gray-200"
+                  : "border-gray-200 hover:bg-gray-50")
+              }
+            >
+              끝
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
