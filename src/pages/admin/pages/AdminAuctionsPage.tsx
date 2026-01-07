@@ -143,7 +143,20 @@ const AdminAuctionsPage: React.FC = () => {
       <SectionTitle title="경매 모니터링" right={<span className="text-[11px] text-gray-500">검색은 상단에서</span>} />
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed min-w-[980px]">
+
+    <colgroup>
+      <col className="w-[50px]" />   {/* ID */}
+      <col className="w-[320px]" />  {/* 제목 */}
+      <col className="w-[110px]" />  {/* 판매자 */}
+      <col className="w-[140px]" />  {/* 카테고리 */}
+      <col className="w-[120px]" />  {/* 현재가 */}
+      <col className="w-[70px]" />   {/* 입찰 */}
+      <col className="w-[150px]" />  {/* 종료 */}
+      <col className="w-[90px]" />   {/* 상태 */}
+      <col className="w-[130px]" />  {/* 조치 */}
+    </colgroup>
+          
           <thead>
             <tr className="text-[11px] text-gray-500 border-b border-gray-100">
               <th className="text-left py-2 pr-2">ID</th>
@@ -173,7 +186,7 @@ const AdminAuctionsPage: React.FC = () => {
 
               return (
                 <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="py-3 pr-2 text-[12px] text-gray-600">{a.id}</td>
+                  <td className="py-3 pr-2 text-[12px] text-gray-600 ">{a.id}</td>
 
                   <td className="py-3 pr-2">
                     <div className="font-semibold text-gray-900">{a.title}</div>
