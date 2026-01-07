@@ -171,8 +171,16 @@ export const adminApi = {
   getOverview: () =>
     request<CommonResDto<AdminOverviewResponse>>("/admin/overview").then((r) => unwrap<AdminOverviewResponse>(r)),
 
-  getAuctions: () =>
-    request<CommonResDto<AuctionRow[]>>("/admin/auctions").then((r) => unwrap<AuctionRow[]>(r)),
+  // getAuctions: () =>
+  //   request<CommonResDto<AuctionRow[]>>("/admin/auctions").then((r) => unwrap<AuctionRow[]>(r)),
+  getAuctionsPage: (params?: { page?: number; size?: number }) => {
+    const sp = new URLSearchParams();
+    sp.set("page", String(params?.page ?? 0));
+    sp.set("size", String(params?.size ?? 20));
+
+    return request<CommonResDto<SpringPage<AuctionRow>>>(`/admin/auctions?${sp.toString()}`)
+      .then((r) => unwrap<SpringPage<AuctionRow>>(r));
+  },
 
   suspendAuction: (auctionId: string, reason: string) =>
     request<CommonResDto<void>>(`/admin/auctions/${encodeURIComponent(auctionId)}/suspend`, {
