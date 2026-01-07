@@ -7,6 +7,7 @@ import {
 } from "./SellProductDto";
 import CategorySelector from "@/components/fcm/category_selector/CategorySelector";
 import { fetchCreateProduct, fetchParentCategories } from "./SellProductApi";
+import { useNavigate } from "react-router-dom";
 
 const SellProductPage = () => {
   const [images, setImages] = useState<any[]>([]);
@@ -20,6 +21,8 @@ const SellProductPage = () => {
     productContent: "",
   });
   const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   /* 부모 카테고리 조회 */
   const loadParentCategories = async () => {
@@ -79,6 +82,7 @@ const SellProductPage = () => {
       const response = await fetchCreateProduct(productData, files, token);
 
       alert(response.message || "상품이 등록되었습니다!");
+      navigate(`/auction_list`);
 
       // 폼 초기화
       setFormData({
