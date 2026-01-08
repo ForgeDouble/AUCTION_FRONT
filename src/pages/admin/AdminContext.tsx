@@ -104,6 +104,8 @@ export interface AdminStore {
   setAuctionsPagingFromUrl: (pageUi: number, size: number) => void;
   refreshAuctionsPage: () => Promise<void>;
 
+  overviewTopAuctions: AuctionRow[];
+  refreshOverviewTopAuctions: () => Promise<void>; 
 
   // 신고(유저)
   reportGroups: AdminReportGroupRow[];
@@ -200,7 +202,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [auctionsTotalPages, setAuctionsTotalPages] = useState<number>(1);
   const [auctionsTotalElements, setAuctionsTotalElements] = useState<number>(0);
-  const auctionsPagingRef = useRef<{ index: number; size: number }>({ index: -1, size: -1 });
+
+  const [overviewTopAuctions, setOverviewTopAuctions] = useState<AuctionRow[]>([]);
+  // const auctionsPagingRef = useRef<{ index: number; size: number }>({ index: -1, size: -1 });
 
   const [reportGroups, setReportGroups] = useState<AdminReportGroupRow[]>([]);
 
@@ -260,6 +264,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const refreshAuctionsPage = useCallback(async (): Promise<void> => {
     await fetchAuctionsPage(auctionsPageIndex, auctionsPageSize);
   }, [fetchAuctionsPage, auctionsPageIndex, auctionsPageSize]);
+
+  const refreshOverviewTopAuctions = useCallback(async (): Promise<void> => {
+    try {
+      const pg = await adminApi.getAuctionsPage({ page: 0, size: 5 });
+      const content = Array.isArray(pg?.content) ? pg.content : [];
+      setOverviewTopAuctions(content);
+    } catch (e) {
+      console.error(e);
+      setOverviewTopAuctions([]);
+    }
+  }, []);
 
   const setAuctionsPagingFromUrl = useCallback((pageUi: number, size: number) => {
     const uiPage = Number.isFinite(pageUi) ? pageUi : 1;
@@ -333,8 +348,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (auctionsPage !== null) {
       await refreshAuctionsPage();
     }
+    await Promise.allSettled([
+      refreshAuctionsPage(),
+      refreshOverviewTopAuctions(),
+      fetchNoticesPage(noticePage, noticeSize),
+    ]);
 
-    await fetchNoticesPage(noticePage, noticeSize);
     setLastUpdatedAt(nowIso());
     
   };
@@ -352,6 +371,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         await adminApi.suspendAuction(auctionId, reason.trim());
         // setAuctions((prev) => prev.map((a) => (a.id === auctionId ? { ...a, status: "SUSPENDED" } : a)));
         await refreshAuctionsPage();
+        await refreshOverviewTopAuctions();
       } catch (e) {
         console.error(e);
         alert("임시차단에 실패했습니다. 서버 로그/응답을 확인하세요.");
@@ -368,6 +388,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         await adminApi.forceEndAuction(auctionId, reason.trim());
         // setAuctions((prev) => prev.filter((a) => a.id !== auctionId));
         await refreshAuctionsPage();
+        await refreshOverviewTopAuctions();
         setStats((s) => ({
           ...s,
           todayEndedAuctions: s.todayEndedAuctions + 1,
@@ -506,6 +527,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     auctionsTotalElements,
     setAuctionsPagingFromUrl,
     refreshAuctionsPage,
+
+    overviewTopAuctions,
+    refreshOverviewTopAuctions,
 
     reportGroups,
     setReportGroups,

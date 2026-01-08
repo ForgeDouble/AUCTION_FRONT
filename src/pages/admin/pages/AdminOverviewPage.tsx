@@ -21,9 +21,9 @@ function money(v: number): string {
 }
 
 const AdminOverviewPage: React.FC = () => {
-  const { stats, auctions, reportGroups, categoryDistribution, todayActiveHours  } = useAdminStore();
+  const { stats, overviewTopAuctions, reportGroups, categoryDistribution, todayActiveHours  } = useAdminStore();
 
-  const topAuctions = useMemo(() => auctions.slice(0, 5), [auctions]);
+  const topAuctions = useMemo(() => (overviewTopAuctions ?? []).slice(0, 5), [overviewTopAuctions]); // ✅
 
   const topReportGroups = useMemo(() => {
     return reportGroups
@@ -189,9 +189,9 @@ const AdminOverviewPage: React.FC = () => {
         </div>
       </div>
 
-      {/*✅ 금일 사용 시간대(선형) . (아직 연결 안됨) */}
+      {/*금일 사용 시간대(선형)*/}
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-        <SectionTitle title="금일 사용자 주 사용 시간대" right={<span className="text-[11px] text-gray-500">시간대별 접속/활동</span>} />
+        <SectionTitle title="금일 사용자 주 사용 시간대" right={<span className="text-[11px] text-gray-500"></span>} />
         <SimpleMultiLineChart series={todayActiveHourLine} height={190} yLabel="users" />
       </div>
 
@@ -212,7 +212,7 @@ const AdminOverviewPage: React.FC = () => {
                     flex items-center gap-3
                   "
                 >
-                  {/* ✅ LEFT: 제목/서브 (가변, 하지만 truncate 되도록) */}
+                  {/* LEFT: 제목/서브 (가변, 하지만 truncate 되도록) */}
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-gray-900 truncate whitespace-nowrap">
                       {a.title}
@@ -223,7 +223,7 @@ const AdminOverviewPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* ✅ MIDDLE: 가격/메타 (고정폭 + 줄바꿈 금지) */}
+                  {/* MIDDLE: 가격/메타 (고정폭 + 줄바꿈 금지) */}
                   <div className="w-[220px] text-right flex-none">
                     <div className="text-sm font-bold text-gray-900 truncate whitespace-nowrap">
                       ₩{money(a.currentBid)}
@@ -234,7 +234,7 @@ const AdminOverviewPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* ✅ RIGHT: 뱃지 (고정) */}
+                  {/* RIGHT: 뱃지 (고정) */}
                   <div className="flex-none">
                     <span className={"text-[11px] px-2 py-1 rounded-full border whitespace-nowrap " + b.cls}>
                       {b.label}
@@ -245,6 +245,7 @@ const AdminOverviewPage: React.FC = () => {
             })}
           </div>
         </div>
+        
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <SectionTitle title="최근 신고(상위)" right={<span className="text-[11px] text-gray-500">신고 탭에서 처리</span>} />
