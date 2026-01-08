@@ -5,6 +5,7 @@ import { useAdminStore } from "../AdminContext";
 import { StatCard, SectionTitle } from "../components/AdminUi";
 import { auctionBadge, categoryBadge, pendingRiskBadge } from "../components/badges";
 import { SimpleDonutChart, SimpleMultiLineChart, type DonutSegment, type MultiLineSeries } from "../components/AdminCharts";
+import { useNavigate } from "react-router-dom";
 
 function formatKST(iso: string): string {
   const d = new Date(iso);
@@ -22,8 +23,8 @@ function money(v: number): string {
 
 const AdminOverviewPage: React.FC = () => {
   const { stats, overviewTopAuctions, reportGroups, categoryDistribution, todayActiveHours  } = useAdminStore();
-
-  const topAuctions = useMemo(() => (overviewTopAuctions ?? []).slice(0, 5), [overviewTopAuctions]); // ✅
+  const navigate = useNavigate();
+  const topAuctions = useMemo(() => (overviewTopAuctions ?? []).slice(0, 5), [overviewTopAuctions]);
 
   const topReportGroups = useMemo(() => {
     return reportGroups
@@ -129,6 +130,9 @@ const AdminOverviewPage: React.FC = () => {
     ];
   }, []);
 
+  const rightLinkCls = "text-[11px] text-gray-500 hover:text-gray-900 hover:underline cursor-pointer select-none";
+
+
   return (
     <div className="space-y-4">
       {/* KPI */}
@@ -198,7 +202,18 @@ const AdminOverviewPage: React.FC = () => {
       {/* 진행중인 경매 상위*/}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="진행중 경매(상위)" right={<span className="text-[11px] text-gray-500">경매 탭에서 상세</span>} />
+          <SectionTitle
+            title="진행중 경매(상위)"
+            right={
+              <button
+                type="button"
+                className={rightLinkCls}
+                onClick={() => navigate("/admin/auctions?page=1&size=10")}
+              >
+                경매 탭에서 상세
+              </button>
+            }
+          />
 
           <div className="space-y-2">
             {topAuctions.map((a) => {
@@ -248,7 +263,18 @@ const AdminOverviewPage: React.FC = () => {
         
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="최근 신고(상위)" right={<span className="text-[11px] text-gray-500">신고 탭에서 처리</span>} />
+          <SectionTitle
+            title="최근 신고(상위)"
+            right={
+              <button
+                type="button"
+                className={rightLinkCls}
+                onClick={() => navigate("/admin/reports")}
+              >
+                신고 탭에서 처리
+              </button>
+            }
+          />
           <div className="space-y-2">
             {topReportGroups.map((g) => {
               const cat = categoryBadge(g.category);
