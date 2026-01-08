@@ -21,18 +21,31 @@ export const fetchLoginUser = async (
 };
 
 export const fetchProductsByUser = async (
-  token: string | null
-): Promise<ApiResponse<ProductListDto[]>> => {
-  const response = await fetch(`http://localhost:8080/product/allByUser`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
+  token: string | null,
+  page: number = 0,
+  size: number = 10
+): Promise<
+  ApiResponse<{
+    content: ProductListDto[];
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    size: number;
+  }>
+> => {
+  const response = await fetch(
+    `http://localhost:8080/product/allByUser?page=${page}&size=${size}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    throw new Error(`Failed to fetch products: ${response.status}`);
   }
 
   return response.json();
