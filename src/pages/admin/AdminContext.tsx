@@ -213,7 +213,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [noticeTotalElements, setNoticeTotalElements] = useState(0);
 
   const [blockedProducts, setBlockedProducts] = useState<BlockedProductRow[]>([]);
-
   const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistributionRow[]>([]);
   const [todayActiveHours, setTodayActiveHours] = useState<ActiveHourBucketRow[]>([]);
 
@@ -259,33 +258,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const refreshAuctionsPage = useCallback(async (): Promise<void> => {
-    const cur = auctionsPagingRef.current;
-    await fetchAuctionsPage(cur.index, cur.size);
+    await fetchAuctionsPage(auctionsPageIndex, auctionsPageSize);
+  }, [fetchAuctionsPage, auctionsPageIndex, auctionsPageSize]);
+
+  const setAuctionsPagingFromUrl = useCallback((pageUi: number, size: number) => {
+    const uiPage = Number.isFinite(pageUi) ? pageUi : 1;
+    const uiSize = Number.isFinite(size) ? size : 10;
+
+    const nextSize = Math.max(1, Math.min(uiSize, 100));
+    const nextIndex = Math.max(0, Math.max(1, uiPage) - 1);
+
+    setAuctionsPageIndex(nextIndex);
+    setAuctionsPageSize(nextSize);
+
+    void fetchAuctionsPage(nextIndex, nextSize);
   }, [fetchAuctionsPage]);
-
-  const setAuctionsPagingFromUrl = useCallback(
-    (pageUi: number, size: number) => {
-      const uiPage = Number.isFinite(pageUi) ? pageUi : 1;
-      const uiSize = Number.isFinite(size) ? size : 10;
-
-      const nextSize = Math.max(1, Math.min(uiSize, 100));
-      const nextIndex = Math.max(0, Math.max(1, uiPage) - 1);
-
-      const cur = auctionsPagingRef.current;
-
-      // ✅ FIX 2) "초기 1회"는 반드시 fetch 되게:
-      // - auctionsPage가 null이면 아직 로딩 전이므로 같은 값이어도 fetch 진행
-      const canSkip = cur.index === nextIndex && cur.size === nextSize && auctionsPage !== null;
-      if (canSkip) return;
-
-      auctionsPagingRef.current = { index: nextIndex, size: nextSize };
-      setAuctionsPageIndex(nextIndex);
-      setAuctionsPageSize(nextSize);
-
-      void fetchAuctionsPage(nextIndex, nextSize);
-    },
-    [fetchAuctionsPage, auctionsPage]
-  );
 
   const refreshBlockedProducts = async (): Promise<void> => {
     try {

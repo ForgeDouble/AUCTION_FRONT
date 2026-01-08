@@ -145,29 +145,29 @@ const AdminAuctionsPage: React.FC = () => {
       <div className="overflow-x-auto">
         <table className="w-full text-sm table-fixed min-w-[980px]">
 
-    <colgroup>
-      <col className="w-[50px]" />   {/* ID */}
-      <col className="w-[320px]" />  {/* 제목 */}
-      <col className="w-[110px]" />  {/* 판매자 */}
-      <col className="w-[140px]" />  {/* 카테고리 */}
-      <col className="w-[120px]" />  {/* 현재가 */}
-      <col className="w-[70px]" />   {/* 입찰 */}
-      <col className="w-[150px]" />  {/* 종료 */}
-      <col className="w-[90px]" />   {/* 상태 */}
-      <col className="w-[130px]" />  {/* 조치 */}
-    </colgroup>
+        <colgroup>
+          <col className="w-[50px]" />   {/* ID */}
+          <col className="w-[320px]" />  {/* 제목 */}
+          <col className="w-[110px]" />  {/* 판매자 */}
+          <col className="w-[140px]" />  {/* 카테고리 */}
+          <col className="w-[120px]" />  {/* 현재가 */}
+          <col className="w-[70px]" />   {/* 입찰 */}
+          <col className="w-[150px]" />  {/* 종료 */}
+          <col className="w-[90px]" />   {/* 상태 */}
+          <col className="w-[130px]" />  {/* 조치 */}
+        </colgroup>
           
           <thead>
             <tr className="text-[11px] text-gray-500 border-b border-gray-100">
-              <th className="text-left py-2 pr-2">ID</th>
-              <th className="text-left py-2 pr-2">제목</th>
-              <th className="text-left py-2 pr-2">판매자</th>
-              <th className="text-left py-2 pr-2">카테고리</th>
-              <th className="text-right py-2 pr-2">현재가</th>
-              <th className="text-right py-2 pr-2">입찰</th>
-              <th className="text-left py-2 pr-2">종료</th>
-              <th className="text-left py-2 pr-2">상태</th>
-              <th className="text-right py-2">조치</th>
+              <th className="text-left py-2 pr-2" whitespace-nowrap >ID</th>
+              <th className="text-left py-2 pr-2" whitespace-nowrap >제목</th>
+              <th className="text-left py-2 pr-2" whitespace-nowrap>판매자</th>
+              <th className="text-left py-2 pr-2"whitespace-nowrap>카테고리</th>
+              <th className="text-right py-2 pr-2"whitespace-nowrap>현재가</th>
+              <th className="text-right py-2 pr-2"whitespace-nowrap>입찰</th>
+              <th className="text-left py-2 pr-2"whitespace-nowrap>종료</th>
+              <th className="text-left py-2 pr-2"whitespace-nowrap>상태</th>
+              <th className="text-right py-2"whitespace-nowrap>조치</th>
             </tr>
           </thead>
 
@@ -186,20 +186,20 @@ const AdminAuctionsPage: React.FC = () => {
 
               return (
                 <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="py-3 pr-2 text-[12px] text-gray-600 ">{a.id}</td>
+                  <td className="py-3 pr-2 text-[12px] text-gray-600 whitespace-nowrap">{a.id}</td>
 
                   <td className="py-3 pr-2">
-                    <div className="font-semibold text-gray-900">{a.title}</div>
+                    <div className="font-semibold text-gray-900 truncate">{a.title}</div>
                   </td>
 
-                  <td className="py-3 pr-2 text-gray-700">{a.sellerMasked}</td>
-                  <td className="py-3 pr-2 text-gray-700">{a.category}</td>
+                  <td className="py-3 pr-2 text-gray-700 whitespace-nowrap">{a.sellerMasked}</td>
+                  <td className="py-3 pr-2 text-gray-700 truncate">{a.category}</td>
 
-                  <td className="py-3 pr-2 text-right font-bold text-gray-900">₩ {money(a.currentBid)}</td>
-                  <td className="py-3 pr-2 text-right text-gray-700">{a.bidCount}</td>
-                  <td className="py-3 pr-2 text-gray-700">{formatKST(a.endsAt)}</td>
+                  <td className="py-3 pr-2 text-right font-bold text-gray-900 whitespace-nowrap">₩ {money(a.currentBid)}</td>
+                  <td className="py-3 pr-2 text-right text-gray-700 whitespace-nowrap">{a.bidCount}</td>
+                  <td className="py-3 pr-2 text-gray-700 whitespace-nowrap">{formatKST(a.endsAt)}</td>
 
-                  <td className="py-3 pr-2">
+                  <td className="py-3 pr-2 whitespace-nowrap">
                     <span className={"text-[11px] px-2 py-1 rounded-full border " + (b?.cls ?? "border-gray-200 text-gray-600")}>
                       {b?.label ?? "UNKNOWN"}
                     </span>

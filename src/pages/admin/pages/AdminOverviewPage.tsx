@@ -195,26 +195,51 @@ const AdminOverviewPage: React.FC = () => {
         <SimpleMultiLineChart series={todayActiveHourLine} height={190} yLabel="users" />
       </div>
 
-      {/* ✅ 리스트 ( 아직 연결 안됨 ) */}
+      {/* 진행중인 경매 상위*/}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <SectionTitle title="진행중 경매(상위)" right={<span className="text-[11px] text-gray-500">경매 탭에서 상세</span>} />
+
           <div className="space-y-2">
             {topAuctions.map((a) => {
               const b = auctionBadge(a.status);
+
               return (
-                <div key={a.id} className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 truncate">{a.title}</div>
-                    <div className="text-[11px] text-gray-500">
+                <div
+                  key={a.id}
+                  className="
+                    p-3 rounded-xl bg-gray-50 border border-gray-100
+                    flex items-center gap-3
+                  "
+                >
+                  {/* ✅ LEFT: 제목/서브 (가변, 하지만 truncate 되도록) */}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-gray-900 truncate whitespace-nowrap">
+                      {a.title}
+                    </div>
+
+                    <div className="text-[11px] text-gray-500 truncate whitespace-nowrap">
                       {a.id} · {a.category} · {a.sellerMasked}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-gray-900">₩{money(a.currentBid)}</div>
-                    <div className="text-[11px] text-gray-500">입찰 {a.bidCount} · {formatKST(a.endsAt)}</div>
+
+                  {/* ✅ MIDDLE: 가격/메타 (고정폭 + 줄바꿈 금지) */}
+                  <div className="w-[220px] text-right flex-none">
+                    <div className="text-sm font-bold text-gray-900 truncate whitespace-nowrap">
+                      ₩{money(a.currentBid)}
+                    </div>
+
+                    <div className="text-[11px] text-gray-500 truncate whitespace-nowrap">
+                      입찰 {a.bidCount} · {formatKST(a.endsAt)}
+                    </div>
                   </div>
-                  <span className={"text-[11px] px-2 py-1 rounded-full border " + b.cls}>{b.label}</span>
+
+                  {/* ✅ RIGHT: 뱃지 (고정) */}
+                  <div className="flex-none">
+                    <span className={"text-[11px] px-2 py-1 rounded-full border whitespace-nowrap " + b.cls}>
+                      {b.label}
+                    </span>
+                  </div>
                 </div>
               );
             })}
