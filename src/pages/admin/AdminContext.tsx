@@ -85,7 +85,7 @@ export interface AdminStore {
   setQuery: (v: string) => void;
 
   lastUpdatedAt: string;
-  refreshAll: () => Promise<void>;
+  refreshAll: (opts?: { auctionsPageUi?: number; auctionsSize?: number }) => Promise<void>;
 
   stats: AdminOverviewResponse;
   setStats: React.Dispatch<React.SetStateAction<AdminOverviewResponse>>;
@@ -325,10 +325,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   
-  const refreshAll = async (): Promise<void> => {
+  const refreshAll: AdminStore["refreshAll"] = async (opts) => {
     const results = await Promise.allSettled([
       adminApi.getOverview(),
-      // adminApi.getAuctions(),
       adminApi.getReportGroups(),
       adminApi.getBlockedProducts(),
       adminApi.getEvents(),
@@ -345,17 +344,23 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (evR.status === "fulfilled") setEvents(evR.value);
     if (catR.status === "fulfilled") setCategoryDistribution(catR.value);
     if (hourR.status === "fulfilled") setTodayActiveHours(hourR.value);
-    if (auctionsPage !== null) {
+
+    const uiPage = opts?.auctionsPageUi;
+    const uiSize = opts?.auctionsSize;
+
+    if (typeof uiPage === "number" || typeof uiSize === "number") {
+      const nextSize = Math.max(1, Math.min(uiSize ?? auctionsPageSize, 100));
+      const nextIndex = Math.max(0, (Math.max(1, uiPage ?? (auctionsPageIndex + 1)) - 1));
+
+      setAuctionsPageIndex(nextIndex);
+      setAuctionsPageSize(nextSize);
+      await fetchAuctionsPage(nextIndex, nextSize);
+    } else {
       await refreshAuctionsPage();
     }
-    await Promise.allSettled([
-      refreshAuctionsPage(),
-      refreshOverviewTopAuctions(),
-      fetchNoticesPage(noticePage, noticeSize),
-    ]);
 
+    await fetchNoticesPage(noticePage, noticeSize);
     setLastUpdatedAt(nowIso());
-    
   };
 
   useEffect(() => {

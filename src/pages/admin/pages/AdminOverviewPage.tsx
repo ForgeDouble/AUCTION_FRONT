@@ -271,7 +271,7 @@ const AdminOverviewPage: React.FC = () => {
                 className={rightLinkCls}
                 onClick={() => navigate("/admin/reports")}
               >
-                신고 탭에서 처리
+                신고 탭으로 이동
               </button>
             }
           />

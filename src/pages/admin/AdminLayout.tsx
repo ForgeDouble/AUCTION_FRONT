@@ -1,6 +1,6 @@
 // src/pages/admin/AdminLayout.tsx
 import React from "react";
-import { NavLink, Outlet, Link } from "react-router-dom";
+import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import {
   Activity,
   CalendarDays,
@@ -55,6 +55,7 @@ const SideItem: React.FC<{ to: string; icon: React.ElementType; label: string; b
 };
 
 const AdminLayout: React.FC = () => {
+  const location = useLocation();
   const {
     adminEmail,
     adminNick,
@@ -67,6 +68,23 @@ const AdminLayout: React.FC = () => {
     noticesCount,
     reportsOpenCount,
   } = useAdminStore();
+
+  const onRefresh = () => {
+    
+    if (location.pathname.startsWith("/admin/auctions")) {
+      const sp = new URLSearchParams(location.search);
+      const page = Number(sp.get("page") ?? "1");
+      const size = Number(sp.get("size") ?? "10");
+
+      void refreshAll({
+        auctionsPageUi: Number.isFinite(page) ? page : 1,
+        auctionsSize: Number.isFinite(size) ? size : 10,
+      });
+      return;
+    }
+
+    void refreshAll();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -105,7 +123,7 @@ const AdminLayout: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={refreshAll}
+              onClick={onRefresh}
               className="px-3 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-sm flex items-center gap-2"
               title="새로고침"
             >
