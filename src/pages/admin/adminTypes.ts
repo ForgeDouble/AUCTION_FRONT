@@ -133,3 +133,10 @@ export type ActiveHourBucketRow = {
   count: number;
 };
 
+// 최근 7일 내 경매 추이 
+export type AuctionTrendRow = {
+  date: string;
+  created: number;
+  ended: number;
+};
+

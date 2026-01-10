@@ -12,6 +12,7 @@ import type {
   BlockedProductRow,
   CategoryDistributionRow,
   ActiveHourBucketRow,
+  AuctionTrendRow,
 } from "./adminTypes";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -301,6 +302,21 @@ export const adminApi = {
     const raw = await request<CommonResDto<any[]>>("/admin/metrics/active-hours");
     const arr = unwrap<any[]>(raw) ?? [];
     return arr.map(normalizeActiveHourBucket);
+  },
+
+  // 최근 7일 경매 추이 (overivew)
+  getAuctionTrend: async (days = 7) => {
+    const sp = new URLSearchParams();
+    sp.set("days", String(days));
+
+    const raw = await request<CommonResDto<any[]>>(`/admin/metrics/auction-trend?${sp.toString()}`);
+    const arr = unwrap<any[]>(raw) ?? [];
+
+    return arr.map((x) => ({
+      date: String(x.date ?? ""),
+      created: Number(x.created ?? 0),
+      ended: Number(x.ended ?? 0),
+    })) as AuctionTrendRow[];
   },
 
   createNotice: (payload: {
