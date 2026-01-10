@@ -359,6 +359,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       await refreshAuctionsPage();
     }
 
+    await refreshOverviewTopAuctions();
     await fetchNoticesPage(noticePage, noticeSize);
     setLastUpdatedAt(nowIso());
   };

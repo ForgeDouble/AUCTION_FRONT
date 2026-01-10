@@ -1,5 +1,6 @@
 // src/pages/admin/AdminLayout.tsx
-import React from "react";
+import React, { useState } from "react";
+// import React from "react";
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import {
   Activity,
@@ -69,23 +70,33 @@ const AdminLayout: React.FC = () => {
     reportsOpenCount,
   } = useAdminStore();
 
-  const onRefresh = () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  // const onRefresh = () => {
     
-    if (location.pathname.startsWith("/admin/auctions")) {
-      const sp = new URLSearchParams(location.search);
-      const page = Number(sp.get("page") ?? "1");
-      const size = Number(sp.get("size") ?? "10");
+  //   if (location.pathname.startsWith("/admin/auctions")) {
+  //     const sp = new URLSearchParams(location.search);
+  //     const page = Number(sp.get("page") ?? "1");
+  //     const size = Number(sp.get("size") ?? "10");
 
-      void refreshAll({
-        auctionsPageUi: Number.isFinite(page) ? page : 1,
-        auctionsSize: Number.isFinite(size) ? size : 10,
-      });
-      return;
+  //     void refreshAll({
+  //       auctionsPageUi: Number.isFinite(page) ? page : 1,
+  //       auctionsSize: Number.isFinite(size) ? size : 10,
+  //     });
+  //     return;
+  //   }
+
+  //   void refreshAll();
+  // };
+  const onRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refreshAll();
+    } finally {
+      setRefreshing(false);
     }
-
-    void refreshAll();
   };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200">
@@ -123,12 +134,21 @@ const AdminLayout: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={onRefresh}
-              className="px-3 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-sm flex items-center gap-2"
+              onClick={onRefresh}         
+              disabled={refreshing}     
+              className={
+                "px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 " +
+                (refreshing ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
+              }
               title="새로고침"
             >
-              <RefreshCw className="w-4 h-4 text-gray-700" />
-              <span className="hidden md:inline">Refresh</span>
+              <RefreshCw
+                className={"w-4 h-4 text-gray-700 " + (refreshing ? "animate-spin" : "")}
+              />
+
+              <span className="hidden md:inline w-[60px] text-center">
+                {refreshing ? "Refreshing" : "Refresh"}
+              </span>
             </button>
 
             <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
