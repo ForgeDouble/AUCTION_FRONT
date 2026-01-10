@@ -22,7 +22,7 @@ function money(v: number): string {
 }
 
 const AdminOverviewPage: React.FC = () => {
-  const { stats, overviewTopAuctions, reportGroups, categoryDistribution, todayActiveHours  } = useAdminStore();
+  const { stats, overviewTopAuctions, reportGroups, categoryDistribution, todayActiveHours, auctionTrendRows } = useAdminStore();
   const navigate = useNavigate();
   const topAuctions = useMemo(() => (overviewTopAuctions ?? []).slice(0, 5), [overviewTopAuctions]);
 
@@ -39,23 +39,30 @@ const AdminOverviewPage: React.FC = () => {
 
   // 최근 7일 생성/종료 샘플(더미)
   const auctionTrendSeries: MultiLineSeries[] = useMemo(() => {
-    const labels = ["12/15", "12/16", "12/17", "12/18", "12/19", "12/20", "12/21"];
-    const created = [48, 55, 42, 23, 61, 44, 39];
-    const ended = [52, 47, 51, 18, 39, 58, 41];
+    const toLabel = (dateStr: string) => {
+      // yyyy-MM-dd
+      const d = new Date(dateStr + "T00:00:00");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${mm}/${dd}`;
+    };
+
+    const rows = Array.isArray(auctionTrendRows) ? auctionTrendRows : [];
+    const labels = rows.map((r) => toLabel(r.date));
 
     return [
       {
         name: "생성",
         colorClass: "text-violet-600",
-        points: labels.map((l, i) => ({ label: l, value: created[i] })),
+        points: rows.map((r, i) => ({ label: labels[i], value: Number(r.created ?? 0) })),
       },
       {
         name: "종료",
         colorClass: "text-blue-600",
-        points: labels.map((l, i) => ({ label: l, value: ended[i] })),
+        points: rows.map((r, i) => ({ label: labels[i], value: Number(r.ended ?? 0) })),
       },
     ];
-  }, []);
+  }, [auctionTrendRows]);
 
   // 카테고리 분포 샘플(도넛 차트)
   const categorySegments: DonutSegment[] = useMemo(() => {
@@ -180,15 +187,15 @@ const AdminOverviewPage: React.FC = () => {
         </div>
       </div>
 
-      {/*✅ 그래프 섹션(아직 연결 안됨) */}
+      {/* 그래프 섹션 7일 내 경매 생성/죵료 + 카테고리 분포 */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="최근 7일 경매 생성/종료 추이" right={<span className="text-[11px] text-gray-500">(샘플)</span>} />
+          <SectionTitle title="최근 7일 경매 생성/종료 추이" right={<span className="text-[11px] text-gray-500"></span>} />
           <SimpleMultiLineChart series={auctionTrendSeries} height={190} yLabel="count" />
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="카테고리 분포 (원형)" right={<span className="text-[11px] text-gray-500">  </span>} />
+          <SectionTitle title="카테고리 분포" right={<span className="text-[11px] text-gray-500">  </span>} />
           <SimpleDonutChart segments={categorySegments} size={180} thickness={16} />
         </div>
       </div>
@@ -196,7 +203,7 @@ const AdminOverviewPage: React.FC = () => {
       {/*금일 사용 시간대(선형)*/}
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
         <SectionTitle title="금일 사용자 주 사용 시간대" right={<span className="text-[11px] text-gray-500"></span>} />
-        <SimpleMultiLineChart series={todayActiveHourLine} height={190} yLabel="users" />
+        <SimpleMultiLineChart series={todayActiveHourLine} height={190} yLabel="" />
       </div>
 
       {/* 진행중인 경매 상위*/}

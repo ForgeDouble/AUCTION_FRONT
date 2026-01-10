@@ -13,6 +13,7 @@ import type {
   BlockedProductRow,
   CategoryDistributionRow,
   ActiveHourBucketRow,
+  AuctionTrendRow,
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
 // import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
@@ -177,6 +178,9 @@ export interface AdminStore {
   todayActiveHours: ActiveHourBucketRow[];
   setTodayActiveHours: React.Dispatch<React.SetStateAction<ActiveHourBucketRow[]>>;
   refreshTodayActiveHours: () => Promise<void>;
+
+  auctionTrendRows: AuctionTrendRow[];
+  refreshAuctionTrend: () => Promise<void>;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -220,6 +224,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistributionRow[]>([]);
   const [todayActiveHours, setTodayActiveHours] = useState<ActiveHourBucketRow[]>([]);
 
+  const [auctionTrendRows, setAuctionTrendRows] = useState<AuctionTrendRow[]>([]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -324,6 +329,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const refreshAuctionTrend = useCallback(async (): Promise<void> => {
+    try {
+      const rows = await adminApi.getAuctionTrend(7);
+      setAuctionTrendRows(rows);
+    } catch (e) {
+      console.error(e);
+      setAuctionTrendRows([]);
+    }
+  }, []);
+
   
   const refreshAll: AdminStore["refreshAll"] = async (opts) => {
     const results = await Promise.allSettled([
@@ -333,10 +348,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       adminApi.getEvents(),
       adminApi.getCategoryDistribution(),
       adminApi.getTodayActiveHours(),
+      adminApi.getAuctionTrend(7),
     ]);
 
     // const [ovR, auctR, groupR, blockedR, evR, catR, hourR] = results;
-    const [ovR, groupR, blockedR, evR, catR, hourR] = results;
+    const [ovR, groupR, blockedR, evR, catR, hourR, trendR] = results;
     if (ovR.status === "fulfilled") setStats(ovR.value);
     // if (auctR.status === "fulfilled") setAuctions(auctR.value);
     if (groupR.status === "fulfilled") setReportGroups(groupR.value);
@@ -344,6 +360,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (evR.status === "fulfilled") setEvents(evR.value);
     if (catR.status === "fulfilled") setCategoryDistribution(catR.value);
     if (hourR.status === "fulfilled") setTodayActiveHours(hourR.value);
+    if (trendR.status === "fulfilled") setAuctionTrendRows(trendR.value);
 
     const uiPage = opts?.auctionsPageUi;
     const uiSize = opts?.auctionsSize;
@@ -585,6 +602,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     todayActiveHours,
     setTodayActiveHours,
     refreshTodayActiveHours,
+
+    auctionTrendRows,
+    refreshAuctionTrend,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
