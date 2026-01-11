@@ -13,6 +13,7 @@ import type {
   CategoryDistributionRow,
   ActiveHourBucketRow,
   AuctionTrendRow,
+  MonthlyTradeRow,
 } from "./adminTypes";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -23,7 +24,6 @@ function getToken(): string | null {
 
 type ApiError = { status: number; message: string };
 
-// CommonResDto 대응
 type CommonResDto<T> = {
   status_code?: number;
   status_message?: string;
@@ -304,7 +304,7 @@ export const adminApi = {
     return arr.map(normalizeActiveHourBucket);
   },
 
-  // 최근 7일 경매 추이 (overivew)
+  // 최근 7일 경매 생성 종료 (메인)
   getAuctionTrend: async (days = 7) => {
     const sp = new URLSearchParams();
     sp.set("days", String(days));
@@ -317,6 +317,20 @@ export const adminApi = {
       created: Number(x.created ?? 0),
       ended: Number(x.ended ?? 0),
     })) as AuctionTrendRow[];
+  },
+
+  // 월별 경매 값 추이 (메인)
+  getMonthlyTrade: async (months = 6) => {
+    const sp = new URLSearchParams();
+    sp.set("months", String(months));
+
+    const raw = await request<CommonResDto<any[]>>(`/admin/metrics/trade-monthly?${sp.toString()}`);
+    const arr = unwrap<any[]>(raw) ?? [];
+
+    return arr.map((x) => ({
+      ym: String(x.ym ?? ""),
+      amount: Number(x.amount ?? 0),
+    })) as MonthlyTradeRow[];
   },
 
   createNotice: (payload: {

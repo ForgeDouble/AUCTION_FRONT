@@ -14,6 +14,7 @@ import type {
   CategoryDistributionRow,
   ActiveHourBucketRow,
   AuctionTrendRow,
+  MonthlyTradeRow,
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
 // import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
@@ -179,8 +180,13 @@ export interface AdminStore {
   setTodayActiveHours: React.Dispatch<React.SetStateAction<ActiveHourBucketRow[]>>;
   refreshTodayActiveHours: () => Promise<void>;
 
+  // 최근 7일 내 경매 생성/종료 
   auctionTrendRows: AuctionTrendRow[];
   refreshAuctionTrend: () => Promise<void>;
+
+  // 월 별 경매 계산
+  monthlyTradeRows: MonthlyTradeRow[];
+  refreshMonthlyTrade: () => Promise<void>;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -225,6 +231,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [todayActiveHours, setTodayActiveHours] = useState<ActiveHourBucketRow[]>([]);
 
   const [auctionTrendRows, setAuctionTrendRows] = useState<AuctionTrendRow[]>([]);
+  const [monthlyTradeRows, setMonthlyTradeRows] = useState<MonthlyTradeRow[]>([]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -339,7 +346,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  
+  const refreshMonthlyTrade = useCallback(async (): Promise<void> => {
+    try {
+      const rows = await adminApi.getMonthlyTrade(6);
+      setMonthlyTradeRows(rows);
+    } catch (e) {
+      console.error(e);
+      setMonthlyTradeRows([]);
+    }
+  }, []);
+
   const refreshAll: AdminStore["refreshAll"] = async (opts) => {
     const results = await Promise.allSettled([
       adminApi.getOverview(),
@@ -349,10 +365,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       adminApi.getCategoryDistribution(),
       adminApi.getTodayActiveHours(),
       adminApi.getAuctionTrend(7),
+      adminApi.getMonthlyTrade(6),
     ]);
 
     // const [ovR, auctR, groupR, blockedR, evR, catR, hourR] = results;
-    const [ovR, groupR, blockedR, evR, catR, hourR, trendR] = results;
+    const [ovR, groupR, blockedR, evR, catR, hourR, trendR, tradeR] = results;
     if (ovR.status === "fulfilled") setStats(ovR.value);
     // if (auctR.status === "fulfilled") setAuctions(auctR.value);
     if (groupR.status === "fulfilled") setReportGroups(groupR.value);
@@ -361,6 +378,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (catR.status === "fulfilled") setCategoryDistribution(catR.value);
     if (hourR.status === "fulfilled") setTodayActiveHours(hourR.value);
     if (trendR.status === "fulfilled") setAuctionTrendRows(trendR.value);
+    if(tradeR.status === "fulfilled") setMonthlyTradeRows(tradeR.value);
 
     const uiPage = opts?.auctionsPageUi;
     const uiSize = opts?.auctionsSize;
@@ -605,6 +623,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     auctionTrendRows,
     refreshAuctionTrend,
+
+    monthlyTradeRows,
+    refreshMonthlyTrade,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

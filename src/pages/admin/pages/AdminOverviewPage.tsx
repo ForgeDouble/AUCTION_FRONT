@@ -22,7 +22,7 @@ function money(v: number): string {
 }
 
 const AdminOverviewPage: React.FC = () => {
-  const { stats, overviewTopAuctions, reportGroups, categoryDistribution, todayActiveHours, auctionTrendRows } = useAdminStore();
+  const { stats, overviewTopAuctions, reportGroups, categoryDistribution, todayActiveHours, auctionTrendRows, monthlyTradeRows } = useAdminStore();
   const navigate = useNavigate();
   const topAuctions = useMemo(() => (overviewTopAuctions ?? []).slice(0, 5), [overviewTopAuctions]);
 
@@ -126,16 +126,25 @@ const AdminOverviewPage: React.FC = () => {
 
   // 월별 거래 금액(샘플) + 평균 표시
   const monthlyTradeSeries: MultiLineSeries[] = useMemo(() => {
-    const labels = ["7월", "8월", "9월", "10월", "11월", "12월"];
-    const amount = [860000000, 940000000, 910000000, 980000000, 1100000000, 920000000];
+    const rows = Array.isArray(monthlyTradeRows) ? monthlyTradeRows : [];
+
+    const labelOf = (ym: string) => {
+      // yyyy-MM -> "M월"
+      const mm = Number(String(ym).split("-")[1] ?? 0);
+      return mm ? `${mm}월` : ym;
+    };
+
     return [
       {
         name: "월 거래 금액",
         colorClass: "text-emerald-600",
-        points: labels.map((l, i) => ({ label: l, value: amount[i] })),
+        points: rows.map((r) => ({
+          label: labelOf(r.ym),
+          value: Number(r.amount ?? 0),
+        })),
       },
     ];
-  }, []);
+  }, [monthlyTradeRows]);
 
   const rightLinkCls = "text-[11px] text-gray-500 hover:text-gray-900 hover:underline cursor-pointer select-none";
 
@@ -180,9 +189,9 @@ const AdminOverviewPage: React.FC = () => {
           </div>
         </div>
 
-        {/*✅ 월별 거래 금액 추이(아직 연결 안됨) */}
+        {/* 월별 거래 금액 추이 */}
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm xl:col-span-2">
-          <SectionTitle title="월별 거래 금액 추이" right={<span className="text-[11px] text-gray-500">최근 6개월(샘플)</span>} />
+          <SectionTitle title="월별 거래 금액 추이" right={<span className="text-[11px] text-gray-500">최근 6개월</span>} />
           <SimpleMultiLineChart series={monthlyTradeSeries} height={190} yLabel="KRW" />
         </div>
       </div>
