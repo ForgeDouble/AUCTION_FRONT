@@ -17,6 +17,11 @@ function formatKST(iso: string): string {
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 }
 
+const fmtMillionKRW1 = (v: number) => {
+  const m = v / 1_000_000;
+  return `${m.toFixed(1)}`;
+};
+
 function money(v: number): string {
   return new Intl.NumberFormat("ko-KR").format(v);
 }
@@ -197,7 +202,7 @@ const AdminOverviewPage: React.FC = () => {
             height={190}
             yLabel="KRW"
             valueLabelMode="all"
-            valueFormatter={(v) => `₩${money(v)}`}
+            valueFormatter={fmtMillionKRW1}
           />
         </div>
       </div>

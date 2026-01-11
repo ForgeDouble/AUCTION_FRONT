@@ -1,4 +1,5 @@
 // src/pages/admin/components/AdminCharts.tsx
+import { Bold } from "lucide-react";
 import React, { useMemo } from "react";
 
 export interface LinePoint {
@@ -133,10 +134,11 @@ export const SimpleMultiLineChart: React.FC<{
                       <text
                         x={x}
                         y={yText}
-                        fontSize="10"
+                        fontSize="9"
                         textAnchor="middle"
-                        fill="currentColor"
-                        opacity="0.9"
+                        fill="black"
+                        opacity="1.0"
+                        fontWeight="bold"
                       >
                         {fmt(p.value)}
                       </text>
