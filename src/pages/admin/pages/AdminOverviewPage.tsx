@@ -192,7 +192,13 @@ const AdminOverviewPage: React.FC = () => {
         {/* 월별 거래 금액 추이 */}
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm xl:col-span-2">
           <SectionTitle title="월별 거래 금액 추이" right={<span className="text-[11px] text-gray-500">최근 6개월</span>} />
-          <SimpleMultiLineChart series={monthlyTradeSeries} height={190} yLabel="KRW" />
+          <SimpleMultiLineChart
+            series={monthlyTradeSeries}
+            height={190}
+            yLabel="KRW"
+            valueLabelMode="all"
+            valueFormatter={(v) => `₩${money(v)}`}
+          />
         </div>
       </div>
 

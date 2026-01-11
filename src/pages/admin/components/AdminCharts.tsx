@@ -31,7 +31,11 @@ export const SimpleMultiLineChart: React.FC<{
   series: MultiLineSeries[];
   height?: number;
   yLabel?: string;
-}> = ({ series, height = 180, yLabel }) => {
+
+  valueLabelMode?: "none" | "last" | "all";
+  valueFormatter?: (v: number) => string;
+
+}> = ({ series, height = 180, yLabel, valueLabelMode = "none" , valueFormatter, }) => {
   const allValues = useMemo(() => series.flatMap((s) => s.points.map((p) => p.value)), [series]);
   const max = useMemo(() => Math.max(1, ...allValues), [allValues]);
   const min = useMemo(() => Math.min(0, ...allValues), [allValues]);
@@ -55,6 +59,11 @@ export const SimpleMultiLineChart: React.FC<{
     if (max === min) return padT + usable / 2;
     const t = (v - min) / (max - min);
     return padT + usable * (1 - t);
+  };
+
+  const fmt = (v: number) => {
+    if (valueFormatter) return valueFormatter(v);
+    return new Intl.NumberFormat("ko-KR").format(v);
   };
 
   return (
@@ -96,6 +105,46 @@ export const SimpleMultiLineChart: React.FC<{
               strokeWidth="2"
               className={s.colorClass}
             />
+          );
+        })}
+
+        {series.map((s, sIdx) => {
+          const n = s.points.length;
+
+          return (
+            <g key={`${s.name}-points`} className={s.colorClass}>
+              {s.points.map((p, i) => {
+                const x = xAt(i, n);
+                const y = yAt(p.value);
+
+                const show =
+                  valueLabelMode === "all" ||
+                  (valueLabelMode === "last" && i === n - 1);
+
+                const yText = Math.max(padT + 10, y - (10 + sIdx * 12));
+
+                return (
+                  <g key={`${s.name}-${i}`}>
+                    {/* 점 */}
+                    <circle cx={x} cy={y} r={2.6} fill="currentColor" />
+
+                    {/* 값 라벨 */}
+                    {show && (
+                      <text
+                        x={x}
+                        y={yText}
+                        fontSize="10"
+                        textAnchor="middle"
+                        fill="currentColor"
+                        opacity="0.9"
+                      >
+                        {fmt(p.value)}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
           );
         })}
 
