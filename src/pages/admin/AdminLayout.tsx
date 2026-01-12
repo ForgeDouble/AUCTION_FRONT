@@ -1,5 +1,5 @@
 // src/pages/admin/AdminLayout.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 // import React from "react";
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import {
@@ -29,6 +29,46 @@ function formatKST(iso: string): string {
   const hh = String(d.getHours()).padStart(2, "0");
   const mi = String(d.getMinutes()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
+function safeJwtRemainingSeconds(): number {
+  const token = localStorage.getItem("accessToken");
+  if (!token) return 0;
+
+  const parts = token.split(".");
+  if (parts.length < 2) return 0;
+
+  try {
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, "=");
+    const json = decodeURIComponent(
+      Array.from(atob(padded))
+        .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+        .join("")
+    );
+
+    const payload = JSON.parse(json) as { exp?: number };
+    const expSec = Number(payload.exp ?? 0);
+    if (!Number.isFinite(expSec) || expSec <= 0) return 0;
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    return Math.max(0, expSec - nowSec);
+  } catch {
+    return 0;
+  }
+}
+
+function formatRemain(sec: number): string {
+  if (!Number.isFinite(sec) || sec <= 0) return "만료됨";
+
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+
+  if (h > 0) {
+    return `로그아웃까지 ${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  return `로그아웃까지 ${m}:${String(s).padStart(2, "0")}`;
 }
 
 const SideItem: React.FC<{ to: string; icon: React.ElementType; label: string; badge?: number }> = ({
@@ -74,6 +114,24 @@ const AdminLayout: React.FC = () => {
 
   const [refreshing, setRefreshing] = useState(false);
   const [extending, setExtending] = useState(false);
+  const [remainSec, setRemainSec] = useState<number>(() => safeJwtRemainingSeconds());
+
+  useEffect(() => {
+    const tick = () => setRemainSec(safeJwtRemainingSeconds());
+
+    tick();
+    const id = window.setInterval(tick, 1000);
+
+    const onStorage = (e: StorageEvent) => {
+    if (e.key === "accessToken") tick();
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+    window.clearInterval(id);
+    window.removeEventListener("storage", onStorage);
+    };
+  }, []);
   // const onRefresh = () => {
     
   //   if (location.pathname.startsWith("/admin/auctions")) {
@@ -105,7 +163,7 @@ const AdminLayout: React.FC = () => {
     setExtending(true);
     try {
       await extendAdminSession();
-
+      setRemainSec(safeJwtRemainingSeconds());
     } catch (e) {
       console.error(e);
       alert("로그인 연장에 실패했습니다. 다시 시도해주세요.");
@@ -151,7 +209,6 @@ const AdminLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-
             <button
               onClick={onExtend}
               disabled={extending}
@@ -197,8 +254,13 @@ const AdminLayout: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-[1600px] mx-auto px-4 pb-2">
+        <div className="max-w-[1600px] mx-auto px-4 pb-2 flex items-center justify-between">
           <div className="text-[11px] text-gray-500">Last updated: {formatKST(lastUpdatedAt)}</div>
+
+          <div className="flex items-center gap-1 text-[11px] text-black-600">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{formatRemain(remainSec)}</span>
+          </div>
         </div>
       </div>
 
