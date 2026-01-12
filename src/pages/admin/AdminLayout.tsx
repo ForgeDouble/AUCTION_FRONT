@@ -17,6 +17,7 @@ import {
   Gavel,
   UserCircle2,
   Home,
+  Clock,
 } from "lucide-react";
 import { useAdminStore } from "./AdminContext";
 
@@ -68,10 +69,11 @@ const AdminLayout: React.FC = () => {
     stats,
     noticesCount,
     reportsOpenCount,
+    extendAdminSession,
   } = useAdminStore();
 
   const [refreshing, setRefreshing] = useState(false);
-
+  const [extending, setExtending] = useState(false);
   // const onRefresh = () => {
     
   //   if (location.pathname.startsWith("/admin/auctions")) {
@@ -97,10 +99,26 @@ const AdminLayout: React.FC = () => {
       setRefreshing(false);
     }
   };
+
+  const onExtend = async () => {
+    if (extending) return;
+    setExtending(true);
+    try {
+      await extendAdminSession();
+
+    } catch (e) {
+      console.error(e);
+      alert("로그인 연장에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setExtending(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200">
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-3">
+
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-white" />
@@ -133,6 +151,22 @@ const AdminLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+
+            <button
+              onClick={onExtend}
+              disabled={extending}
+              className={
+                "px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 " +
+                (extending ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
+              }
+              title="로그인 연장"
+            >
+              <Clock className={"w-4 h-4 text-gray-700 " + (extending ? "animate-spin" : "")} />
+              <span className="hidden md:inline w-[60px] text-center">
+                {extending ? "연장중" : "연장"}
+              </span>
+            </button>
+
             <button
               onClick={onRefresh}         
               disabled={refreshing}     

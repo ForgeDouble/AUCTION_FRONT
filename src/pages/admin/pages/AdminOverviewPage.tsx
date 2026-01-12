@@ -169,10 +169,14 @@ const AdminOverviewPage: React.FC = () => {
         <StatCard title="실시간 접속" value={stats.realtimeUsers.toLocaleString()} icon={Activity} hint="웹/앱 합산" />
       </div>
 
-      {/* ✅ 거래 금액 모니터링(아직 연결 안됨)  */}
+      {/* 거래 금액 모니터링  */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="거래 금액 모니터링" right={<span className="text-[11px] text-gray-500">샘플(백엔드 연결 예정)</span>} />
+          <SectionTitle title="거래 금액 모니터링" right = 
+          {
+            null// <span className="text-[11px] text-gray-500">샘플(백엔드 연결 예정)</span>
+          } 
+          />
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
               <div className="flex items-center justify-between">

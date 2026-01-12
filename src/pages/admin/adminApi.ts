@@ -48,6 +48,11 @@ export type NoticePage = {
   totalPages: number;
 };
 
+type ExtendSessionRes = {
+  accessToken: string;
+  expiresInSec: number;
+};
+
 function unwrap<T>(raw: CommonResDto<T> | T): T {
   if (raw && typeof raw === "object" && "result" in (raw as any)) {
     return (raw as CommonResDto<T>).result as T;
@@ -394,4 +399,12 @@ export const adminApi = {
       method: "PATCH",
       body: JSON.stringify({ date: newDate }),
   }).then((r) => unwrap<CalendarEventRow>(r)),
+
+  extendAdminSession: () =>
+    request<CommonResDto<ExtendSessionRes>>("/user/extend", {
+      method: "POST",
+    }).then((r) => unwrap<ExtendSessionRes>(r)),
+
 };
+
+

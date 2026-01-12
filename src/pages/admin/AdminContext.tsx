@@ -187,6 +187,9 @@ export interface AdminStore {
   // 월 별 경매 계산
   monthlyTradeRows: MonthlyTradeRow[];
   refreshMonthlyTrade: () => Promise<void>;
+
+  // 로그인 연장(토큰 재발급 + localStorage 교체)
+  extendAdminSession: () => Promise<void>;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -535,6 +538,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
     void fetchNoticesPage(pg, noticeSize);
   };
+  const extendAdminSession = useCallback(async (): Promise<void> => {
+    const res = await adminApi.extendAdminSession();
+    const token = res?.accessToken;
+
+    if (!token || typeof token !== "string") {
+      throw new Error("extendAdminSession: token missing");
+    }
+
+    localStorage.setItem("accessToken", token);
+  }, []);
+
 
   // 뱃지 관련 카운팅 함수
   const pinnedNoticesCount = useMemo(() => notices.filter((n) => n.pinned).length, [notices]);
@@ -626,6 +640,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     monthlyTradeRows,
     refreshMonthlyTrade,
+
+    extendAdminSession,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
