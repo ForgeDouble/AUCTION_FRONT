@@ -21,18 +21,16 @@ import {
   type ParentCategoriesDto,
   type wishlistDto,
 } from "./AuctionListDto";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
 
 const AuctionListPage = () => {
-  // const navigate = useNavigate(); // 실제 사용 시 주석 해제
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { userEmail } = useAuth();
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
-  const [sortBy, setSortBy] = useState("newest");
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<number>(0);
   const [priceRange, setPriceRange] = useState([0, 10000000]);
   /* 경매 상품들 */
   const [auctions, setAuctions] = useState<ProductListDto[]>([]);
@@ -49,12 +47,19 @@ const AuctionListPage = () => {
     Record<number, { hours: number; minutes: number; seconds: number }>
   >({});
 
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(
+    parseInt(searchParams.get("page") || "0")
+  );
+  const [sortBy, setSortBy] = useState(searchParams.get("sortBy") || "newest");
+  const [selectedCategory, setSelectedCategory] = useState<number>(
+    parseInt(searchParams.get("categoryId") || "0")
+  );
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("search") || ""
+  );
   const [pageSize, setPageSize] = useState(9);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-
-  const navigate = useNavigate();
 
   // 샘플 경매 데이터 예시
   // const auctions = [
@@ -76,6 +81,26 @@ const AuctionListPage = () => {
   //     endTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
   //     featured: true,
   //   }
+
+  /* URL 쿼리 파라미터 업데이트 */
+  const updateURLParams = (params: Record<string, string | number>) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (
+        value !== null &&
+        value !== undefined &&
+        value !== "" &&
+        value !== 0
+      ) {
+        newSearchParams.set(key, value.toString());
+      } else {
+        newSearchParams.delete(key);
+      }
+    });
+
+    setSearchParams(newSearchParams);
+  };
   //]
 
   /** 상태 체크박스 핸들러 */
@@ -232,8 +257,9 @@ const AuctionListPage = () => {
   const handlePageChange = (newPage: number) => {
     if (newPage >= 0 && newPage < totalPages) {
       setCurrentPage(newPage);
+      updateURLParams({ page: newPage });
       loadProductList(newPage, pageSize);
-      window.scrollTo({ top: 0, behavior: "smooth" }); // 페이지 상단으로 스크롤
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -364,6 +390,12 @@ const AuctionListPage = () => {
 
   // sortBy 변경 시 첫 페이지로 이동하며 재조회
   useEffect(() => {
+    updateURLParams({
+      page: 0,
+      sortBy,
+      categoryId: selectedCategory,
+      search: searchQuery,
+    });
     loadProductList(0, pageSize);
   }, [sortBy, selectedCategory, selectedStatuses, searchQuery]);
 
@@ -394,7 +426,13 @@ const AuctionListPage = () => {
                   {parentCategories.map((category) => (
                     <div key={category.categoryId} className="relative group">
                       <div
-                        onClick={() => setSelectedCategory(category.categoryId)}
+                        onClick={() => {
+                          setSelectedCategory(category.categoryId);
+                          updateURLParams({
+                            categoryId: category.categoryId,
+                            page: 0,
+                          });
+                        }}
                         className="flex items-center cursor-pointer p-2 hover:bg-white/10 rounded transition-colors"
                       >
                         <span
@@ -554,7 +592,10 @@ const AuctionListPage = () => {
                 <div className="relative">
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    onChange={(e) => {
+                      setSortBy(e.target.value);
+                      updateURLParams({ sortBy: e.target.value, page: 0 });
+                    }}
                     className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-black text-sm appearance-none pr-8"
                   >
                     <option value="newest">최신순</option>
