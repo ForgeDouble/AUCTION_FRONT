@@ -15,6 +15,7 @@ import { fetchParentCategories, fetchTop3Products } from "./HomeApi";
 import type { ParentCategoriesDto, Top3ProductDto } from "./HomeDto";
 import { useNavigate } from "react-router-dom";
 import PlaceHolder from "@/components/PlaceHolder";
+import dayjs from "dayjs";
 
 const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -29,6 +30,10 @@ const Home = () => {
   const [parentCategories, setParentCategories] = useState<
     ParentCategoriesDto[]
   >([]);
+  // 각 경매의 남은 시간을 관리하는 state
+  const [timers, setTimers] = useState<
+    Record<number, { hours: number; minutes: number; seconds: number }>
+  >({});
 
   const navigate = useNavigate();
 
@@ -40,52 +45,22 @@ const Home = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 카운트다운 타이머
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        }
-        return prev;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  /** 타이머 핸들러 */
+  const calculateTimeLeft = (endTime: string) => {
+    const now = dayjs();
+    const end = dayjs(endTime);
+    const diff = end.diff(now, "second");
 
-  const featuredItems = [
-    {
-      id: 1,
-      title: "빈티지 롤렉스 서브마리너",
-      currentBid: "₩2,450,000",
-      image:
-        "https://images.unsplash.com/photo-1594576662059-74d0d09c4001?w=400&h=300&fit=crop",
-      bids: 23,
-      timeLeft: "2시간 45분",
-    },
-    {
-      id: 2,
-      title: "조선시대 백자 항아리",
-      currentBid: "₩850,000",
-      image:
-        "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop",
-      bids: 15,
-      timeLeft: "1시간 20분",
-    },
-    {
-      id: 3,
-      title: "한정판 스니커즈",
-      currentBid: "₩320,000",
-      image:
-        "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=300&fit=crop",
-      bids: 42,
-      timeLeft: "45분",
-    },
-  ];
+    if (diff <= 0) {
+      return { hours: 0, minutes: 0, seconds: 0 };
+    }
+
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+
+    return { hours, minutes, seconds };
+  };
 
   /* 입찰수 상위 3개 상품들 조회 */
   const loadTop3Products = async () => {
@@ -113,6 +88,43 @@ const Home = () => {
       // setLoading(false);
     }
   };
+
+  // 모든 경매의 타이머 업데이트
+  useEffect(() => {
+    if (products.length === 0) return;
+
+    // 초기 시간 설정
+    const initialTimers: Record<
+      number,
+      { hours: number; minutes: number; seconds: number }
+    > = {};
+    products.forEach((product) => {
+      if (product.auctionEndTime) {
+        initialTimers[product.productId] = calculateTimeLeft(
+          product.auctionEndTime
+        );
+      }
+    });
+    setTimers(initialTimers);
+
+    // 1초마다 업데이트
+    const timer = setInterval(() => {
+      const updatedTimers: Record<
+        number,
+        { hours: number; minutes: number; seconds: number }
+      > = {};
+      products.forEach((product) => {
+        if (product.auctionEndTime) {
+          updatedTimers[product.productId] = calculateTimeLeft(
+            product.auctionEndTime
+          );
+        }
+      });
+      setTimers(updatedTimers);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [products]);
 
   useEffect(() => {
     loadTop3Products();
@@ -248,7 +260,7 @@ const Home = () => {
                 {products.map((item) => (
                   <div
                     key={item.productId}
-                    className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+                    className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200"
                   >
                     <div className="relative">
                       {item.previewImageUrl ? (
@@ -261,11 +273,14 @@ const Home = () => {
                         <PlaceHolder />
                       )}
                       <div className="absolute top-3 right-3 bg-slate-900/80 text-white px-2.5 py-1 rounded-full text-[11px] font-medium flex items-center">
-                        <Clock className="h-3.5 w-3.5 mr-1" />
-                        {item.timeLeft}
-                      </div>
-                      <div className="absolute inset-0 bg-black/25 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                        <Play className="h-8 w-8 text-white" />
+                        <Clock className="h-3 w-3 mr-1" />
+                        {timers[item.productId]
+                          ? `${timers[item.productId].hours}:${String(
+                              timers[item.productId].minutes
+                            ).padStart(2, "0")}:${String(
+                              timers[item.productId].seconds
+                            ).padStart(2, "0")}`
+                          : "0:00:00"}
                       </div>
                     </div>
                     <div className="p-4">
@@ -290,7 +305,12 @@ const Home = () => {
                           </div>
                         </div>
                       </div>
-                      <button className="w-full bg-slate-900 text-white py-2 rounded-lg hover:bg-slate-800 text-sm font-medium">
+                      <button
+                        onClick={() =>
+                          navigate(`/auction_detail/${item.productId}`)
+                        }
+                        className="w-full bg-slate-900 text-white py-2 rounded-lg hover:bg-slate-800 text-sm font-medium cursor-pointer"
+                      >
                         입찰 참여하기
                       </button>
                     </div>
@@ -320,6 +340,9 @@ const Home = () => {
             {parentCategories.map((category, index) => (
               <div
                 key={index}
+                onClick={() =>
+                  navigate(`/auction_list?categoryId=${category.categoryId}`)
+                }
                 className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-5 text-center hover:bg-white hover:shadow-sm transition-all duration-150 cursor-pointer"
               >
                 <CircleDot className="text-3xl mb-2" />
