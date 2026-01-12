@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Clock, Eye } from "lucide-react";
 import { fetchProductsByWishlist } from "../MyPageApi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PageInfo } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
 
@@ -23,8 +23,11 @@ interface ProductListDto {
 }
 
 const MyWishlist = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [wishlist, setWishlist] = useState<ProductListDto[]>([]);
-  const [currentPage, setCurrentPage] = useState(0); // 별도 상태 추가
+  const [currentPage, setCurrentPage] = useState(
+    parseInt(searchParams.get("page") || "0")
+  );
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     totalElements: 0,
     totalPages: 0,
@@ -33,6 +36,26 @@ const MyWishlist = () => {
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  /* URL 쿼리 파라미터 업데이트 */
+  const updateURLParams = (params: Record<string, string | number>) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (
+        value !== null &&
+        value !== undefined &&
+        value !== "" &&
+        value !== 0
+      ) {
+        newSearchParams.set(key, value.toString());
+      } else {
+        newSearchParams.delete(key);
+      }
+    });
+
+    setSearchParams(newSearchParams);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -101,7 +124,8 @@ const MyWishlist = () => {
     if (isNaN(newPage) || newPage < 0) {
       return;
     }
-    setCurrentPage(newPage); // 즉시 업데이트
+    setCurrentPage(newPage);
+    updateURLParams({ page: newPage });
     loadProductsByWishlist(newPage, pageInfo.size || 10);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };

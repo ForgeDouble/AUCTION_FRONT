@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { Clock, CheckCircle, XCircle, TrendingUp } from "lucide-react";
 import { fetchBidsByUser } from "../MyPageApi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { BidListDto, PageInfo } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
 
 const MyBidlist = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [bids, setBids] = useState<BidListDto[]>([]);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(
+    parseInt(searchParams.get("page") || "0")
+  );
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     totalElements: 0,
     totalPages: 0,
@@ -87,6 +90,26 @@ const MyBidlist = () => {
     }
   };
 
+  /* URL 쿼리 파라미터 업데이트 */
+  const updateURLParams = (params: Record<string, string | number>) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (
+        value !== null &&
+        value !== undefined &&
+        value !== "" &&
+        value !== 0
+      ) {
+        newSearchParams.set(key, value.toString());
+      } else {
+        newSearchParams.delete(key);
+      }
+    });
+
+    setSearchParams(newSearchParams);
+  };
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + "원";
   };
@@ -131,6 +154,7 @@ const MyBidlist = () => {
       return;
     }
     setCurrentPage(newPage);
+    updateURLParams({ page: newPage });
     loadBidsByUser(newPage, pageInfo.size || 10);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
