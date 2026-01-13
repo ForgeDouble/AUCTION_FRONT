@@ -178,6 +178,6 @@ export type AdminUserRow = {
   warning?: number | null;
   suspendedUntil?: string | null;
   viewOnly?: boolean | null;
-
+  delYn?: "N" | "Y";
   createdAt?: string | null;
 };

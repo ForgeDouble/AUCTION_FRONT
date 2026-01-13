@@ -195,6 +195,35 @@ function normalizeAdminUser(x: any): AdminUserRow {
     createdAt: x.createdAt ? String(x.createdAt) : null,
   };
 }
+function normalizeUser(x: any): AdminUserRow {
+  const raw = String(
+    x.authority ??
+      x.role ??
+      x.userRole ??
+      x.userAuthority ??
+      x.auth ??
+      "USER"
+  ).toUpperCase();
+
+  const cleaned = raw.startsWith("ROLE_") ? raw.slice(5) : raw;
+
+  const authority: Authority =
+    cleaned === "ADMIN" ? "ADMIN" : cleaned === "INQUIRY" ? "INQUIRY" : "USER";
+
+  return {
+    userId: Number(x.userId ?? x.id ?? 0),
+    email: String(x.email ?? ""),
+    name: String(x.name ?? ""),
+    nickname: x.nickname != null ? String(x.nickname) : null,
+    phone: x.phone != null ? String(x.phone).replace(/\D/g, "") : null,
+    authority,
+
+    viewOnly: Boolean(x.viewOnly ?? false),
+    suspendedUntil: x.suspendedUntil ? String(x.suspendedUntil) : null,
+    delYn: (x.delYn ?? "N") as any,
+    profileImageUrl: x.profileImageUrl ? String(x.profileImageUrl) : null,
+  };
+}
 
 export const adminApi = {
 
@@ -429,10 +458,10 @@ export const adminApi = {
       method: "POST",
     }).then((r) => unwrap<ExtendSessionRes>(r)),
 
-  getUsers: async () => {
+  getUsers: async (): Promise<AdminUserRow[]> => {
     const raw = await request<CommonResDto<any[]>>("/user/list");
     const arr = unwrap<any[]>(raw) ?? [];
-    return arr.map(normalizeAdminUser);
+    return arr.map(normalizeUser);
   },
 
   createAdminUser: (payload: AdminUserCreateReq) =>

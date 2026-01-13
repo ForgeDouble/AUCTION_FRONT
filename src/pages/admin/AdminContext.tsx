@@ -371,7 +371,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const refreshUsers = useCallback(async (): Promise<void> => {
+  const refreshUsers = useCallback(async () => {
     try {
       const list = await adminApi.getUsers();
       setUsers(list);
@@ -381,15 +381,15 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const createAdminUser: AdminStore["createAdminUser"] = async (payload) => {
+  const createAdminUser = useCallback(async (payload: AdminUserCreateReq) => {
     await adminApi.createAdminUser(payload);
     await refreshUsers();
-  };
+  }, [refreshUsers]);
 
-  const createInquiryUser: AdminStore["createInquiryUser"] = async (payload) => {
+  const createInquiryUser = useCallback(async (payload: AdminUserCreateReq) => {
     await adminApi.createInquiryUser(payload);
     await refreshUsers();
-  };
+  }, [refreshUsers]);
 
   const refreshAll: AdminStore["refreshAll"] = async (opts) => {
     const results = await Promise.allSettled([

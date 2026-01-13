@@ -3,6 +3,8 @@ import { ShieldCheck, UserPlus, RefreshCw } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import type { AdminUserCreateReq, Authority, Gender } from "../adminTypes";
 
+type RoleTab = "ALL" | "ADMIN" | "INQUIRY" | "USER";
+
 function authorityBadge(role: Authority) {
   const map: Record<Authority, string> = {
     USER: "bg-gray-50 text-gray-700 border-gray-200",
@@ -12,80 +14,37 @@ function authorityBadge(role: Authority) {
   return map[role] ?? "bg-gray-50 text-gray-700 border-gray-200";
 }
 
-function onlyDigits(s: string) {
-  return (s ?? "").replace(/\D/g, "");
+function onlyDigits(v: string) {
+  return v.replace(/\D/g, "");
 }
 
-type Field = keyof AdminUserCreateReq;
-type Errors = Partial<Record<Field, string>>;
-
-function validate(v: AdminUserCreateReq): Errors {
-  const e: Errors = {};
-  const email = (v.email ?? "").trim();
-  const name = (v.name ?? "").trim();
-  const pw = v.password ?? "";
-
-  const phone = onlyDigits(v.phone ?? "");
-  const birthday = onlyDigits(v.birthday ?? "");
-
-  if (!email) e.email = "필수 입력값입니다.";
-  else if (!email.includes("@")) e.email = "이메일 형식이 올바르지 않습니다.";
-
-  if (!name) e.name = "필수 입력값입니다.";
-  if (!pw) e.password = "필수 입력값입니다.";
-  else if (pw.length < 4) e.password = "비밀번호는 4자 이상 입력해 주세요.";
-
-  // phone: 010xxxxxxxx (11자리 기준)
-  if (!phone) e.phone = "필수 입력값입니다.";
-  else if (phone.length !== 11) e.phone = "전화번호는 11자리(010xxxxxxxx)로 입력해 주세요.";
-
-  // birthday: yyyymmdd (8자리)
-  if (!birthday) e.birthday = "필수 입력값입니다.";
-  else if (birthday.length !== 8) e.birthday = "생년월일은 8자리(yyyymmdd)로 입력해 주세요.";
-
-  // gender는 select 기본값이 있으니 보통 필요 없지만, 혹시 비었을 때만
-  if (!v.gender) e.gender = "필수 입력값입니다.";
-
-  return e;
+function pad2(v: string) {
+  return v.padStart(2, "0");
 }
 
 export default function AdminUsersPage() {
   const { users, refreshUsers, createAdminUser, createInquiryUser } = useAdminStore();
 
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState<"ADMIN" | "INQUIRY">("INQUIRY");
-  const [q, setQ] = useState("");
 
-  const [form, setForm] = useState<AdminUserCreateReq>({
+  const [createRole, setCreateRole] = useState<"ADMIN" | "INQUIRY">("INQUIRY");
+  const [q, setQ] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleTab>("ALL");
+
+  const [form, setForm] = useState<Omit<AdminUserCreateReq, "birthday" | "phone">>({
     email: "",
     name: "",
     password: "",
     gender: "M" as Gender,
-    birthday: "", // yyyymmdd
-    phone: "", // 010xxxxxxxx
     address: "",
     nickname: "",
-  });
+  } as any);
 
-  const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({});
-  const [submitTried, setSubmitTried] = useState(false);
+  const [birth, setBirth] = useState({ yyyy: "", mm: "", dd: "" });
+  const [phone, setPhone] = useState({ p1: "010", p2: "", p3: "" });
 
-  const errors = useMemo(() => validate(form), [form]);
-
-  const showError = (f: Field) => (submitTried || touched[f]) && errors[f];
-
-  const markTouched = (f: Field) => setTouched((p) => ({ ...p, [f]: true }));
-
-  const inputBase =
-    "mt-1 w-full px-3 py-2 rounded-xl border text-sm outline-none bg-white " +
-    "placeholder:text-gray-300 placeholder:opacity-70 " +
-    "focus:ring-2";
-
-  const inputClass = (hasErr: boolean) =>
-    inputBase +
-    (hasErr
-      ? " border-red-300 focus:ring-red-200"
-      : " border-gray-200 focus:ring-violet-200");
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const touch = (k: string) => setTouched((p) => ({ ...p, [k]: true }));
 
   useEffect(() => {
     void (async () => {
@@ -98,64 +57,119 @@ export default function AdminUsersPage() {
     })();
   }, [refreshUsers]);
 
+  const errors = useMemo(() => {
+    const e: Record<string, string> = {};
+
+    const email = form.email.trim();
+    const name = form.name.trim();
+    const password = form.password ?? "";
+
+    if (!email) e.email = "이메일을 입력해 주세요.";
+    else if (!email.includes("@")) e.email = "이메일 형식을 확인해 주세요.";
+
+    if (!name) e.name = "이름을 입력해 주세요.";
+
+    if (!password) e.password = "비밀번호를 입력해 주세요.";
+    else if (password.length < 4) e.password = "비밀번호는 4자 이상 입력해 주세요.";
+
+    const yyyy = onlyDigits(birth.yyyy);
+    const mm = onlyDigits(birth.mm);
+    const dd = onlyDigits(birth.dd);
+
+    if (!yyyy || !mm || !dd) e.birthday = "생년월일을 입력해 주세요.";
+    else if (yyyy.length !== 4) e.birthday = "YYYY 4자리를 입력해 주세요.";
+    else {
+      const m = Number(mm);
+      const d = Number(dd);
+      if (mm.length !== 2 || m < 1 || m > 12) e.birthday = "월(MM)을 01~12로 입력해 주세요.";
+      else if (dd.length !== 2 || d < 1 || d > 31) e.birthday = "일(DD)을 01~31로 입력해 주세요.";
+    }
+
+    const p1 = onlyDigits(phone.p1);
+    const p2 = onlyDigits(phone.p2);
+    const p3 = onlyDigits(phone.p3);
+
+    if (!p1 || !p2 || !p3) e.phone = "전화번호를 입력해 주세요.";
+    else if (p1.length !== 3) e.phone = "앞자리는 3자리(예: 010)로 입력해 주세요.";
+    else if (p2.length !== 4 || p3.length !== 4) e.phone = "가운데/끝자리는 4자리로 입력해 주세요.";
+
+    return e;
+  }, [form, birth, phone]);
+
+  const canSubmit = Object.keys(errors).length === 0;
+
+  const birthdayValue = useMemo(() => {
+    const yyyy = onlyDigits(birth.yyyy);
+    const mm = pad2(onlyDigits(birth.mm).slice(0, 2));
+    const dd = pad2(onlyDigits(birth.dd).slice(0, 2));
+    if (yyyy.length !== 4 || mm.length !== 2 || dd.length !== 2) return "";
+    return `${yyyy}.${mm}.${dd}`;
+  }, [birth]);
+
+  const phoneValue = useMemo(() => {
+    const p1 = onlyDigits(phone.p1).slice(0, 3);
+    const p2 = onlyDigits(phone.p2).slice(0, 4);
+    const p3 = onlyDigits(phone.p3).slice(0, 4);
+    if (p1.length !== 3 || p2.length !== 4 || p3.length !== 4) return "";
+    return `${p1}${p2}${p3}`;
+  }, [phone]);
+
   const filtered = useMemo(() => {
     const keyword = q.trim().toLowerCase();
-    if (!keyword) return users;
-    return users.filter((u) => {
+
+    let list = users;
+
+    if (roleFilter !== "ALL") {
+      list = list.filter((u) => u.authority === roleFilter);
+    }
+
+    if (!keyword) return list;
+
+    return list.filter((u) => {
       const a = (u.email ?? "").toLowerCase();
       const b = (u.name ?? "").toLowerCase();
       const c = (u.nickname ?? "").toLowerCase();
       return a.includes(keyword) || b.includes(keyword) || c.includes(keyword);
     });
-  }, [users, q]);
+  }, [users, q, roleFilter]);
 
-  const admins = useMemo(() => filtered.filter((u) => u.authority === "ADMIN"), [filtered]);
-  const inquiries = useMemo(() => filtered.filter((u) => u.authority === "INQUIRY"), [filtered]);
-  const normals = useMemo(() => filtered.filter((u) => u.authority === "USER"), [filtered]);
+  const adminsCount = useMemo(() => users.filter((u) => u.authority === "ADMIN").length, [users]);
+  const inquiriesCount = useMemo(() => users.filter((u) => u.authority === "INQUIRY").length, [users]);
+  const normalsCount = useMemo(() => users.filter((u) => u.authority === "USER").length, [users]);
 
-  // phone split
-  const phoneDigits = onlyDigits(form.phone);
-  const p1 = phoneDigits.slice(0, 3);
-  const p2 = phoneDigits.slice(3, 7);
-  const p3 = phoneDigits.slice(7, 11);
+  const inputBase =
+    "mt-1 w-full px-3 py-2 rounded-xl border text-sm outline-none bg-white " +
+    "focus:ring-2 focus:ring-violet-200 placeholder:text-gray-300 text-gray-900";
 
-  const setPhoneParts = (n1: string, n2: string, n3: string) => {
-    const next = (onlyDigits(n1).slice(0, 3) + onlyDigits(n2).slice(0, 4) + onlyDigits(n3).slice(0, 4)).slice(0, 11);
-    setForm((prev) => ({ ...prev, phone: next }));
-  };
+  const inputErr = "border-red-300 focus:ring-red-100";
+  const inputOk = "border-gray-200";
 
-  // birthday split
-  const birthDigits = onlyDigits(form.birthday);
-  const by = birthDigits.slice(0, 4);
-  const bm = birthDigits.slice(4, 6);
-  const bd = birthDigits.slice(6, 8);
-
-  const setBirthParts = (y: string, m: string, d: string) => {
-    const yy = onlyDigits(y).slice(0, 4);
-    const mm = onlyDigits(m).slice(0, 2);
-    const dd = onlyDigits(d).slice(0, 2);
-    setForm((prev) => ({ ...prev, birthday: (yy + mm + dd).slice(0, 8) }));
-  };
+  const showErr = (k: string) => Boolean(errors[k]) && Boolean(touched[k]);
 
   const onSubmit = async () => {
-    setSubmitTried(true);
+    // 제출 시 한 번에 에러 표시
+    touch("email");
+    touch("name");
+    touch("password");
+    touch("birthday");
+    touch("phone");
 
-    const hasErr = Object.keys(errors).length > 0;
-    if (hasErr) return;
+    if (!canSubmit) return;
 
     setLoading(true);
     try {
       const payload: AdminUserCreateReq = {
-        ...form,
         email: form.email.trim(),
         name: form.name.trim(),
-        phone: onlyDigits(form.phone),
-        birthday: onlyDigits(form.birthday),
+        password: form.password,
+        gender: form.gender,
+        birthday: birthdayValue,
+        phone: phoneValue,
         address: form.address?.trim() ? form.address.trim() : null,
         nickname: form.nickname?.trim() ? form.nickname.trim() : null,
       };
 
-      if (role === "ADMIN") {
+      if (createRole === "ADMIN") {
         await createAdminUser(payload);
         alert("ADMIN 계정 생성 성공");
       } else {
@@ -163,18 +177,10 @@ export default function AdminUsersPage() {
         alert("INQUIRY 계정 생성 성공");
       }
 
-      setForm({
-        email: "",
-        name: "",
-        password: "",
-        gender: "M" as Gender,
-        birthday: "",
-        phone: "",
-        address: "",
-        nickname: "",
-      });
+      setForm((p) => ({ ...p, email: "", name: "", password: "", address: "", nickname: "" }));
+      setBirth({ yyyy: "", mm: "", dd: "" });
+      setPhone({ p1: "010", p2: "", p3: "" });
       setTouched({});
-      setSubmitTried(false);
     } catch (e) {
       console.error(e);
       alert("생성 실패. 서버 응답/로그를 확인해 주세요.");
@@ -192,6 +198,12 @@ export default function AdminUsersPage() {
       setLoading(false);
     }
   };
+
+  const pill = (active: boolean) =>
+    "px-3 py-1.5 rounded-xl border text-sm whitespace-nowrap " +
+    (active
+      ? "bg-violet-50 border-violet-200 text-violet-700"
+      : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50");
 
   return (
     <div className="space-y-4">
@@ -229,26 +241,10 @@ export default function AdminUsersPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setRole("INQUIRY")}
-              className={
-                "px-3 py-1.5 rounded-xl border text-sm " +
-                (role === "INQUIRY"
-                  ? "bg-blue-50 border-blue-200 text-blue-700"
-                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50")
-              }
-            >
+            <button onClick={() => setCreateRole("INQUIRY")} className={pill(createRole === "INQUIRY")}>
               INQUIRY
             </button>
-            <button
-              onClick={() => setRole("ADMIN")}
-              className={
-                "px-3 py-1.5 rounded-xl border text-sm " +
-                (role === "ADMIN"
-                  ? "bg-violet-50 border-violet-200 text-violet-700"
-                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50")
-              }
-            >
+            <button onClick={() => setCreateRole("ADMIN")} className={pill(createRole === "ADMIN")}>
               ADMIN
             </button>
           </div>
@@ -259,24 +255,24 @@ export default function AdminUsersPage() {
             <div className="text-[11px] text-gray-500">이메일</div>
             <input
               value={form.email}
-              onBlur={() => markTouched("email")}
               onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-              className={inputClass(Boolean(showError("email")))}
+              onBlur={() => touch("email")}
+              className={inputBase + " " + (showErr("email") ? inputErr : inputOk)}
               placeholder="admin@example.com"
             />
-            {showError("email") ? <div className="mt-1 text-[11px] text-red-600">{errors.email}</div> : null}
+            {showErr("email") ? <div className="mt-1 text-[11px] text-red-600">{errors.email}</div> : null}
           </div>
 
           <div>
             <div className="text-[11px] text-gray-500">이름</div>
             <input
               value={form.name}
-              onBlur={() => markTouched("name")}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              className={inputClass(Boolean(showError("name")))}
+              onBlur={() => touch("name")}
+              className={inputBase + " " + (showErr("name") ? inputErr : inputOk)}
               placeholder="홍길동"
             />
-            {showError("name") ? <div className="mt-1 text-[11px] text-red-600">{errors.name}</div> : null}
+            {showErr("name") ? <div className="mt-1 text-[11px] text-red-600">{errors.name}</div> : null}
           </div>
 
           <div>
@@ -284,102 +280,104 @@ export default function AdminUsersPage() {
             <input
               type="password"
               value={form.password}
-              onBlur={() => markTouched("password")}
               onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-              className={inputClass(Boolean(showError("password")))}
+              onBlur={() => touch("password")}
+              className={inputBase + " " + (showErr("password") ? inputErr : inputOk)}
               placeholder="비밀번호"
             />
-            {showError("password") ? <div className="mt-1 text-[11px] text-red-600">{errors.password}</div> : null}
+            {showErr("password") ? <div className="mt-1 text-[11px] text-red-600">{errors.password}</div> : null}
           </div>
 
           <div>
             <div className="text-[11px] text-gray-500">성별</div>
             <select
               value={form.gender}
-              onBlur={() => markTouched("gender")}
               onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value as any }))}
-              className={inputClass(Boolean(showError("gender"))) + " bg-white"}
+              className={inputBase + " " + inputOk}
             >
               <option value="M">남</option>
               <option value="W">여</option>
             </select>
-            {showError("gender") ? <div className="mt-1 text-[11px] text-red-600">{errors.gender}</div> : null}
           </div>
 
           <div>
             <div className="text-[11px] text-gray-500">생년월일</div>
-            <div className="mt-1 flex items-center gap-2">
+            <div className="mt-1 grid grid-cols-3 gap-2">
               <input
-                value={by}
-                onBlur={() => markTouched("birthday")}
-                onChange={(e) => setBirthParts(e.target.value, bm, bd)}
-                className={inputClass(Boolean(showError("birthday")))}
+                value={birth.yyyy}
+                onChange={(e) => setBirth((p) => ({ ...p, yyyy: onlyDigits(e.target.value).slice(0, 4) }))}
+                onBlur={() => touch("birthday")}
+                inputMode="numeric"
+                className={inputBase + " " + (showErr("birthday") ? inputErr : inputOk)}
                 placeholder="YYYY"
               />
               <input
-                value={bm}
-                onBlur={() => markTouched("birthday")}
-                onChange={(e) => setBirthParts(by, e.target.value, bd)}
-                className={inputClass(Boolean(showError("birthday")))}
+                value={birth.mm}
+                onChange={(e) => setBirth((p) => ({ ...p, mm: onlyDigits(e.target.value).slice(0, 2) }))}
+                onBlur={() => touch("birthday")}
+                inputMode="numeric"
+                className={inputBase + " " + (showErr("birthday") ? inputErr : inputOk)}
                 placeholder="MM"
               />
               <input
-                value={bd}
-                onBlur={() => markTouched("birthday")}
-                onChange={(e) => setBirthParts(by, bm, e.target.value)}
-                className={inputClass(Boolean(showError("birthday")))}
+                value={birth.dd}
+                onChange={(e) => setBirth((p) => ({ ...p, dd: onlyDigits(e.target.value).slice(0, 2) }))}
+                onBlur={() => touch("birthday")}
+                inputMode="numeric"
+                className={inputBase + " " + (showErr("birthday") ? inputErr : inputOk)}
                 placeholder="DD"
               />
             </div>
-            
-            {showError("birthday") ? <div className="mt-1 text-[11px] text-red-600">{errors.birthday}</div> : null}
+            {showErr("birthday") ? <div className="mt-1 text-[11px] text-red-600">{errors.birthday}</div> : null}
           </div>
 
           <div>
             <div className="text-[11px] text-gray-500">전화번호</div>
-            <div className="mt-1 flex items-center gap-2">
+            <div className="mt-1 grid grid-cols-3 gap-2">
               <input
-                value={p1}
-                onBlur={() => markTouched("phone")}
-                onChange={(e) => setPhoneParts(e.target.value, p2, p3)}
-                className={inputClass(Boolean(showError("phone")))}
+                value={phone.p1}
+                onChange={(e) => setPhone((p) => ({ ...p, p1: onlyDigits(e.target.value).slice(0, 3) }))}
+                onBlur={() => touch("phone")}
+                inputMode="numeric"
+                className={inputBase + " " + (showErr("phone") ? inputErr : inputOk)}
                 placeholder="010"
               />
               <input
-                value={p2}
-                onBlur={() => markTouched("phone")}
-                onChange={(e) => setPhoneParts(p1, e.target.value, p3)}
-                className={inputClass(Boolean(showError("phone")))}
+                value={phone.p2}
+                onChange={(e) => setPhone((p) => ({ ...p, p2: onlyDigits(e.target.value).slice(0, 4) }))}
+                onBlur={() => touch("phone")}
+                inputMode="numeric"
+                className={inputBase + " " + (showErr("phone") ? inputErr : inputOk)}
                 placeholder="1234"
               />
               <input
-                value={p3}
-                onBlur={() => markTouched("phone")}
-                onChange={(e) => setPhoneParts(p1, p2, e.target.value)}
-                className={inputClass(Boolean(showError("phone")))}
+                value={phone.p3}
+                onChange={(e) => setPhone((p) => ({ ...p, p3: onlyDigits(e.target.value).slice(0, 4) }))}
+                onBlur={() => touch("phone")}
+                inputMode="numeric"
+                className={inputBase + " " + (showErr("phone") ? inputErr : inputOk)}
                 placeholder="5678"
               />
             </div>
-            
-            {showError("phone") ? <div className="mt-1 text-[11px] text-red-600">{errors.phone}</div> : null}
+            {showErr("phone") ? <div className="mt-1 text-[11px] text-red-600">{errors.phone}</div> : null}
           </div>
 
           <div>
-            <div className="text-[11px] text-gray-500">주소</div>
+            <div className="text-[11px] text-gray-500">주소 (옵션)</div>
             <input
-              value={form.address ?? ""}
+              value={(form.address as any) ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
-              className={inputClass(false)}
+              className={inputBase + " " + inputOk}
               placeholder="서울시 ..."
             />
           </div>
 
           <div>
-            <div className="text-[11px] text-gray-500">닉네임</div>
+            <div className="text-[11px] text-gray-500">닉네임 (옵션)</div>
             <input
-              value={form.nickname ?? ""}
+              value={(form.nickname as any) ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, nickname: e.target.value }))}
-              className={inputClass(false)}
+              className={inputBase + " " + inputOk}
               placeholder="운영자"
             />
           </div>
@@ -393,6 +391,7 @@ export default function AdminUsersPage() {
               "px-4 py-2 rounded-xl text-sm font-semibold text-white bg-violet-600 " +
               (loading ? "opacity-60 cursor-not-allowed" : "hover:bg-violet-700")
             }
+            title={canSubmit ? "생성" : "필수 입력값을 확인해 주세요"}
           >
             생성
           </button>
@@ -400,12 +399,25 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-sm font-bold text-gray-900">계정 목록</div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-bold text-gray-900 whitespace-nowrap">계정 목록</div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={() => setRoleFilter("ALL")} className={pill(roleFilter === "ALL")}>ALL</button>
+              <button onClick={() => setRoleFilter("ADMIN")} className={pill(roleFilter === "ADMIN")}>ADMIN</button>
+              <button onClick={() => setRoleFilter("INQUIRY")} className={pill(roleFilter === "INQUIRY")}>INQUIRY</button>
+              <button onClick={() => setRoleFilter("USER")} className={pill(roleFilter === "USER")}>USER</button>
+            </div>
+          </div>
+
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className={inputBase + " border-gray-200 focus:ring-violet-200 w-[320px]"}
+            className={
+              "px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none " +
+              "focus:ring-2 focus:ring-violet-200 w-full sm:w-[360px] placeholder:text-gray-300"
+            }
             placeholder="검색 (이메일/이름/닉네임)"
           />
         </div>
@@ -413,22 +425,22 @@ export default function AdminUsersPage() {
         <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
             <div className="text-[11px] text-gray-500">ADMIN</div>
-            <div className="text-xl font-bold text-gray-900">{admins.length.toLocaleString()}</div>
+            <div className="text-xl font-bold text-gray-900">{adminsCount.toLocaleString()}</div>
           </div>
           <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
             <div className="text-[11px] text-gray-500">INQUIRY</div>
-            <div className="text-xl font-bold text-gray-900">{inquiries.length.toLocaleString()}</div>
+            <div className="text-xl font-bold text-gray-900">{inquiriesCount.toLocaleString()}</div>
           </div>
           <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
             <div className="text-[11px] text-gray-500">USER</div>
-            <div className="text-xl font-bold text-gray-900">{normals.length.toLocaleString()}</div>
+            <div className="text-xl font-bold text-gray-900">{normalsCount.toLocaleString()}</div>
           </div>
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-auto">
             <thead>
-              <tr className="text-left text-[11px] text-gray-500 border-b">
+              <tr className="text-left text-[11px] text-gray-500 border-b whitespace-nowrap">
                 <th className="py-2 pr-3">ID</th>
                 <th className="py-2 pr-3">권한</th>
                 <th className="py-2 pr-3">이메일</th>
@@ -444,21 +456,31 @@ export default function AdminUsersPage() {
                 const suspended = Boolean(u.suspendedUntil);
                 const viewOnly = Boolean(u.viewOnly);
 
-                const phoneView = u.phone ? onlyDigits(String(u.phone)) : "-";
-
                 return (
                   <tr key={u.userId} className="border-b">
-                    <td className="py-2 pr-3 text-gray-700">{u.userId}</td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pr-3 text-gray-700 whitespace-nowrap">{u.userId}</td>
+
+                    <td className="py-2 pr-3 whitespace-nowrap">
                       <span className={"inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] " + roleCls}>
                         {u.authority}
                       </span>
                     </td>
-                    <td className="py-2 pr-3 text-gray-900">{u.email}</td>
-                    <td className="py-2 pr-3 text-gray-900">{u.name}</td>
-                    <td className="py-2 pr-3 text-gray-700">{u.nickname ?? "-"}</td>
-                    <td className="py-2 pr-3 text-gray-700">{phoneView}</td>
-                    <td className="py-2 pr-3">
+
+                    <td className="py-2 pr-3 text-gray-900 whitespace-nowrap max-w-[260px] truncate">
+                      {u.email}
+                    </td>
+
+                    <td className="py-2 pr-3 text-gray-900 whitespace-nowrap">{u.name}</td>
+
+                    <td className="py-2 pr-3 text-gray-700 whitespace-nowrap max-w-[160px] truncate">
+                      {u.nickname ?? "-"}
+                    </td>
+
+                    <td className="py-2 pr-3 text-gray-700 whitespace-nowrap">
+                      {(u.phone ?? "-").replace(/\D/g, "")}
+                    </td>
+
+                    <td className="py-2 pr-3 whitespace-nowrap">
                       <div className="flex flex-wrap gap-2">
                         {viewOnly ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] bg-orange-50 text-orange-700 border-orange-200">
