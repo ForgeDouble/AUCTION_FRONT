@@ -40,3 +40,10 @@ export interface BidListDto {
   isWinned: string;
   productCreatedAt: string;
 }
+
+export interface PageInfo {
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  size: number;
+}

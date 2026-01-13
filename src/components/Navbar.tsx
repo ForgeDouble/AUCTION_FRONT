@@ -14,7 +14,7 @@ const Navbar = () => {
                 src={logoBid}
                 alt="BID"
                 style={{
-                  height: "250px",
+                  height: "65px",
                   display: "block",
                   float: "left",
                   filter: "brightness(2.0)",
