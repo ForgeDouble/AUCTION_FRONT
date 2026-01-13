@@ -1,5 +1,5 @@
 // src/pages/admin/AdminContext.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useCallback, useState, } from "react";
 import type {
   AdminOverviewResponse,
   AuctionRow,
@@ -12,9 +12,12 @@ import type {
   AdminReportItemRow,
   BlockedProductRow,
   CategoryDistributionRow,
+  ActiveHourBucketRow,
+  AuctionTrendRow,
+  MonthlyTradeRow,
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
-import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
+// import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -52,6 +55,29 @@ function safeGetAdminProfile(): { email: string; nick: string; role: string } {
   }
 }
 
+// 초기값 셋팅
+function emptyAdminStats(): AdminOverviewResponse {
+  return {
+  todayNewUsers: 0,
+  todayCreatedAuctions: 0,
+  todayEndedAuctions: 0,
+  todaySoldAuctions: 0,
+  totalBids: 0,
+  ongoingAuctions: 0,
+  reportsOpen: 0,
+  realtimeUsers: 0,
+  todayActiveUsers: 0,
+
+  todayTradeAmount: 0,
+  monthlyAvgTradeAmount: 0,
+
+  todayActivityHourly: [],
+  statusReady: 0,
+  statusProcessing: 0,
+  statusSelled: 0,
+  statusNotselled: 0,
+  };
+}
 export interface AdminStore {
   adminEmail: string;
   adminNick: string;
@@ -61,13 +87,27 @@ export interface AdminStore {
   setQuery: (v: string) => void;
 
   lastUpdatedAt: string;
-  refreshAll: () => Promise<void>;
+  refreshAll: (opts?: { auctionsPageUi?: number; auctionsSize?: number }) => Promise<void>;
 
   stats: AdminOverviewResponse;
   setStats: React.Dispatch<React.SetStateAction<AdminOverviewResponse>>;
 
+  // 경매 모니터링 관련
   auctions: AuctionRow[];
   setAuctions: React.Dispatch<React.SetStateAction<AuctionRow[]>>;
+
+  auctionsPage: SpringPage<AuctionRow> | null;
+  auctionsPageIndex: number;
+  auctionsPageSize: number;
+
+  auctionsTotalPages: number;
+  auctionsTotalElements: number;
+
+  setAuctionsPagingFromUrl: (pageUi: number, size: number) => void;
+  refreshAuctionsPage: () => Promise<void>;
+
+  overviewTopAuctions: AuctionRow[];
+  refreshOverviewTopAuctions: () => Promise<void>; 
 
   // 신고(유저)
   reportGroups: AdminReportGroupRow[];
@@ -134,6 +174,22 @@ export interface AdminStore {
   // 카테고리 확인용(overview)
   categoryDistribution: CategoryDistributionRow[];
   setCategoryDistribution: React.Dispatch<React.SetStateAction<CategoryDistributionRow[]>>;
+  refreshCategoryDistribution: () => Promise<void>;
+
+  todayActiveHours: ActiveHourBucketRow[];
+  setTodayActiveHours: React.Dispatch<React.SetStateAction<ActiveHourBucketRow[]>>;
+  refreshTodayActiveHours: () => Promise<void>;
+
+  // 최근 7일 내 경매 생성/종료 
+  auctionTrendRows: AuctionTrendRow[];
+  refreshAuctionTrend: () => Promise<void>;
+
+  // 월 별 경매 계산
+  monthlyTradeRows: MonthlyTradeRow[];
+  refreshMonthlyTrade: () => Promise<void>;
+
+  // 로그인 연장(토큰 재발급 + localStorage 교체)
+  extendAdminSession: () => Promise<void>;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -149,14 +205,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [query, setQuery] = useState<string>("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>(nowIso());
 
-  // 옥션 관련 더미
-  const [stats, setStats] = useState<AdminOverviewResponse>(() => createMockStats());
-  const [auctions, setAuctions] = useState<AuctionRow[]>(() => createMockAuctions());
-  
-  // 신고 관련 더미
-  const [reportGroups, setReportGroups] = useState<AdminReportGroupRow[]>(() => createMockReportGroups());
+  const [stats, setStats] = useState<AdminOverviewResponse>(() => emptyAdminStats());
 
-  // 캘린더 관련 더미
+  const [auctions, setAuctions] = useState<AuctionRow[]>([]);
+  const [auctionsPage, setAuctionsPage] = useState<SpringPage<AuctionRow> | null>(null);
+
+  const [auctionsPageIndex, setAuctionsPageIndex] = useState<number>(0);
+  const [auctionsPageSize, setAuctionsPageSize] = useState<number>(10);
+
+  const [auctionsTotalPages, setAuctionsTotalPages] = useState<number>(1);
+  const [auctionsTotalElements, setAuctionsTotalElements] = useState<number>(0);
+
+  const [overviewTopAuctions, setOverviewTopAuctions] = useState<AuctionRow[]>([]);
+  // const auctionsPagingRef = useRef<{ index: number; size: number }>({ index: -1, size: -1 });
+
+  const [reportGroups, setReportGroups] = useState<AdminReportGroupRow[]>([]);
+
   const [events, setEvents] = useState<CalendarEventRow[]>([]);
   
   const [notices, setNotices] = useState<NoticeRow[]>([]);
@@ -166,8 +230,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [noticeTotalElements, setNoticeTotalElements] = useState(0);
 
   const [blockedProducts, setBlockedProducts] = useState<BlockedProductRow[]>([]);
-
   const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistributionRow[]>([]);
+  const [todayActiveHours, setTodayActiveHours] = useState<ActiveHourBucketRow[]>([]);
+
+  const [auctionTrendRows, setAuctionTrendRows] = useState<AuctionTrendRow[]>([]);
+  const [monthlyTradeRows, setMonthlyTradeRows] = useState<MonthlyTradeRow[]>([]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -191,6 +258,52 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setNoticeTotalPages(Math.max(1, res.totalPages));
     setNoticeTotalElements(res.totalElements);
   };
+
+  const fetchAuctionsPage = useCallback(async (pageIndex: number, size: number): Promise<void> => {
+    const p = Math.max(0, pageIndex);
+    const s = Math.max(1, Math.min(size, 100));
+
+    const pg = await adminApi.getAuctionsPage({ page: p, size: s });
+    setAuctionsPage(pg);
+
+    const content = Array.isArray(pg?.content) ? pg.content : [];
+    setAuctions(content);
+
+    const tp = (pg as any)?.totalPages ?? 1;
+    const te = (pg as any)?.totalElements ?? content.length;
+
+    setAuctionsTotalPages(Math.max(1, Number(tp) || 1));
+    setAuctionsTotalElements(Number(te) || 0);
+  }, []);
+
+  const refreshAuctionsPage = useCallback(async (): Promise<void> => {
+    await fetchAuctionsPage(auctionsPageIndex, auctionsPageSize);
+  }, [fetchAuctionsPage, auctionsPageIndex, auctionsPageSize]);
+
+  const refreshOverviewTopAuctions = useCallback(async (): Promise<void> => {
+    try {
+      const pg = await adminApi.getAuctionsPage({ page: 0, size: 5 });
+      const content = Array.isArray(pg?.content) ? pg.content : [];
+      setOverviewTopAuctions(content);
+    } catch (e) {
+      console.error(e);
+      setOverviewTopAuctions([]);
+    }
+  }, []);
+
+  const setAuctionsPagingFromUrl = useCallback((pageUi: number, size: number) => {
+    const uiPage = Number.isFinite(pageUi) ? pageUi : 1;
+    const uiSize = Number.isFinite(size) ? size : 10;
+
+    const nextSize = Math.max(1, Math.min(uiSize, 100));
+    const nextIndex = Math.max(0, Math.max(1, uiPage) - 1);
+
+    setAuctionsPageIndex(nextIndex);
+    setAuctionsPageSize(nextSize);
+
+    void fetchAuctionsPage(nextIndex, nextSize);
+  }, [fetchAuctionsPage]);
+
   const refreshBlockedProducts = async (): Promise<void> => {
     try {
       const list = await adminApi.getBlockedProducts();
@@ -208,28 +321,85 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const refreshAll = async (): Promise<void> => {
+  const refreshCategoryDistribution = async (): Promise<void> => {
+    try {
+      const list = await adminApi.getCategoryDistribution();
+      setCategoryDistribution(list);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const refreshTodayActiveHours = async (): Promise<void> => {
+    try {
+      const list = await adminApi.getTodayActiveHours();
+      setTodayActiveHours(list);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const refreshAuctionTrend = useCallback(async (): Promise<void> => {
+    try {
+      const rows = await adminApi.getAuctionTrend(7);
+      setAuctionTrendRows(rows);
+    } catch (e) {
+      console.error(e);
+      setAuctionTrendRows([]);
+    }
+  }, []);
+
+  const refreshMonthlyTrade = useCallback(async (): Promise<void> => {
+    try {
+      const rows = await adminApi.getMonthlyTrade(6);
+      setMonthlyTradeRows(rows);
+    } catch (e) {
+      console.error(e);
+      setMonthlyTradeRows([]);
+    }
+  }, []);
+
+  const refreshAll: AdminStore["refreshAll"] = async (opts) => {
     const results = await Promise.allSettled([
       adminApi.getOverview(),
-      adminApi.getAuctions(),
       adminApi.getReportGroups(),
       adminApi.getBlockedProducts(),
       adminApi.getEvents(),
       adminApi.getCategoryDistribution(),
+      adminApi.getTodayActiveHours(),
+      adminApi.getAuctionTrend(7),
+      adminApi.getMonthlyTrade(6),
     ]);
 
-    const [ovR, auctR, groupR, blockedR, evR, catR] = results;
-
+    // const [ovR, auctR, groupR, blockedR, evR, catR, hourR] = results;
+    const [ovR, groupR, blockedR, evR, catR, hourR, trendR, tradeR] = results;
     if (ovR.status === "fulfilled") setStats(ovR.value);
-    if (auctR.status === "fulfilled") setAuctions(auctR.value);
+    // if (auctR.status === "fulfilled") setAuctions(auctR.value);
     if (groupR.status === "fulfilled") setReportGroups(groupR.value);
     if (blockedR.status === "fulfilled") setBlockedProducts(blockedR.value);
     if (evR.status === "fulfilled") setEvents(evR.value);
     if (catR.status === "fulfilled") setCategoryDistribution(catR.value);
+    if (hourR.status === "fulfilled") setTodayActiveHours(hourR.value);
+    if (trendR.status === "fulfilled") setAuctionTrendRows(trendR.value);
+    if(tradeR.status === "fulfilled") setMonthlyTradeRows(tradeR.value);
 
+    const uiPage = opts?.auctionsPageUi;
+    const uiSize = opts?.auctionsSize;
+
+    if (typeof uiPage === "number" || typeof uiSize === "number") {
+      const nextSize = Math.max(1, Math.min(uiSize ?? auctionsPageSize, 100));
+      const nextIndex = Math.max(0, (Math.max(1, uiPage ?? (auctionsPageIndex + 1)) - 1));
+
+      setAuctionsPageIndex(nextIndex);
+      setAuctionsPageSize(nextSize);
+      await fetchAuctionsPage(nextIndex, nextSize);
+    } else {
+      await refreshAuctionsPage();
+    }
+
+    await refreshOverviewTopAuctions();
     await fetchNoticesPage(noticePage, noticeSize);
     setLastUpdatedAt(nowIso());
-    
   };
 
   useEffect(() => {
@@ -243,7 +413,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       try {
         await adminApi.suspendAuction(auctionId, reason.trim());
-        setAuctions((prev) => prev.map((a) => (a.id === auctionId ? { ...a, status: "SUSPENDED" } : a)));
+        // setAuctions((prev) => prev.map((a) => (a.id === auctionId ? { ...a, status: "SUSPENDED" } : a)));
+        await refreshAuctionsPage();
+        await refreshOverviewTopAuctions();
       } catch (e) {
         console.error(e);
         alert("임시차단에 실패했습니다. 서버 로그/응답을 확인하세요.");
@@ -258,7 +430,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       try {
         await adminApi.forceEndAuction(auctionId, reason.trim());
-        setAuctions((prev) => prev.filter((a) => a.id !== auctionId));
+        // setAuctions((prev) => prev.filter((a) => a.id !== auctionId));
+        await refreshAuctionsPage();
+        await refreshOverviewTopAuctions();
         setStats((s) => ({
           ...s,
           todayEndedAuctions: s.todayEndedAuctions + 1,
@@ -364,6 +538,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
     void fetchNoticesPage(pg, noticeSize);
   };
+  const extendAdminSession = useCallback(async (): Promise<void> => {
+    const res = await adminApi.extendAdminSession();
+    const token = res?.accessToken;
+
+    if (!token || typeof token !== "string") {
+      throw new Error("extendAdminSession: token missing");
+    }
+
+    localStorage.setItem("accessToken", token);
+  }, []);
+
 
   // 뱃지 관련 카운팅 함수
   const pinnedNoticesCount = useMemo(() => notices.filter((n) => n.pinned).length, [notices]);
@@ -389,6 +574,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     auctions,
     setAuctions,
+
+    auctionsPage,
+    auctionsPageIndex,
+    auctionsPageSize,
+    auctionsTotalPages,
+    auctionsTotalElements,
+    setAuctionsPagingFromUrl,
+    refreshAuctionsPage,
+
+    overviewTopAuctions,
+    refreshOverviewTopAuctions,
 
     reportGroups,
     setReportGroups,
@@ -433,6 +629,19 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     categoryDistribution,
     setCategoryDistribution,
+    refreshCategoryDistribution,
+
+    todayActiveHours,
+    setTodayActiveHours,
+    refreshTodayActiveHours,
+
+    auctionTrendRows,
+    refreshAuctionTrend,
+
+    monthlyTradeRows,
+    refreshMonthlyTrade,
+
+    extendAdminSession,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

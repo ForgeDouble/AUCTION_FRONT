@@ -407,7 +407,7 @@ const AdminReportsPage: React.FC = () => {
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
         <SectionTitle
           title="신고 그룹"
-          sub = "유저 × 카테고리 단위로 묶어서 처리"
+          sub = "유저 × 카테고리 단위"
           right={
             <button
               onClick={() => {

@@ -3,7 +3,7 @@ export type TabKey = "overview" | "auctions" | "reports" | "calendar" | "notices
 export type ReportCategory = "SPAM" | "AD" | "ABUSE" | "HATE" | "SCAM" | "OTHER";
 export type BackendReportStatus = "PENDING" | "ACCEPTED" | "REJECTED";
 
-export type AuctionStatus = "NORMAL" | "HOT" | "ENDING" | "SUSPENDED";
+export type AuctionStatus = "NORMAL" | "HOT" | "ENDING" | "SUSPENDED" | "READY" | "PROCESSING" | "SELLED" | "NOTSELLED" | "BLOCKED" | "SUSPENDED" | "UNKNOWN";
 
 export type NoticeCategory = "HANDOVER" | "SYSTEM" | "POLICY" | "ETC";
 
@@ -127,3 +127,16 @@ export type CategoryDistributionRow = {
   category: string;
   count: number;
 };
+
+export type ActiveHourBucketRow = {
+  hour: string;
+  count: number;
+};
+
+// 최근 7일 내 경매 추이 
+export type AuctionTrendRow = {
+  date: string;
+  created: number;
+  ended: number;
+};
+
