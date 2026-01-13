@@ -14,6 +14,9 @@ import type {
   ActiveHourBucketRow,
   AuctionTrendRow,
   MonthlyTradeRow,
+  AdminUserRow,
+  AdminUserCreateReq,
+  Authority,
 } from "./adminTypes";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -170,6 +173,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (res.status === 204) return undefined as unknown as T;
   return (await res.json()) as T;
+}
+
+// 관리자 유저 생성 관련 
+function normalizeAdminUser(x: any): AdminUserRow {
+  return {
+    userId: Number(x.userId ?? x.id ?? 0),
+    email: String(x.email ?? ""),
+    name: String(x.name ?? ""),
+
+    nickname: x.nickname != null ? String(x.nickname) : null,
+    authority: String(x.authority ?? "USER").toUpperCase() as Authority,
+
+    phone: x.phone != null ? String(x.phone) : null,
+    profileImageUrl: x.profileImageUrl != null ? String(x.profileImageUrl) : null,
+
+    warning: x.warning != null ? Number(x.warning) : null,
+    suspendedUntil: x.suspendedUntil ? String(x.suspendedUntil) : null,
+    viewOnly: x.viewOnly != null ? Boolean(x.viewOnly) : null,
+
+    createdAt: x.createdAt ? String(x.createdAt) : null,
+  };
 }
 
 export const adminApi = {
@@ -405,6 +429,23 @@ export const adminApi = {
       method: "POST",
     }).then((r) => unwrap<ExtendSessionRes>(r)),
 
+  getUsers: async () => {
+    const raw = await request<CommonResDto<any[]>>("/user/list");
+    const arr = unwrap<any[]>(raw) ?? [];
+    return arr.map(normalizeAdminUser);
+  },
+
+  createAdminUser: (payload: AdminUserCreateReq) =>
+    request<CommonResDto<void>>("/user/admin/create", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).then((r) => unwrap<void>(r)),
+
+  createInquiryUser: (payload: AdminUserCreateReq) =>
+    request<CommonResDto<void>>("/user/inquiry/create", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).then((r) => unwrap<void>(r)),
 };
 
 

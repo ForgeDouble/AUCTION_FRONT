@@ -292,6 +292,7 @@ const AdminLayout: React.FC = () => {
             <SideItem to="/admin/reports" icon={Siren} label="신고 관리" badge={reportsOpenCount} />
             <SideItem to="/admin/calendar" icon={CalendarDays} label="운영 캘린더" />
             <SideItem to="/admin/notices" icon={Megaphone} label="인수인계/공지" badge={noticesCount} />
+            <SideItem to="/admin/users" icon={Users} label="유저/권한 관리" />
           </div>
 
           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">

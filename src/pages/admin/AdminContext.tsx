@@ -15,6 +15,9 @@ import type {
   ActiveHourBucketRow,
   AuctionTrendRow,
   MonthlyTradeRow,
+  AdminUserRow,
+  AdminUserCreateReq,
+  Authority,
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
 // import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
@@ -188,8 +191,15 @@ export interface AdminStore {
   monthlyTradeRows: MonthlyTradeRow[];
   refreshMonthlyTrade: () => Promise<void>;
 
-  // 로그인 연장(토큰 재발급 + localStorage 교체)
+  // 로그인 연장(토큰 재발급 + localStorage 변경
   extendAdminSession: () => Promise<void>;
+
+  users: AdminUserRow[];
+  setUsers: React.Dispatch<React.SetStateAction<AdminUserRow[]>>;
+  refreshUsers: () => Promise<void>;
+
+  createAdminUser: (payload: AdminUserCreateReq) => Promise<void>;
+  createInquiryUser: (payload: AdminUserCreateReq) => Promise<void>;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -235,6 +245,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [auctionTrendRows, setAuctionTrendRows] = useState<AuctionTrendRow[]>([]);
   const [monthlyTradeRows, setMonthlyTradeRows] = useState<MonthlyTradeRow[]>([]);
+
+  const [users, setUsers] = useState<AdminUserRow[]>([]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -358,6 +370,26 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setMonthlyTradeRows([]);
     }
   }, []);
+
+  const refreshUsers = useCallback(async (): Promise<void> => {
+    try {
+      const list = await adminApi.getUsers();
+      setUsers(list);
+    } catch (e) {
+      console.error(e);
+      setUsers([]);
+    }
+  }, []);
+
+  const createAdminUser: AdminStore["createAdminUser"] = async (payload) => {
+    await adminApi.createAdminUser(payload);
+    await refreshUsers();
+  };
+
+  const createInquiryUser: AdminStore["createInquiryUser"] = async (payload) => {
+    await adminApi.createInquiryUser(payload);
+    await refreshUsers();
+  };
 
   const refreshAll: AdminStore["refreshAll"] = async (opts) => {
     const results = await Promise.allSettled([
@@ -642,6 +674,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refreshMonthlyTrade,
 
     extendAdminSession,
+
+    users,
+    setUsers,
+    refreshUsers,
+
+    createAdminUser,
+    createInquiryUser,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
