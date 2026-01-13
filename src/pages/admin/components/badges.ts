@@ -32,12 +32,17 @@ export function pendingRiskBadge(pendingCount: number): { label: string; cls: st
 }
 
 // 옥션 뱃지
-export function auctionBadge(st: AuctionStatus): { label: string; cls: string } {
-  const map: Record<AuctionStatus, { label: string; cls: string }> = {
-    NORMAL: { label: "일반", cls: "bg-gray-50 text-gray-700 border-gray-200" },
-    HOT: { label: "HOT", cls: "bg-red-50 text-red-700 border-red-200" },
-    ENDING: { label: "마감임박", cls: "bg-orange-50 text-orange-700 border-orange-200" },
-    SUSPENDED: { label: "차단", cls: "bg-gray-200 text-gray-700 border-gray-300" },
+export function auctionBadge(status?: string) {
+  const s = String(status ?? "UNKNOWN").toUpperCase();
+
+  const map: Record<string, { label: string; cls: string }> = {
+    READY: { label: "대기", cls: "bg-gray-50 text-gray-700 border-gray-200" },
+    PROCESSING: { label: "진행중", cls: "bg-gray-50 text-gray-700 border-gray-200" },
+    SELLED: { label: "낙찰", cls: "bg-gray-50 text-gray-700 border-gray-200" },
+    SUSPENDED: { label: "임시정지", cls: "bg-gray-50 text-gray-700 border-gray-200"},
+    NOTSELLED: { label: "유찰", cls: "bg-gray-50 text-gray-700 border-gray-200" },
+    BLOCKED: { label: "차단", cls: "bg-gray-50 text-gray-700 border-gray-200" },
   };
-  return map[st];
+
+  return map[s] ?? { label: s, cls: "bg-gray-50 text-gray-700 border-gray-200" };
 }

@@ -5,6 +5,7 @@ import { useAdminStore } from "../AdminContext";
 import { StatCard, SectionTitle } from "../components/AdminUi";
 import { auctionBadge, categoryBadge, pendingRiskBadge } from "../components/badges";
 import { SimpleDonutChart, SimpleMultiLineChart, type DonutSegment, type MultiLineSeries } from "../components/AdminCharts";
+import { useNavigate } from "react-router-dom";
 
 function formatKST(iso: string): string {
   const d = new Date(iso);
@@ -16,14 +17,19 @@ function formatKST(iso: string): string {
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 }
 
+const fmtMillionKRW1 = (v: number) => {
+  const m = v / 1_000_000;
+  return `${m.toFixed(1)}`;
+};
+
 function money(v: number): string {
   return new Intl.NumberFormat("ko-KR").format(v);
 }
 
 const AdminOverviewPage: React.FC = () => {
-  const { stats, auctions, reportGroups, categoryDistribution } = useAdminStore();
-
-  const topAuctions = useMemo(() => auctions.slice(0, 5), [auctions]);
+  const { stats, overviewTopAuctions, reportGroups, categoryDistribution, todayActiveHours, auctionTrendRows, monthlyTradeRows } = useAdminStore();
+  const navigate = useNavigate();
+  const topAuctions = useMemo(() => (overviewTopAuctions ?? []).slice(0, 5), [overviewTopAuctions]);
 
   const topReportGroups = useMemo(() => {
     return reportGroups
@@ -38,23 +44,30 @@ const AdminOverviewPage: React.FC = () => {
 
   // 최근 7일 생성/종료 샘플(더미)
   const auctionTrendSeries: MultiLineSeries[] = useMemo(() => {
-    const labels = ["12/15", "12/16", "12/17", "12/18", "12/19", "12/20", "12/21"];
-    const created = [48, 55, 42, 23, 61, 44, 39];
-    const ended = [52, 47, 51, 18, 39, 58, 41];
+    const toLabel = (dateStr: string) => {
+      // yyyy-MM-dd
+      const d = new Date(dateStr + "T00:00:00");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${mm}/${dd}`;
+    };
+
+    const rows = Array.isArray(auctionTrendRows) ? auctionTrendRows : [];
+    const labels = rows.map((r) => toLabel(r.date));
 
     return [
       {
         name: "생성",
         colorClass: "text-violet-600",
-        points: labels.map((l, i) => ({ label: l, value: created[i] })),
+        points: rows.map((r, i) => ({ label: labels[i], value: Number(r.created ?? 0) })),
       },
       {
         name: "종료",
         colorClass: "text-blue-600",
-        points: labels.map((l, i) => ({ label: l, value: ended[i] })),
+        points: rows.map((r, i) => ({ label: labels[i], value: Number(r.ended ?? 0) })),
       },
     ];
-  }, []);
+  }, [auctionTrendRows]);
 
   // 카테고리 분포 샘플(도넛 차트)
   const categorySegments: DonutSegment[] = useMemo(() => {
@@ -83,28 +96,63 @@ const AdminOverviewPage: React.FC = () => {
   // 금일 사용자 주 사용 시간대 (선 차트)
   const todayActiveHourLine: MultiLineSeries[] = useMemo(() => {
     const labels = ["00", "03", "06", "09", "12", "15", "18", "21"];
-    const users = [45, 23, 67, 189, 312, 278, 398, 342];
+    const starts = [0, 3, 6, 9, 12, 15, 18, 21];
+
+    const map = new Map<number, number>();
+    for (const row of todayActiveHours ?? []) {
+      const h = Number(row.hour);
+      const c = Number(row.count ?? 0);
+      if (!Number.isFinite(h)) continue;
+      map.set(h, (map.get(h) ?? 0) + (Number.isFinite(c) ? c : 0));
+    }
+
+    const bucketValue = (start: number) => {
+      let sum = 0;
+      for (let h = start; h < start + 3; h++) {
+        sum += map.get(h) ?? 0;
+      }
+      return sum;
+    };
+
+    const points = starts.map((s, i) => ({
+      label: labels[i],
+      value: bucketValue(s),
+    }));
+
     return [
       {
         name: "접속/활동",
         colorClass: "text-violet-600",
-        points: labels.map((l, i) => ({ label: l, value: users[i] })),
+        points,
       },
     ];
-  }, []);
+  }, [todayActiveHours]);
+
 
   // 월별 거래 금액(샘플) + 평균 표시
   const monthlyTradeSeries: MultiLineSeries[] = useMemo(() => {
-    const labels = ["7월", "8월", "9월", "10월", "11월", "12월"];
-    const amount = [860000000, 940000000, 910000000, 980000000, 1100000000, 920000000];
+    const rows = Array.isArray(monthlyTradeRows) ? monthlyTradeRows : [];
+
+    const labelOf = (ym: string) => {
+      // yyyy-MM -> "M월"
+      const mm = Number(String(ym).split("-")[1] ?? 0);
+      return mm ? `${mm}월` : ym;
+    };
+
     return [
       {
         name: "월 거래 금액",
         colorClass: "text-emerald-600",
-        points: labels.map((l, i) => ({ label: l, value: amount[i] })),
+        points: rows.map((r) => ({
+          label: labelOf(r.ym),
+          value: Number(r.amount ?? 0),
+        })),
       },
     ];
-  }, []);
+  }, [monthlyTradeRows]);
+
+  const rightLinkCls = "text-[11px] text-gray-500 hover:text-gray-900 hover:underline cursor-pointer select-none";
+
 
   return (
     <div className="space-y-4">
@@ -121,10 +169,14 @@ const AdminOverviewPage: React.FC = () => {
         <StatCard title="실시간 접속" value={stats.realtimeUsers.toLocaleString()} icon={Activity} hint="웹/앱 합산" />
       </div>
 
-      {/* ✅ 거래 금액 모니터링(아직 연결 안됨)  */}
+      {/* 거래 금액 모니터링  */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="거래 금액 모니터링" right={<span className="text-[11px] text-gray-500">샘플(백엔드 연결 예정)</span>} />
+          <SectionTitle title="거래 금액 모니터링" right = 
+          {
+            null// <span className="text-[11px] text-gray-500">샘플(백엔드 연결 예정)</span>
+          } 
+          />
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
               <div className="flex items-center justify-between">
@@ -146,60 +198,114 @@ const AdminOverviewPage: React.FC = () => {
           </div>
         </div>
 
-        {/*✅ 월별 거래 금액 추이(아직 연결 안됨) */}
+        {/* 월별 거래 금액 추이 */}
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm xl:col-span-2">
-          <SectionTitle title="월별 거래 금액 추이" right={<span className="text-[11px] text-gray-500">최근 6개월(샘플)</span>} />
-          <SimpleMultiLineChart series={monthlyTradeSeries} height={190} yLabel="KRW" />
+          <SectionTitle title="월별 거래 금액 추이" right={<span className="text-[11px] text-gray-500">최근 6개월</span>} />
+          <SimpleMultiLineChart
+            series={monthlyTradeSeries}
+            height={190}
+            yLabel="KRW"
+            valueLabelMode="all"
+            valueFormatter={fmtMillionKRW1}
+          />
         </div>
       </div>
 
-      {/*✅ 그래프 섹션(아직 연결 안됨) */}
+      {/* 그래프 섹션 7일 내 경매 생성/죵료 + 카테고리 분포 */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="최근 7일 경매 생성/종료 추이" right={<span className="text-[11px] text-gray-500">샘플</span>} />
+          <SectionTitle title="최근 7일 경매 생성/종료 추이" right={<span className="text-[11px] text-gray-500"></span>} />
           <SimpleMultiLineChart series={auctionTrendSeries} height={190} yLabel="count" />
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="카테고리 분포 (원형)" right={<span className="text-[11px] text-gray-500">샘플</span>} />
+          <SectionTitle title="카테고리 분포" right={<span className="text-[11px] text-gray-500">  </span>} />
           <SimpleDonutChart segments={categorySegments} size={180} thickness={16} />
         </div>
       </div>
 
-      {/*✅ 금일 사용 시간대(선형) . (아직 연결 안됨) */}
+      {/*금일 사용 시간대(선형)*/}
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-        <SectionTitle title="금일 사용자 주 사용 시간대" right={<span className="text-[11px] text-gray-500">시간대별 접속/활동(샘플)</span>} />
-        <SimpleMultiLineChart series={todayActiveHourLine} height={190} yLabel="users" />
+        <SectionTitle title="금일 사용자 주 사용 시간대" right={<span className="text-[11px] text-gray-500"></span>} />
+        <SimpleMultiLineChart series={todayActiveHourLine} height={190} yLabel="" />
       </div>
 
-      {/* ✅ 리스트 ( 아직 연결 안됨 ) */}
+      {/* 진행중인 경매 상위*/}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="진행중 경매(상위)" right={<span className="text-[11px] text-gray-500">경매 탭에서 상세</span>} />
+          <SectionTitle
+            title="진행중 경매(상위)"
+            right={
+              <button
+                type="button"
+                className={rightLinkCls}
+                onClick={() => navigate("/admin/auctions?page=1&size=10")}
+              >
+                경매 탭에서 상세
+              </button>
+            }
+          />
+
           <div className="space-y-2">
             {topAuctions.map((a) => {
               const b = auctionBadge(a.status);
+
               return (
-                <div key={a.id} className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 truncate">{a.title}</div>
-                    <div className="text-[11px] text-gray-500">
+                <div
+                  key={a.id}
+                  className="
+                    p-3 rounded-xl bg-gray-50 border border-gray-100
+                    flex items-center gap-3
+                  "
+                >
+                  {/* LEFT: 제목/서브 (가변, 하지만 truncate 되도록) */}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-gray-900 truncate whitespace-nowrap">
+                      {a.title}
+                    </div>
+
+                    <div className="text-[11px] text-gray-500 truncate whitespace-nowrap">
                       {a.id} · {a.category} · {a.sellerMasked}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-gray-900">₩{money(a.currentBid)}</div>
-                    <div className="text-[11px] text-gray-500">입찰 {a.bidCount} · {formatKST(a.endsAt)}</div>
+
+                  {/* MIDDLE: 가격/메타 (고정폭 + 줄바꿈 금지) */}
+                  <div className="w-[220px] text-right flex-none">
+                    <div className="text-sm font-bold text-gray-900 truncate whitespace-nowrap">
+                      ₩{money(a.currentBid)}
+                    </div>
+
+                    <div className="text-[11px] text-gray-500 truncate whitespace-nowrap">
+                      입찰 {a.bidCount} · {formatKST(a.endsAt)}
+                    </div>
                   </div>
-                  <span className={"text-[11px] px-2 py-1 rounded-full border " + b.cls}>{b.label}</span>
+
+                  {/* RIGHT: 뱃지 (고정) */}
+                  <div className="flex-none">
+                    <span className={"text-[11px] px-2 py-1 rounded-full border whitespace-nowrap " + b.cls}>
+                      {b.label}
+                    </span>
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
+        
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="최근 신고(상위)" right={<span className="text-[11px] text-gray-500">신고 탭에서 처리</span>} />
+          <SectionTitle
+            title="최근 신고(상위)"
+            right={
+              <button
+                type="button"
+                className={rightLinkCls}
+                onClick={() => navigate("/admin/reports")}
+              >
+                신고 탭으로 이동
+              </button>
+            }
+          />
           <div className="space-y-2">
             {topReportGroups.map((g) => {
               const cat = categoryBadge(g.category);

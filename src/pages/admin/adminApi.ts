@@ -11,6 +11,9 @@ import type {
   SpringPage,
   BlockedProductRow,
   CategoryDistributionRow,
+  ActiveHourBucketRow,
+  AuctionTrendRow,
+  MonthlyTradeRow,
 } from "./adminTypes";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -21,7 +24,6 @@ function getToken(): string | null {
 
 type ApiError = { status: number; message: string };
 
-// CommonResDto 대응
 type CommonResDto<T> = {
   status_code?: number;
   status_message?: string;
@@ -44,6 +46,11 @@ export type NoticePage = {
   size: number;
   totalElements: number;
   totalPages: number;
+};
+
+type ExtendSessionRes = {
+  accessToken: string;
+  expiresInSec: number;
 };
 
 function unwrap<T>(raw: CommonResDto<T> | T): T {
@@ -134,6 +141,14 @@ function normalizeCategoryDistribution(x: any): CategoryDistributionRow {
   };
 }
 
+function normalizeActiveHourBucket(x: any): ActiveHourBucketRow {
+  const h = String(x.hour ?? x.label ?? "00").padStart(2, "0");
+  return {
+    hour: h,
+    count: Number(x.count ?? x.value ?? 0),
+  };
+}
+
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
@@ -162,8 +177,16 @@ export const adminApi = {
   getOverview: () =>
     request<CommonResDto<AdminOverviewResponse>>("/admin/overview").then((r) => unwrap<AdminOverviewResponse>(r)),
 
-  getAuctions: () =>
-    request<CommonResDto<AuctionRow[]>>("/admin/auctions").then((r) => unwrap<AuctionRow[]>(r)),
+  // getAuctions: () =>
+  //   request<CommonResDto<AuctionRow[]>>("/admin/auctions").then((r) => unwrap<AuctionRow[]>(r)),
+  getAuctionsPage: (params?: { page?: number; size?: number }) => {
+    const sp = new URLSearchParams();
+    sp.set("page", String(params?.page ?? 0));
+    sp.set("size", String(params?.size ?? 20));
+
+    return request<CommonResDto<SpringPage<AuctionRow>>>(`/admin/auctions?${sp.toString()}`)
+      .then((r) => unwrap<SpringPage<AuctionRow>>(r));
+  },
 
   suspendAuction: (auctionId: string, reason: string) =>
     request<CommonResDto<void>>(`/admin/auctions/${encodeURIComponent(auctionId)}/suspend`, {
@@ -280,6 +303,41 @@ export const adminApi = {
     return arr.map(normalizeCategoryDistribution);
   },
 
+  getTodayActiveHours: async () => {
+    const raw = await request<CommonResDto<any[]>>("/admin/metrics/active-hours");
+    const arr = unwrap<any[]>(raw) ?? [];
+    return arr.map(normalizeActiveHourBucket);
+  },
+
+  // 최근 7일 경매 생성 종료 (메인)
+  getAuctionTrend: async (days = 7) => {
+    const sp = new URLSearchParams();
+    sp.set("days", String(days));
+
+    const raw = await request<CommonResDto<any[]>>(`/admin/metrics/auction-trend?${sp.toString()}`);
+    const arr = unwrap<any[]>(raw) ?? [];
+
+    return arr.map((x) => ({
+      date: String(x.date ?? ""),
+      created: Number(x.created ?? 0),
+      ended: Number(x.ended ?? 0),
+    })) as AuctionTrendRow[];
+  },
+
+  // 월별 경매 값 추이 (메인)
+  getMonthlyTrade: async (months = 6) => {
+    const sp = new URLSearchParams();
+    sp.set("months", String(months));
+
+    const raw = await request<CommonResDto<any[]>>(`/admin/metrics/trade-monthly?${sp.toString()}`);
+    const arr = unwrap<any[]>(raw) ?? [];
+
+    return arr.map((x) => ({
+      ym: String(x.ym ?? ""),
+      amount: Number(x.amount ?? 0),
+    })) as MonthlyTradeRow[];
+  },
+
   createNotice: (payload: {
     category: NoticeCategory;
     title: string;
@@ -341,4 +399,12 @@ export const adminApi = {
       method: "PATCH",
       body: JSON.stringify({ date: newDate }),
   }).then((r) => unwrap<CalendarEventRow>(r)),
+
+  extendAdminSession: () =>
+    request<CommonResDto<ExtendSessionRes>>("/user/extend", {
+      method: "POST",
+    }).then((r) => unwrap<ExtendSessionRes>(r)),
+
 };
+
+
