@@ -17,6 +17,8 @@ import type {
   AdminUserRow,
   AdminUserCreateReq,
   Authority,
+  AdminUserPageRes,
+  AdminUserCounts
 } from "./adminTypes";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -195,20 +197,41 @@ function normalizeAdminUser(x: any): AdminUserRow {
     createdAt: x.createdAt ? String(x.createdAt) : null,
   };
 }
+
+function parseAuthorityFromAny(x: any): Authority {
+  const pick =
+    x?.authority ??
+    x?.role ??
+    x?.userRole ??
+    x?.userAuthority ??
+    x?.auth ??
+    x?.grant;
+
+  let raw = pick;
+
+  if (raw && typeof raw === "object") {
+    raw =
+      raw.name ??
+      raw.value ??
+      raw.code ??
+      raw.authority ??
+      raw.role ??
+      raw.type ??
+      "";
+  }
+
+  const cleaned = String(raw ?? "USER")
+    .trim()
+    .toUpperCase()
+    .replace(/^ROLE_/, "");
+
+  if (cleaned.includes("ADMIN")) return "ADMIN";
+  if (cleaned.includes("INQUIRY")) return "INQUIRY";
+  return "USER";
+}
+
 function normalizeUser(x: any): AdminUserRow {
-  const raw = String(
-    x.authority ??
-      x.role ??
-      x.userRole ??
-      x.userAuthority ??
-      x.auth ??
-      "USER"
-  ).toUpperCase();
-
-  const cleaned = raw.startsWith("ROLE_") ? raw.slice(5) : raw;
-
-  const authority: Authority =
-    cleaned === "ADMIN" ? "ADMIN" : cleaned === "INQUIRY" ? "INQUIRY" : "USER";
+  const authority = parseAuthorityFromAny(x);
 
   return {
     userId: Number(x.userId ?? x.id ?? 0),
@@ -475,6 +498,45 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }).then((r) => unwrap<void>(r)),
+
+
+
+   getUsersPage: async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
+    const sp = new URLSearchParams();
+    sp.set("page", String(params?.page ?? 0));
+    sp.set("size", String(params?.size ?? 10));
+
+    if (params?.role && params.role !== "ALL") sp.set("role", params.role);
+    if (params?.q && params.q.trim()) sp.set("q", params.q.trim());
+
+    const raw = await request<CommonResDto<any>>(`/user/admin/page?${sp.toString()}`);
+    const dto = unwrap<any>(raw);
+    const items = (dto?.items ?? dto?.content ?? []).map(normalizeUser);
+
+    const counts: AdminUserCounts | undefined =
+      dto?.counts
+        ? {
+            ADMIN: Number(dto.counts.ADMIN ?? 0),
+            INQUIRY: Number(dto.counts.INQUIRY ?? 0),
+            USER: Number(dto.counts.USER ?? 0),
+          }
+        : dto?.adminCount != null || dto?.inquiryCount != null || dto?.userCount != null
+          ? {
+              ADMIN: Number(dto.adminCount ?? 0),
+              INQUIRY: Number(dto.inquiryCount ?? 0),
+              USER: Number(dto.userCount ?? 0),
+            }
+          : undefined;
+
+    return {
+      items,
+      page: Number(dto?.page ?? dto?.number ?? 0),
+      size: Number(dto?.size ?? 10),
+      totalElements: Number(dto?.totalElements ?? 0),
+      totalPages: Math.max(1, Number(dto?.totalPages ?? 1)),
+      counts,
+    } as AdminUserPageRes;
+  },
 };
 
 

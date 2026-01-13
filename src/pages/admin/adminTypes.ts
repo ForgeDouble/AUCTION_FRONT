@@ -171,13 +171,26 @@ export type AdminUserRow = {
   name: string;
   nickname?: string | null;
   authority: Authority;
-
   phone?: string | null;
   profileImageUrl?: string | null;
-
   warning?: number | null;
   suspendedUntil?: string | null;
   viewOnly?: boolean | null;
   delYn?: "N" | "Y";
   createdAt?: string | null;
+};
+
+export type AdminUserCounts = {
+  ADMIN: number;
+  INQUIRY: number;
+  USER: number;
+};
+
+export type AdminUserPageRes = {
+  items: AdminUserRow[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  counts?: AdminUserCounts;
 };

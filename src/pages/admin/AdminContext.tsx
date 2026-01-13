@@ -18,6 +18,8 @@ import type {
   AdminUserRow,
   AdminUserCreateReq,
   Authority,
+  AdminUserPageRes,
+  AdminUserCounts
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
 // import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
@@ -200,6 +202,20 @@ export interface AdminStore {
 
   createAdminUser: (payload: AdminUserCreateReq) => Promise<void>;
   createInquiryUser: (payload: AdminUserCreateReq) => Promise<void>;
+
+  // 유저 페이징 관련
+  usersPage: AdminUserPageRes | null;
+
+  usersPageIndex: number;
+  usersPageSize: number;
+  usersTotalPages: number;
+  usersTotalElements: number;
+
+  usersCounts: AdminUserCounts;
+
+  refreshUsersPage: (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => Promise<void>;
+  goUsersPage: (pageIndex: number) => void;
+  changeUsersPageSize: (size: number) => void;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -247,6 +263,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [monthlyTradeRows, setMonthlyTradeRows] = useState<MonthlyTradeRow[]>([]);
 
   const [users, setUsers] = useState<AdminUserRow[]>([]);
+  const [usersPage, setUsersPage] = useState<AdminUserPageRes | null>(null);
+
+  const [usersPageIndex, setUsersPageIndex] = useState(0);
+  const [usersPageSize, setUsersPageSize] = useState(10);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
+  const [usersTotalElements, setUsersTotalElements] = useState(0);
+
+  const [usersCounts, setUsersCounts] = useState<AdminUserCounts>({ ADMIN: 0, INQUIRY: 0, USER: 0 });
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -254,6 +278,37 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 250);
     return () => window.clearTimeout(t);
   }, [query]);
+
+  const usersPagingRef = useRef<{ page: number; size: number; role: "ALL" | Authority; q: string }>({
+    page: 0,
+    size: 10,
+    role: "ALL",
+    q: "",
+  });
+
+  const fetchUsersPage = useCallback(async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
+    const next = {
+      page: Math.max(0, params?.page ?? usersPagingRef.current.page ?? 0),
+      size: Math.max(1, Math.min(params?.size ?? usersPagingRef.current.size ?? 10, 100)),
+      role: (params?.role ?? usersPagingRef.current.role ?? "ALL") as "ALL" | Authority,
+      q: (params?.q ?? usersPagingRef.current.q ?? "").trim(),
+    };
+
+    usersPagingRef.current = next;
+
+    const res = await adminApi.getUsersPage(next);
+
+    setUsersPage(res);
+
+    setUsers(res.items);
+
+    setUsersPageIndex(res.page);
+    setUsersPageSize(res.size);
+    setUsersTotalPages(Math.max(1, res.totalPages));
+    setUsersTotalElements(res.totalElements);
+
+    if (res.counts) setUsersCounts(res.counts);
+  }, [setUsers]);
 
   const fetchNoticesPage = async (pg: number, sz: number): Promise<void> => {
     const qv = query.trim();
@@ -371,25 +426,47 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const refreshUsers = useCallback(async () => {
+  // const refreshUsers = useCallback(async () => {
+  //   try {
+  //     const list = await adminApi.getUsers();
+  //     setUsers(list);
+  //   } catch (e) {
+  //     console.error(e);
+  //     setUsers([]);
+  //   }
+  // }, []);
+    const refreshUsers = useCallback(async () => {
     try {
-      const list = await adminApi.getUsers();
-      setUsers(list);
+      await fetchUsersPage({ page: 0 });
     } catch (e) {
       console.error(e);
       setUsers([]);
     }
-  }, []);
+  }, [fetchUsersPage]);
 
   const createAdminUser = useCallback(async (payload: AdminUserCreateReq) => {
     await adminApi.createAdminUser(payload);
-    await refreshUsers();
-  }, [refreshUsers]);
+    await fetchUsersPage({ ...usersPagingRef.current });
+  }, [fetchUsersPage]);
 
   const createInquiryUser = useCallback(async (payload: AdminUserCreateReq) => {
     await adminApi.createInquiryUser(payload);
-    await refreshUsers();
-  }, [refreshUsers]);
+    await fetchUsersPage({ ...usersPagingRef.current });
+  }, [fetchUsersPage]);
+
+  const refreshUsersPage: AdminStore["refreshUsersPage"] = async (params) => {
+    await fetchUsersPage(params);
+  };
+
+  const goUsersPage: AdminStore["goUsersPage"] = (pageIndex) => {
+    const pg = Math.max(0, Math.min(pageIndex, usersTotalPages - 1));
+    void fetchUsersPage({ page: pg });
+  };
+
+  const changeUsersPageSize: AdminStore["changeUsersPageSize"] = (size) => {
+    const sz = Math.max(1, Math.min(size, 100));
+    void fetchUsersPage({ page: 0, size: sz });
+  };
 
   const refreshAll: AdminStore["refreshAll"] = async (opts) => {
     const results = await Promise.allSettled([
@@ -577,9 +654,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!token || typeof token !== "string") {
       throw new Error("extendAdminSession: token missing");
     }
-
     localStorage.setItem("accessToken", token);
   }, []);
+  
 
 
   // 뱃지 관련 카운팅 함수
@@ -681,6 +758,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     createAdminUser,
     createInquiryUser,
+
+    usersPage,
+    usersPageIndex,
+    usersPageSize,
+    usersTotalPages,
+    usersTotalElements,
+    usersCounts,
+    refreshUsersPage,
+    goUsersPage,
+    changeUsersPageSize,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
