@@ -7,6 +7,10 @@ export type AuctionStatus = "NORMAL" | "HOT" | "ENDING" | "SUSPENDED" | "READY" 
 
 export type NoticeCategory = "HANDOVER" | "SYSTEM" | "POLICY" | "ETC";
 
+export type Authority = "USER" | "ADMIN" | "INQUIRY";
+
+export type Gender = "M" | "W"; 
+
 export interface OverviewStats {
   todayNewUsers: number;
   todayCreatedAuctions: number;
@@ -133,10 +137,47 @@ export type ActiveHourBucketRow = {
   count: number;
 };
 
-// 최근 7일 내 경매 추이 
+// 최근 7일 내 경매 생성/종료
 export type AuctionTrendRow = {
   date: string;
   created: number;
   ended: number;
 };
 
+// 월별 경매 추이(금액)
+export type MonthlyTradeRow = {
+  ym: string;
+  amount: number;
+};
+
+
+// 관리자 유저 생성 관련 
+export type AdminUserCreateReq = {
+  email: string;
+  name: string;
+  password: string;
+
+  gender: Gender;
+  birthday: string; 
+  phone: string;
+
+  address?: string | null;
+  nickname?: string | null;
+};
+
+export type AdminUserRow = {
+  userId: number;
+  email: string;
+  name: string;
+  nickname?: string | null;
+  authority: Authority;
+
+  phone?: string | null;
+  profileImageUrl?: string | null;
+
+  warning?: number | null;
+  suspendedUntil?: string | null;
+  viewOnly?: boolean | null;
+
+  createdAt?: string | null;
+};
