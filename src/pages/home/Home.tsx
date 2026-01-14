@@ -5,11 +5,17 @@ import {
   Gavel,
   TrendingUp,
   ArrowRight,
-  Play,
   Award,
   Shield,
-  AlignStartVertical,
-  CircleDot,
+  ShoppingBag,
+  Shirt,
+  Microwave,
+  Tent,
+  Refrigerator,
+  ToyBrick,
+  Bike,
+  Book,
+  type LucideIcon,
 } from "lucide-react";
 import { fetchParentCategories, fetchTop3Products } from "./HomeApi";
 import type { ParentCategoriesDto, Top3ProductDto } from "./HomeDto";
@@ -19,11 +25,7 @@ import dayjs from "dayjs";
 
 const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 2,
-    minutes: 45,
-    seconds: 30,
-  });
+
   /* 입찰수 상위 3개 상품들 */
   const [products, setProducts] = useState<Top3ProductDto[]>([]);
   /* 부모 카테고리들 */
@@ -44,6 +46,16 @@ const Home = () => {
     }, 4000);
     return () => clearInterval(timer);
   }, []);
+
+  const categoryIcons: Record<string, LucideIcon> = {
+    전자제품: Microwave,
+    "패션/잡화": Shirt,
+    "생활/가전": Refrigerator,
+    "취미/레저": Tent,
+    컬렉터블: ToyBrick,
+    "자동차/오토바이": Bike,
+    "도서/음반/영화": Book,
+  };
 
   /** 타이머 핸들러 */
   const calculateTimeLeft = (endTime: string) => {
@@ -337,23 +349,30 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {parentCategories.map((category, index) => (
-              <div
-                key={index}
-                onClick={() =>
-                  navigate(`/auction_list?categoryId=${category.categoryId}`)
-                }
-                className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-5 text-center hover:bg-white hover:shadow-sm transition-all duration-150 cursor-pointer"
-              >
-                <CircleDot className="text-3xl mb-2" />
-                <h3 className="text-sm font-semibold text-slate-900 mb-1">
-                  {category.categoryName}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  {category.productCount}개
-                </p>
-              </div>
-            ))}
+            {parentCategories.map((category, index) => {
+              const IconComponent =
+                categoryIcons[category.categoryName] || ShoppingBag;
+              return (
+                <div
+                  key={index}
+                  onClick={() =>
+                    navigate(`/auction_list?categoryId=${category.categoryId}`)
+                  }
+                  className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-5 text-center hover:bg-white hover:shadow-sm transition-all duration-150 cursor-pointer"
+                >
+                  <div className="flex justify-center mb-3">
+                    <IconComponent className="text-3xl" />
+                  </div>
+
+                  <h3 className="text-sm font-semibold text-slate-900 mb-1">
+                    {category.categoryName}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {category.productCount}개
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
