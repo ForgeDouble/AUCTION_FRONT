@@ -18,14 +18,20 @@ import {
   CheckCircle,
   ArrowUp,
   Check,
+  Siren,
 } from "lucide-react";
 import {
   fetchBidsFromDB,
   fetchBidsFromRedis,
   fetchIsWishlisted,
   fetchProductById,
+  fetchSellerByProductId,
 } from "./AuctionDetailApi";
-import type { BidLogDto, ProductDto } from "./AuctionDetailDto";
+import {
+  type SellerDto,
+  type BidLogDto,
+  type ProductDto,
+} from "./AuctionDetailDto";
 import dayjs from "dayjs";
 import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
 import { useNumberParam } from "@/hooks/useNumberParam";
@@ -33,6 +39,7 @@ import { useNumberParam } from "@/hooks/useNumberParam";
 const AuctionDetail = () => {
   const productId = useNumberParam("productId");
   const [product, setProduct] = useState<ProductDto>();
+  const [sellerInfo, setSellerInfo] = useState<SellerDto>();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState(0);
   const [wishlistId, setWishlistId] = useState<number | null>(null);
@@ -60,6 +67,15 @@ const AuctionDetail = () => {
     const seconds = diff % 60;
 
     return { hours, minutes, seconds };
+  };
+  // 날짜 포맷 함수
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}년 ${month}월 ${day}일`;
   };
 
   // 카운트다운 타이머
@@ -122,6 +138,27 @@ const AuctionDetail = () => {
       console.error(error);
     } finally {
       // setLoading(false);
+    }
+  };
+
+  /* 판매자 정보 조회 */
+  const loadSellerInfo = async () => {
+    if (productId == null) {
+      console.error("Missing ProductId");
+      return;
+    }
+    try {
+      const data = await fetchSellerByProductId(productId);
+
+      // createdAt 포맷 변환
+      const formattedData = {
+        ...data.result,
+        createdAt: formatDate(data.result.createdAt),
+      };
+
+      setSellerInfo(formattedData);
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -202,6 +239,7 @@ const AuctionDetail = () => {
 
   useEffect(() => {
     loadProduct();
+    loadSellerInfo();
     loadIsWishlisted(productId);
   }, [productId]);
 
@@ -624,18 +662,30 @@ const AuctionDetail = () => {
 
             {/* 판매자 정보 */}
             <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6">
-              <h3 className="text-xl font-bold text-white mb-4">판매자 정보</h3>
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  V
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">판매자 정보</h3>
+                <div className="flex items-center text-gray-400 hover:text-red-400 transition-colors cursor-pointer">
+                  <Siren className="h-4 w-4 mr-1" />
+                  <span className="text-sm">신고하기</span>
                 </div>
+              </div>
+
+              <div className="flex items-center mb-4">
+                {sellerInfo?.profileImageUrl ? (
+                  <img
+                    src={sellerInfo.profileImageUrl}
+                    alt={`프로필이미지`}
+                    className="w-12 h-12"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    S
+                  </div>
+                )}
+
                 <div className="ml-3">
                   <div className="text-white font-semibold">
-                    VintageCollector
-                  </div>
-                  <div className="flex items-center text-yellow-400">
-                    <Star className="h-4 w-4 fill-current mr-1" />
-                    <span>4.9 (127 거래)</span>
+                    {sellerInfo?.nickname}
                   </div>
                 </div>
               </div>
@@ -643,16 +693,18 @@ const AuctionDetail = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400">가입일:</span>
-                  <span className="text-white">2019년 3월</span>
+                  <span className="text-white">{sellerInfo?.createdAt}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">완료된 경매:</span>
-                  <span className="text-white">89건</span>
+                  <span className="text-white">
+                    {sellerInfo?.selledBidCount}건
+                  </span>
                 </div>
-                <div className="flex justify-between">
+                {/* <div className="flex justify-between">
                   <span className="text-gray-400">평균 평점:</span>
                   <span className="text-white">4.9/5.0</span>
-                </div>
+                </div> */}
               </div>
 
               <button className="w-full mt-4 bg-white/10 border border-white/20 text-white py-2 rounded-lg hover:bg-white/20 transition-all duration-300">

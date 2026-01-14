@@ -23,3 +23,11 @@ export type imageDto = {
   url: string;
   position: number;
 };
+
+export interface SellerDto {
+  userId: number;
+  nickname: string | null;
+  profileImageUrl: string | null;
+  createdAt: string;
+  selledBidCount: number;
+}
