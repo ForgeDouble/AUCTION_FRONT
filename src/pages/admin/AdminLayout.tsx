@@ -278,21 +278,21 @@ const AdminLayout: React.FC = () => {
           </div>
 
           <div className="mt-3 space-y-1">
-            <NavLink
-              to="/"
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition"
-              title="사용자 페이지로 이동"
-            >
-              <Home className="w-4 h-4" />
-              <span className="font-medium">홈으로</span>
-            </NavLink>
-
             <SideItem to="/admin" icon={LayoutDashboard} label="개요" />
             <SideItem to="/admin/auctions" icon={Gavel} label="경매 모니터링" />
             <SideItem to="/admin/reports" icon={Siren} label="신고 관리" badge={reportsOpenCount} />
             <SideItem to="/admin/calendar" icon={CalendarDays} label="운영 캘린더" />
             <SideItem to="/admin/notices" icon={Megaphone} label="인수인계/공지" badge={noticesCount} />
             <SideItem to="/admin/users" icon={Users} label="유저/권한 관리" />
+
+            <NavLink
+              to="/"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition"
+              title="사용자 페이지로 이동"
+            >
+              <Home className="w-4 h-4" />
+              <span className="font-medium">경매사이트 이동</span>
+            </NavLink>
           </div>
 
           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">

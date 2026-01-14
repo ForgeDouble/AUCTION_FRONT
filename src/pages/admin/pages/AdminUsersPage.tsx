@@ -243,10 +243,10 @@ export default function AdminUsersPage() {
             <button
               onClick={() => setListOnly((v) => !v)}
               className="px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 hover:bg-gray-50 break-keep"
-              title="생성 폼 숨기고 목록만 보기"
+              title="목록만 보기"
             >
               <List className="w-4 h-4" />
-              {listOnly ? "계정 생성" : "전체 리스트 보기"}
+              {listOnly ? "계정 생성" : "리스트 보기"}
             </button>
 
             <button

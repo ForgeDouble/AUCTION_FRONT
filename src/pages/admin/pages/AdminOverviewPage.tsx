@@ -215,11 +215,13 @@ const AdminOverviewPage: React.FC = () => {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <SectionTitle title="최근 7일 경매 생성 / 종료 추이" right={<span className="text-[11px] text-gray-500"></span>} />
+          <br></br>
           <SimpleMultiLineChart series={auctionTrendSeries} height={190} yLabel="count" />
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <SectionTitle title="카테고리 분포" right={<span className="text-[11px] text-gray-500">  </span>} />
+          <br></br>
           <SimpleDonutChart segments={categorySegments} size={180} thickness={16} />
         </div>
       </div>
@@ -245,7 +247,7 @@ const AdminOverviewPage: React.FC = () => {
               </button>
             }
           />
-
+          
           <div className="space-y-2">
             {topAuctions.map((a) => {
               const b = auctionBadge(a.status);
