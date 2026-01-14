@@ -272,6 +272,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [usersCounts, setUsersCounts] = useState<AdminUserCounts>({ ADMIN: 0, INQUIRY: 0, USER: 0 });
 
+  const computeCountsFromItems = useCallback((items: AdminUserRow[]): AdminUserCounts => {
+    return items.reduce(
+      (acc, u) => {
+        if (u.authority === "ADMIN") acc.ADMIN += 1;
+        else if (u.authority === "INQUIRY") acc.INQUIRY += 1;
+        else acc.USER += 1;
+        return acc;
+      },
+      { ADMIN: 0, INQUIRY: 0, USER: 0 } as AdminUserCounts
+    );
+  }, []);
+
   useEffect(() => {
     const t = window.setTimeout(() => {
       void fetchNoticesPage(0, noticeSize);
@@ -443,20 +455,60 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setUsers([]);
     }
   }, [fetchUsersPage]);
+  const refreshUsersPage = useCallback(
+    async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
+      try {
+        const page = Math.max(0, Number(params?.page ?? usersPageIndex));
+        const size = Math.max(1, Math.min(Number(params?.size ?? usersPageSize), 100));
+        const role = params?.role ?? "ALL";
+        const q = params?.q ?? "";
 
-  const createAdminUser = useCallback(async (payload: AdminUserCreateReq) => {
-    await adminApi.createAdminUser(payload);
-    await fetchUsersPage({ ...usersPagingRef.current });
-  }, [fetchUsersPage]);
+        const res = await adminApi.getUsersPage({ page, size, role, q });
 
-  const createInquiryUser = useCallback(async (payload: AdminUserCreateReq) => {
-    await adminApi.createInquiryUser(payload);
-    await fetchUsersPage({ ...usersPagingRef.current });
-  }, [fetchUsersPage]);
+        setUsers(res.items ?? []);
+        setUsersPageIndex(res.page ?? page);
+        setUsersPageSize(res.size ?? size);
+        setUsersTotalElements(res.totalElements ?? 0);
+        setUsersTotalPages(Math.max(1, res.totalPages ?? 1));
 
-  const refreshUsersPage: AdminStore["refreshUsersPage"] = async (params) => {
-    await fetchUsersPage(params);
-  };
+        if (res.counts) {
+          setUsersCounts({
+            ADMIN: Number(res.counts.ADMIN ?? 0),
+            INQUIRY: Number(res.counts.INQUIRY ?? 0),
+            USER: Number(res.counts.USER ?? 0),
+          });
+          return;
+        }
+        if (res.totalElements > 0 && res.totalElements <= (res.items?.length ?? 0)) {
+          setUsersCounts(computeCountsFromItems(res.items));
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+        setUsers([]);
+        setUsersTotalElements(0);
+        setUsersTotalPages(1);
+      }
+    },
+    [usersPageIndex, usersPageSize, computeCountsFromItems]
+  );
+  
+  const createAdminUser = useCallback(
+    async (payload: AdminUserCreateReq) => {
+      await adminApi.createAdminUser(payload);
+      await refreshUsersPage({ page: 0, size: usersPageSize, role: "ALL", q: "" });
+    },
+    [refreshUsersPage, usersPageSize]
+  );
+
+  const createInquiryUser = useCallback(
+    async (payload: AdminUserCreateReq) => {
+      await adminApi.createInquiryUser(payload);
+      await refreshUsersPage({ page: 0, size: usersPageSize, role: "ALL", q: "" });
+    },
+    [refreshUsersPage, usersPageSize]
+  );
+
 
   const goUsersPage: AdminStore["goUsersPage"] = (pageIndex) => {
     const pg = Math.max(0, Math.min(pageIndex, usersTotalPages - 1));

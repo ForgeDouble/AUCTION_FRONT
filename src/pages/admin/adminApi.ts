@@ -501,7 +501,7 @@ export const adminApi = {
 
 
 
-   getUsersPage: async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
+  getUsersPage: async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
     const sp = new URLSearchParams();
     sp.set("page", String(params?.page ?? 0));
     sp.set("size", String(params?.size ?? 10));
@@ -511,29 +511,50 @@ export const adminApi = {
 
     const raw = await request<CommonResDto<any>>(`/user/admin/page?${sp.toString()}`);
     const dto = unwrap<any>(raw);
-    const items = (dto?.items ?? dto?.content ?? []).map(normalizeUser);
 
-    const counts: AdminUserCounts | undefined =
-      dto?.counts
+    const items = (dto?.items ?? dto?.content ?? dto?.data ?? []).map(normalizeUser);
+
+    const toNum = (v: any) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const pickCount = (obj: any, keys: string[]) => {
+      for (const k of keys) {
+        if (obj && obj[k] != null) return toNum(obj[k]);
+      }
+      return undefined;
+    };
+
+    const countsObj = dto?.counts ?? dto?.count ?? dto?.roleCounts ?? null;
+
+    const adminVal =
+      pickCount(countsObj, ["ADMIN", "admin", "ROLE_ADMIN", "roleAdmin", "adminCount"]) ??
+      pickCount(dto, ["adminCount", "ADMIN_COUNT", "roleAdminCount", "ROLE_ADMIN_COUNT"]);
+
+    const inquiryVal =
+      pickCount(countsObj, ["INQUIRY", "inquiry", "ROLE_INQUIRY", "roleInquiry", "inquiryCount"]) ??
+      pickCount(dto, ["inquiryCount", "INQUIRY_COUNT", "roleInquiryCount", "ROLE_INQUIRY_COUNT"]);
+
+    const userVal =
+      pickCount(countsObj, ["USER", "user", "ROLE_USER", "roleUser", "userCount"]) ??
+      pickCount(dto, ["userCount", "USER_COUNT", "roleUserCount", "ROLE_USER_COUNT"]);
+
+    const counts =
+      adminVal != null || inquiryVal != null || userVal != null
         ? {
-            ADMIN: Number(dto.counts.ADMIN ?? 0),
-            INQUIRY: Number(dto.counts.INQUIRY ?? 0),
-            USER: Number(dto.counts.USER ?? 0),
+            ADMIN: adminVal ?? 0,
+            INQUIRY: inquiryVal ?? 0,
+            USER: userVal ?? 0,
           }
-        : dto?.adminCount != null || dto?.inquiryCount != null || dto?.userCount != null
-          ? {
-              ADMIN: Number(dto.adminCount ?? 0),
-              INQUIRY: Number(dto.inquiryCount ?? 0),
-              USER: Number(dto.userCount ?? 0),
-            }
-          : undefined;
+        : undefined;
 
     return {
       items,
-      page: Number(dto?.page ?? dto?.number ?? 0),
-      size: Number(dto?.size ?? 10),
-      totalElements: Number(dto?.totalElements ?? 0),
-      totalPages: Math.max(1, Number(dto?.totalPages ?? 1)),
+      page: toNum(dto?.page ?? dto?.number ?? 0),
+      size: toNum(dto?.size ?? 10),
+      totalElements: toNum(dto?.totalElements ?? dto?.total ?? 0),
+      totalPages: Math.max(1, toNum(dto?.totalPages ?? 1)),
       counts,
     } as AdminUserPageRes;
   },
