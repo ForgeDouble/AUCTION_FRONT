@@ -246,7 +246,7 @@ export default function AdminUsersPage() {
               title="생성 폼 숨기고 목록만 보기"
             >
               <List className="w-4 h-4" />
-              {listOnly ? "계정 생성 보기" : "전체 리스트 보기"}
+              {listOnly ? "계정 생성" : "전체 리스트 보기"}
             </button>
 
             <button
@@ -264,13 +264,13 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* listOnly면 생성 폼 숨김 */}
+
       {!listOnly && (
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-gray-700" />
-              <div className="text-sm font-bold text-gray-900 break-keep">계정 생성</div>
+              <div className="text-sm font-bold text-gray-900 break-keep">문의담당자/관리자 계정 생성</div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -316,7 +316,7 @@ export default function AdminUsersPage() {
                 onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
                 onBlur={() => touch("password")}
                 className={inputBase + " " + (showErr("password") ? inputErr : inputOk)}
-                placeholder="비밀번호"
+                placeholder="알파벳 + 숫자"
               />
               {showErr("password") ? <div className="mt-1 text-[11px] text-red-600 break-keep">{errors.password}</div> : null}
             </div>
@@ -396,17 +396,17 @@ export default function AdminUsersPage() {
             </div>
 
             <div>
-              <div className="text-[11px] text-gray-500 break-keep">주소 (옵션)</div>
+              <div className="text-[11px] text-gray-500 break-keep">주소</div>
               <input
                 value={(form.address as any) ?? ""}
                 onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
                 className={inputBase + " " + inputOk}
-                placeholder="서울시 ..."
+                placeholder="서울특별시 강남구"
               />
             </div>
 
             <div>
-              <div className="text-[11px] text-gray-500 break-keep">닉네임 (옵션)</div>
+              <div className="text-[11px] text-gray-500 break-keep">닉네임</div>
               <input
                 value={(form.nickname as any) ?? ""}
                 onChange={(e) => setForm((p) => ({ ...p, nickname: e.target.value }))}
