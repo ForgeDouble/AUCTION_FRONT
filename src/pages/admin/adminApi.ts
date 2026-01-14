@@ -14,6 +14,11 @@ import type {
   ActiveHourBucketRow,
   AuctionTrendRow,
   MonthlyTradeRow,
+  AdminUserRow,
+  AdminUserCreateReq,
+  Authority,
+  AdminUserPageRes,
+  AdminUserCounts
 } from "./adminTypes";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -170,6 +175,77 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (res.status === 204) return undefined as unknown as T;
   return (await res.json()) as T;
+}
+
+// 관리자 유저 생성 관련 
+function normalizeAdminUser(x: any): AdminUserRow {
+  return {
+    userId: Number(x.userId ?? x.id ?? 0),
+    email: String(x.email ?? ""),
+    name: String(x.name ?? ""),
+
+    nickname: x.nickname != null ? String(x.nickname) : null,
+    authority: String(x.authority ?? "USER").toUpperCase() as Authority,
+
+    phone: x.phone != null ? String(x.phone) : null,
+    profileImageUrl: x.profileImageUrl != null ? String(x.profileImageUrl) : null,
+
+    warning: x.warning != null ? Number(x.warning) : null,
+    suspendedUntil: x.suspendedUntil ? String(x.suspendedUntil) : null,
+    viewOnly: x.viewOnly != null ? Boolean(x.viewOnly) : null,
+
+    createdAt: x.createdAt ? String(x.createdAt) : null,
+  };
+}
+
+function parseAuthorityFromAny(x: any): Authority {
+  const pick =
+    x?.authority ??
+    x?.role ??
+    x?.userRole ??
+    x?.userAuthority ??
+    x?.auth ??
+    x?.grant;
+
+  let raw = pick;
+
+  if (raw && typeof raw === "object") {
+    raw =
+      raw.name ??
+      raw.value ??
+      raw.code ??
+      raw.authority ??
+      raw.role ??
+      raw.type ??
+      "";
+  }
+
+  const cleaned = String(raw ?? "USER")
+    .trim()
+    .toUpperCase()
+    .replace(/^ROLE_/, "");
+
+  if (cleaned.includes("ADMIN")) return "ADMIN";
+  if (cleaned.includes("INQUIRY")) return "INQUIRY";
+  return "USER";
+}
+
+function normalizeUser(x: any): AdminUserRow {
+  const authority = parseAuthorityFromAny(x);
+
+  return {
+    userId: Number(x.userId ?? x.id ?? 0),
+    email: String(x.email ?? ""),
+    name: String(x.name ?? ""),
+    nickname: x.nickname != null ? String(x.nickname) : null,
+    phone: x.phone != null ? String(x.phone).replace(/\D/g, "") : null,
+    authority,
+
+    viewOnly: Boolean(x.viewOnly ?? false),
+    suspendedUntil: x.suspendedUntil ? String(x.suspendedUntil) : null,
+    delYn: (x.delYn ?? "N") as any,
+    profileImageUrl: x.profileImageUrl ? String(x.profileImageUrl) : null,
+  };
 }
 
 export const adminApi = {
@@ -405,6 +481,83 @@ export const adminApi = {
       method: "POST",
     }).then((r) => unwrap<ExtendSessionRes>(r)),
 
+  getUsers: async (): Promise<AdminUserRow[]> => {
+    const raw = await request<CommonResDto<any[]>>("/user/list");
+    const arr = unwrap<any[]>(raw) ?? [];
+    return arr.map(normalizeUser);
+  },
+
+  createAdminUser: (payload: AdminUserCreateReq) =>
+    request<CommonResDto<void>>("/user/admin/create", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).then((r) => unwrap<void>(r)),
+
+  createInquiryUser: (payload: AdminUserCreateReq) =>
+    request<CommonResDto<void>>("/user/inquiry/create", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).then((r) => unwrap<void>(r)),
+
+
+
+  getUsersPage: async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
+    const sp = new URLSearchParams();
+    sp.set("page", String(params?.page ?? 0));
+    sp.set("size", String(params?.size ?? 10));
+
+    if (params?.role && params.role !== "ALL") sp.set("role", params.role);
+    if (params?.q && params.q.trim()) sp.set("q", params.q.trim());
+
+    const raw = await request<CommonResDto<any>>(`/user/admin/page?${sp.toString()}`);
+    const dto = unwrap<any>(raw);
+
+    const items = (dto?.items ?? dto?.content ?? dto?.data ?? []).map(normalizeUser);
+
+    const toNum = (v: any) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const pickCount = (obj: any, keys: string[]) => {
+      for (const k of keys) {
+        if (obj && obj[k] != null) return toNum(obj[k]);
+      }
+      return undefined;
+    };
+
+    const countsObj = dto?.counts ?? dto?.count ?? dto?.roleCounts ?? null;
+
+    const adminVal =
+      pickCount(countsObj, ["ADMIN", "admin", "ROLE_ADMIN", "roleAdmin", "adminCount"]) ??
+      pickCount(dto, ["adminCount", "ADMIN_COUNT", "roleAdminCount", "ROLE_ADMIN_COUNT"]);
+
+    const inquiryVal =
+      pickCount(countsObj, ["INQUIRY", "inquiry", "ROLE_INQUIRY", "roleInquiry", "inquiryCount"]) ??
+      pickCount(dto, ["inquiryCount", "INQUIRY_COUNT", "roleInquiryCount", "ROLE_INQUIRY_COUNT"]);
+
+    const userVal =
+      pickCount(countsObj, ["USER", "user", "ROLE_USER", "roleUser", "userCount"]) ??
+      pickCount(dto, ["userCount", "USER_COUNT", "roleUserCount", "ROLE_USER_COUNT"]);
+
+    const counts =
+      adminVal != null || inquiryVal != null || userVal != null
+        ? {
+            ADMIN: adminVal ?? 0,
+            INQUIRY: inquiryVal ?? 0,
+            USER: userVal ?? 0,
+          }
+        : undefined;
+
+    return {
+      items,
+      page: toNum(dto?.page ?? dto?.number ?? 0),
+      size: toNum(dto?.size ?? 10),
+      totalElements: toNum(dto?.totalElements ?? dto?.total ?? 0),
+      totalPages: Math.max(1, toNum(dto?.totalPages ?? 1)),
+      counts,
+    } as AdminUserPageRes;
+  },
 };
 
 

@@ -182,6 +182,7 @@ const AdminNoticesPage: React.FC = () => {
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-4">
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
         <SectionTitle title="인수인계 / 공지" />
+        <br></br>
         {noticeTotalPages > 1 ? Pager : null}
         {editingId !== null && editForm && (
           <div className="mb-4 p-3 rounded-xl bg-violet-50 border border-violet-100">
