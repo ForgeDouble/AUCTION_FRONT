@@ -18,7 +18,12 @@ import type {
   AdminUserCreateReq,
   Authority,
   AdminUserPageRes,
-  AdminUserCounts
+  AdminUserCounts,
+  AdminChatRoomRow,
+  AdminChatMessageRow,
+  AdminChatCreateGroupReq,
+  AdminChatMemberRow,
+  AdminChatInviteReq,
 } from "./adminTypes";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
