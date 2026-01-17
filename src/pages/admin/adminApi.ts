@@ -253,6 +253,56 @@ function normalizeUser(x: any): AdminUserRow {
   };
 }
 
+function formatRoomNameFallback(x: any): string {
+  return String(x.roomName ?? x.name ?? x.title ?? "채팅방");
+}
+
+function normalizeChatRoom(x: any): AdminChatRoomRow {
+  return {
+    id: String(x.id ?? x.roomId ?? ""),
+    roomName: formatRoomNameFallback(x),
+    roomType: (x.roomType ?? x.type ?? undefined) as any,
+    adminChat: Boolean(x.adminChat ?? false),
+    participantIds: Array.isArray(x.participantIds) ? x.participantIds.map(String) : undefined,
+    recentText: x.recentText != null ? String(x.recentText) : null,
+    recentTime: x.recentTime != null ? String(x.recentTime) : null,
+    unread: x.unread != null ? Number(x.unread) : 0,
+  };
+}
+
+function normalizeChatMessage(x: any): AdminChatMessageRow {
+  return {
+    id: String(x.id ?? ""),
+    roomId: String(x.roomId ?? ""),
+    senderId: String(x.senderId ?? x.senderEmail ?? ""),
+    messageType: String(x.messageType ?? "TALK").toUpperCase() as any,
+    message: x.message != null ? String(x.message) : null,
+    files: Array.isArray(x.files)
+      ? x.files.map((f: any) => ({ fileName: String(f.fileName ?? ""), fileUrl: String(f.fileUrl ?? "") }))
+      : [],
+    createdAt: x.createdAt != null ? String(x.createdAt) : null,
+
+    sender: x.sender
+      ? {
+          userId: x.sender.userId != null ? Number(x.sender.userId) : undefined,
+          email: String(x.sender.email ?? ""),
+          nickname: x.sender.nickname != null ? String(x.sender.nickname) : null,
+          authority: parseAuthorityFromAny(x.sender),
+          profileImageUrl: x.sender.profileImageUrl != null ? String(x.sender.profileImageUrl) : null,
+        }
+      : null,
+  };
+}
+function normalizeMember(x: any): AdminChatMemberRow {
+  return {
+    userId: x.userId != null ? Number(x.userId) : undefined,
+    email: String(x.email ?? ""),
+    nickname: x.nickname != null ? String(x.nickname) : null,
+    authority: parseAuthorityFromAny(x),
+    profileImageUrl: x.profileImageUrl != null ? String(x.profileImageUrl) : null,
+  };
+}
+
 export const adminApi = {
 
   getOverview: () =>
@@ -563,6 +613,71 @@ export const adminApi = {
       counts,
     } as AdminUserPageRes;
   },
+
+  openAdminLounge: () =>
+    request<CommonResDto<string>>("/chat/room/admin/lounge", { method: "POST" }).then((r) => String(unwrap<string>(r))),
+
+  getMyChatRooms: async (): Promise<AdminChatRoomRow[]> => {
+    const raw = await request<CommonResDto<any[]>>("/chat/room/my");
+    const list = unwrap<any[]>(raw) ?? [];
+    return list.map(normalizeChatRoom);
+  },
+
+  enterChatRoom: (roomId: string) =>
+    request<CommonResDto<void>>(`/chat/room/enter?roomId=${encodeURIComponent(roomId)}`, { method: "POST" }).then((r) =>
+      unwrap<void>(r)
+    ),
+
+  leaveChatRoom: (roomId: string) =>
+    request<CommonResDto<void>>(`/chat/room/${encodeURIComponent(roomId)}/leave`, { method: "POST" }).then((r) =>
+      unwrap<void>(r)
+    ),
+
+  getChatRoomMembers: async (roomId: string): Promise<AdminChatMemberRow[]> => {
+    const raw = await request<CommonResDto<any[]>>(`/chat/room/${encodeURIComponent(roomId)}/members`);
+    const list = unwrap<any[]>(raw) ?? [];
+    return list.map(normalizeMember);
+  },
+
+  listAdminMembers: async (): Promise<AdminChatMemberRow[]> => {
+    const raw = await request<CommonResDto<any[]>>("/chat/room/members/admin");
+    const list = unwrap<any[]>(raw) ?? [];
+    return list.map(normalizeMember);
+  },
+
+  listInquiryMembers: async (): Promise<AdminChatMemberRow[]> => {
+    const raw = await request<CommonResDto<any[]>>("/chat/room/members/inquiry");
+    const list = unwrap<any[]>(raw) ?? [];
+    return list.map(normalizeMember);
+  },
+
+  createStaffGroupRoom: (payload: AdminChatCreateGroupReq) =>
+    request<CommonResDto<string>>("/chat/room/staff/group", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).then((r) => String(unwrap<string>(r))),
+
+  inviteStaffToRoom: (roomId: string, payload: AdminChatInviteReq) =>
+    request<CommonResDto<void>>(`/chat/room/${encodeURIComponent(roomId)}/invite`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).then((r) => unwrap<void>(r)),
+
+  getRecentChatMessages: async (roomId: string, size = 50): Promise<AdminChatMessageRow[]> => {
+    const raw = await request<CommonResDto<any[]>>(
+      `/chat/message/recent?roomId=${encodeURIComponent(roomId)}&size=${encodeURIComponent(String(size))}`
+    );
+    const list = unwrap<any[]>(raw) ?? [];
+
+    const normalized = list.map(normalizeChatMessage);
+    return normalized.slice().reverse();
+  },
+
+  sendChatMessage: (payload: { roomId: string; messageType: "TALK" | "IMAGE" | "FILE"; message: string; files?: any[] }) =>
+    request<CommonResDto<void>>("/chat/message/send", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).then((r) => unwrap<void>(r)),
 };
 
 
