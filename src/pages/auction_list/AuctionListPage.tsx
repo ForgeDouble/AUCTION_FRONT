@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import {
   Filter,
@@ -24,14 +24,17 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
+import { useModal } from "@/contexts/ModalContext";
 
 const AuctionListPage = () => {
   const navigate = useNavigate();
+  const { showLogin, showError, showLoading, hideLoading } = useModal();
   const [searchParams, setSearchParams] = useSearchParams();
+
   const { userEmail } = useAuth();
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
 
-  const [priceRange, setPriceRange] = useState([0, 10000000]);
+  // const [priceRange, setPriceRange] = useState([0, 10000000]);
   /* 경매 상품들 */
   const [auctions, setAuctions] = useState<ProductListDto[]>([]);
   /* 부모 카테고리들 */
@@ -54,33 +57,13 @@ const AuctionListPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<number>(
     parseInt(searchParams.get("categoryId") || "0")
   );
-  const [searchQuery, setSearchQuery] = useState(
-    searchParams.get("search") || ""
-  );
-  const [pageSize, setPageSize] = useState(9);
+  /* 검색 변수 */
+  // const [searchQuery, setSearchQuery] = useState(
+  //   searchParams.get("search") || ""
+  // );
+  const [pageSize /*, setPageSize*/] = useState(9);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-
-  // 샘플 경매 데이터 예시
-  // const auctions = [
-  //   {
-  //     id: 1,
-  //     title: "1960년대 빈티지 롤렉스 서브마리너",
-  //     image:
-  //       "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?w=400",
-  //     currentBid: 850000,
-  //     startingBid: 500000,
-  //     timeLeft: "2시간 15분",
-  //     bids: 23,
-  //     watchers: 156,
-  //     category: "시계",
-  //     location: "서울",
-  //     seller: "빈티지컬렉터",
-  //     rating: 4.9,
-  //     status: "진행중",
-  //     endTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
-  //     featured: true,
-  //   }
 
   /* URL 쿼리 파라미터 업데이트 */
   const updateURLParams = (params: Record<string, string | number>) => {
@@ -135,7 +118,7 @@ const AuctionListPage = () => {
     return { hours, minutes, seconds };
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "마감임박":
         return "bg-red-500";
@@ -145,20 +128,6 @@ const AuctionListPage = () => {
         return "bg-blue-500";
     }
   };
-  // 필터 백엔드 처리
-  // const filteredAuctions = auctions.filter((auction) => {
-  //   const matchesSearch = auction.productName
-  //     .toLowerCase()
-  //     .includes(searchQuery.toLowerCase());
-  //   const matchesCategory =
-  //     selectedCategory === 0 ||
-  //     auction.path.some((category) => category.categoryId === selectedCategory);
-  //   // auction.category === selectedCategory;
-  //   const matchesPrice = true;
-  //   // auction.currentBid >= priceRange[0] &&
-  //   // auction.currentBid <= priceRange[1];
-  //   return matchesSearch && matchesCategory && matchesPrice;
-  // });
 
   // 찜 목록을 Set으로 변환 (성능 최적화)
   const wishlistProductIds = useMemo(
@@ -185,52 +154,6 @@ const AuctionListPage = () => {
         await handleCreateWishlist(productId);
         await loadWishlistByUser();
       }
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  /* 모든 상품 조회 */
-  const loadProductList = async (page = 0, size = 9) => {
-    try {
-      const sortParam = getSortParam(sortBy);
-
-      // 쿼리 파라미터 구성
-      const params = new URLSearchParams({
-        page: page.toString(),
-        size: size.toString(),
-        sortBy: sortParam,
-      });
-      // 카테고리 필터 추가 (전체가 아닐 때만)
-      if (selectedCategory !== 0) {
-        params.append("categoryId", selectedCategory.toString());
-      }
-
-      // 검색어 추가
-      if (searchQuery.trim()) {
-        params.append("search", searchQuery.trim());
-      }
-
-      // 가격 범위 추가 (기본값이 아닐 때만)
-      if (priceRange[0] > 0) {
-        params.append("minPrice", priceRange[0].toString());
-      }
-      if (priceRange[1] < 10000000) {
-        params.append("maxPrice", priceRange[1].toString());
-      }
-
-      if (selectedStatuses.length > 0) {
-        selectedStatuses.forEach((status) => {
-          params.append("statuses", status);
-        });
-      }
-
-      const data = await fetchProducts(params); // fetchProducts 수정 필요
-
-      setAuctions(data.result.content);
-      setTotalPages(data.result.totalPages);
-      setTotalElements(data.result.totalElements);
-      setCurrentPage(data.result.number);
     } catch (error) {
       console.error(error);
     }
@@ -263,9 +186,60 @@ const AuctionListPage = () => {
     }
   };
 
+  /* 모든 상품 조회 */
+  const loadProductList = async (page = 0, size = 9) => {
+    try {
+      showLoading();
+      const sortParam = getSortParam(sortBy);
+
+      // 쿼리 파라미터 구성
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: size.toString(),
+        sortBy: sortParam,
+      });
+      // 카테고리 필터 추가 (전체가 아닐 때만)
+      if (selectedCategory !== 0) {
+        params.append("categoryId", selectedCategory.toString());
+      }
+
+      // 검색어
+      // if (searchQuery.trim()) {
+      //   params.append("search", searchQuery.trim());
+      // }
+
+      // 가격 범위  (기본값이 아닐 때만)
+      // if (priceRange[0] > 0) {
+      //   params.append("minPrice", priceRange[0].toString());
+      // }
+      // if (priceRange[1] < 10000000) {
+      //   params.append("maxPrice", priceRange[1].toString());
+      // }
+
+      if (selectedStatuses.length > 0) {
+        selectedStatuses.forEach((status) => {
+          params.append("statuses", status);
+        });
+      }
+
+      const data = await fetchProducts(params); // fetchProducts 수정 필요
+
+      setAuctions(data.result.content);
+      setTotalPages(data.result.totalPages);
+      setTotalElements(data.result.totalElements);
+      setCurrentPage(data.result.number);
+    } catch (error) {
+      showError("데이터를 불러오는데 실패했습니다.");
+      console.error(error);
+    } finally {
+      hideLoading();
+    }
+  };
+
   /* 부모 카테고리 조회 */
   const loadParentCategories = async () => {
     try {
+      showLoading();
       const data = await fetchParentCategories();
       const categoryResponse = data.result;
       // 모든 카테고리의 productCount 합계 계산
@@ -286,12 +260,11 @@ const AuctionListPage = () => {
         },
         ...categoryResponse,
       ]);
-
-      // setParentCategories(data.result);
     } catch (error) {
+      showError("데이터를 불러오는데 실패했습니다.");
       console.error(error);
     } finally {
-      // setLoading(false);
+      hideLoading();
     }
   };
   /* 위시리스트 생성 */
@@ -299,17 +272,16 @@ const AuctionListPage = () => {
     try {
       const token = localStorage.getItem("accessToken");
       if (token == null) {
-        alert("로그인이 필요합니다.");
-        throw Error("No Token");
+        showLogin();
+        console.error("Missing AccessToken");
         return;
       }
+
       const data = await fetchCreateWishlist(token, productId);
       console.log(data);
-      // setParentCategories(data.result);
     } catch (error) {
+      showError("데이터를 불러오는데 실패했습니다.");
       console.error(error);
-    } finally {
-      // setLoading(false);
     }
   };
 
@@ -318,31 +290,31 @@ const AuctionListPage = () => {
     try {
       const token = localStorage.getItem("accessToken");
       if (token == null) {
-        alert("로그인이 필요합니다.");
-        throw Error("No Token");
+        showLogin();
+        console.error("Missing AccessToken");
         return;
       }
+
       const data = await fetchDeleteWishlist(token, wishlistId);
       console.log(data);
-      // setParentCategories(data.result);
     } catch (error) {
+      showError();
       console.error(error);
-    } finally {
-      // setLoading(false);
     }
   };
   /* 사용자의 위시리스트 조회 */
   const loadWishlistByUser = async () => {
     try {
       const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        console.log("Missing AccessToken");
+        return;
+      }
       const data = await fetchWishlistByUser(token);
       setWishlist(data.result);
-
-      // setParentCategories(data.result);
     } catch (error) {
+      showError();
       console.error(error);
-    } finally {
-      // setLoading(false);
     }
   };
   useEffect(() => {
@@ -394,10 +366,10 @@ const AuctionListPage = () => {
       page: 0,
       sortBy,
       categoryId: selectedCategory,
-      search: searchQuery,
+      // search: searchQuery,
     });
     loadProductList(0, pageSize);
-  }, [sortBy, selectedCategory, selectedStatuses, searchQuery]);
+  }, [sortBy, selectedCategory, selectedStatuses /* ,searchQuery */]);
 
   return (
     <div className="min-h-screen bg-slate-800">
