@@ -19,7 +19,8 @@ import type {
   AdminUserCreateReq,
   Authority,
   AdminUserPageRes,
-  AdminUserCounts
+  AdminUserCounts,
+  AdminChatRoomRow
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
 // import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
@@ -31,6 +32,24 @@ function nowIso(): string {
 // function clamp(n: number, min: number, max: number): number {
 //   return Math.max(min, Math.min(max, n));
 // }
+
+// 권한 확인을 위한 헬퍼
+function parseAuthorityFromTokenPayload(payload: Record<string, unknown>): "ADMIN" | "INQUIRY" | "USER" {
+  const pick =
+    (payload as any)?.authority ??
+    (payload as any)?.role ??
+    (payload as any)?.userRole ??
+    (payload as any)?.userAuthority;
+
+  const cleaned = String(pick ?? "USER")
+    .trim()
+    .toUpperCase()
+    .replace(/^ROLE_/, "");
+
+  if (cleaned.includes("ADMIN")) return "ADMIN";
+  if (cleaned.includes("INQUIRY")) return "INQUIRY";
+  return "USER";
+}
 
 function safeGetAdminProfile(): { email: string; nick: string; role: string } {
   const token = localStorage.getItem("accessToken");
@@ -51,8 +70,12 @@ function safeGetAdminProfile(): { email: string; nick: string; role: string } {
     const payload = JSON.parse(json) as Record<string, unknown>;
 
     const email = typeof payload.email === "string" ? payload.email : fallback.email;
-    const nick = typeof payload.nick === "string" ? payload.nick : fallback.nick;
-    const role = typeof payload.authority === "string" ? payload.authority : fallback.role;
+    const nick =
+      typeof (payload as any).nick === "string" ? (payload as any).nick :
+      typeof (payload as any).nickname === "string" ? (payload as any).nickname :
+      typeof (payload as any).name === "string" ? (payload as any).name :
+      fallback.nick;
+    const role = parseAuthorityFromTokenPayload(payload);
 
     return { email, nick, role };
   } catch {
@@ -216,6 +239,12 @@ export interface AdminStore {
   refreshUsersPage: (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => Promise<void>;
   goUsersPage: (pageIndex: number) => void;
   changeUsersPageSize: (size: number) => void;
+
+  // 채팅 관련
+  chatRooms: AdminChatRoomRow[];
+  setChatRooms: React.Dispatch<React.SetStateAction<AdminChatRoomRow[]>>;
+  refreshChatRooms: () => Promise<void>;
+  chatUnreadTotal: number;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -271,6 +300,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [usersTotalElements, setUsersTotalElements] = useState(0);
 
   const [usersCounts, setUsersCounts] = useState<AdminUserCounts>({ ADMIN: 0, INQUIRY: 0, USER: 0 });
+
+  const [chatRooms, setChatRooms] = useState<AdminChatRoomRow[]>([]);
 
   const computeCountsFromItems = useCallback((items: AdminUserRow[]): AdminUserCounts => {
     return items.reduce(
@@ -438,6 +469,19 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
+  const refreshChatRooms = useCallback(async () => {
+    try {
+      const list = await adminApi.getMyChatRooms();
+      setChatRooms(list ?? []);
+    } catch (e) {
+      console.error(e);
+      setChatRooms([]);
+    }
+  }, []);
+
+  const chatUnreadTotal = useMemo(() => {
+    return (chatRooms ?? []).reduce((acc, r) => acc + (Number((r as any).unread ?? 0) || 0), 0);
+  }, [chatRooms]);
   // const refreshUsers = useCallback(async () => {
   //   try {
   //     const list = await adminApi.getUsers();
@@ -447,7 +491,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   //     setUsers([]);
   //   }
   // }, []);
-    const refreshUsers = useCallback(async () => {
+  const refreshUsers = useCallback(async () => {
     try {
       await fetchUsersPage({ page: 0 });
     } catch (e) {
@@ -455,6 +499,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setUsers([]);
     }
   }, [fetchUsersPage]);
+
   const refreshUsersPage = useCallback(
     async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
       try {
@@ -530,10 +575,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       adminApi.getTodayActiveHours(),
       adminApi.getAuctionTrend(7),
       adminApi.getMonthlyTrade(6),
+      adminApi.getMyChatRooms(),
     ]);
 
     // const [ovR, auctR, groupR, blockedR, evR, catR, hourR] = results;
-    const [ovR, groupR, blockedR, evR, catR, hourR, trendR, tradeR] = results;
+    const [ovR, groupR, blockedR, evR, catR, hourR, trendR, tradeR, chatR] = results;
     if (ovR.status === "fulfilled") setStats(ovR.value);
     // if (auctR.status === "fulfilled") setAuctions(auctR.value);
     if (groupR.status === "fulfilled") setReportGroups(groupR.value);
@@ -543,6 +589,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (hourR.status === "fulfilled") setTodayActiveHours(hourR.value);
     if (trendR.status === "fulfilled") setAuctionTrendRows(trendR.value);
     if(tradeR.status === "fulfilled") setMonthlyTradeRows(tradeR.value);
+    if (chatR.status === "fulfilled") setChatRooms(chatR.value ?? []);
 
     const uiPage = opts?.auctionsPageUi;
     const uiSize = opts?.auctionsSize;
@@ -820,6 +867,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refreshUsersPage,
     goUsersPage,
     changeUsersPageSize,
+
+    chatRooms,
+    setChatRooms,
+    refreshChatRooms,
+    chatUnreadTotal,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

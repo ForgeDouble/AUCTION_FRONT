@@ -4,7 +4,7 @@ import { adminApi } from "../adminApi";
 import type { AdminChatMemberRow, AdminChatMessageRow, AdminChatRoomRow } from "../adminTypes";
 
 import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client/dist/sockjs";
+import SockJS from "sockjs-client"
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
 
