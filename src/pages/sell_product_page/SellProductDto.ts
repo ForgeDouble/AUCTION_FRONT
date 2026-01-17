@@ -1,8 +1,9 @@
-export enum Status {
-  READY = "READY",
-  PROCESSING = "PROCESSING",
-  SELLED = "SELLED",
-  NOTSELLED = "NOTSELLED",
+export type Status = "READY" | "PROCESSING" | "SELLED" | "NOTSELLED";
+
+export interface ImageDto {
+  id: string;
+  url: string;
+  file: File;
 }
 
 export interface ProductCreateDto {

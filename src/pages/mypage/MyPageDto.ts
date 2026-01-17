@@ -24,11 +24,11 @@ export interface ProductListDto {
   productId: number;
   productName: string;
   productContent: string;
-  price: number;
-  sellYN: string;
-  previewImageUrl: string;
+  previewImageUrl?: string;
   latestBidAmount: number;
   bidCount: number;
+  status: "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";
+  auctionEndTime?: string;
 }
 
 export interface BidListDto {
