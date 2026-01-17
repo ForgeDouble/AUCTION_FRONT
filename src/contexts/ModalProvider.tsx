@@ -4,6 +4,7 @@ import LoginModal from "@/components/LoginModal";
 import ErrorModal from "@/components/ErrorModal";
 import LoadingModal from "@/components/LoadingModal";
 import { ModalContext } from "./ModalContext";
+import WarningModal from "@/components/WarningModal";
 
 interface ModalProviderProps {
   children: ReactNode;
@@ -12,8 +13,10 @@ interface ModalProviderProps {
 export default function ModalProvider({ children }: ModalProviderProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
   const [showLoadingModal, setShowLoadingModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [warningMessage, setWarningMessage] = useState("");
   const [loadingMessage, setLoadingMessage] = useState("");
 
   const showLogin = () => setShowLoginModal(true);
@@ -21,6 +24,11 @@ export default function ModalProvider({ children }: ModalProviderProps) {
   const showError = (message = "서버 오류가 발생했습니다.") => {
     setErrorMessage(message);
     setShowErrorModal(true);
+  };
+
+  const showWarning = (message: string) => {
+    setWarningMessage(message);
+    setShowWarningModal(true);
   };
 
   const showLoading = (message = "로딩 중입니다...") => {
@@ -32,7 +40,7 @@ export default function ModalProvider({ children }: ModalProviderProps) {
 
   return (
     <ModalContext.Provider
-      value={{ showLogin, showError, showLoading, hideLoading }}
+      value={{ showLogin, showError, showWarning, showLoading, hideLoading }}
     >
       {children}
 
@@ -43,6 +51,12 @@ export default function ModalProvider({ children }: ModalProviderProps) {
         <ErrorModal
           message={errorMessage}
           onClose={() => setShowErrorModal(false)}
+        />
+      )}
+      {showWarningModal && (
+        <WarningModal
+          message={warningMessage}
+          onClose={() => setShowWarningModal(false)}
         />
       )}
       {showLoadingModal && <LoadingModal message={loadingMessage} />}

@@ -1,49 +1,57 @@
-// components/WarningModal.tsx
+import { X, AlertCircle } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useEffect } from "react";
 
 interface WarningModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title?: string;
-  message: string | null;
+  message?: string;
+  onClose?: () => void;
 }
 
-export const WarningModal = ({
-  isOpen,
+export default function WarningModal({
+  message = "오류가 발생했습니다.",
   onClose,
-  title = "알림",
-  message,
-}: WarningModalProps) => {
+}: WarningModalProps) {
+  // 모달이 열릴 때 배경 스크롤 방지
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
+    document.body.style.overflow = "hidden";
 
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [isOpen]);
+  }, []);
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    if (onClose) onClose();
+  };
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center"
+      className="fixed inset-0 flex items-center justify-center p-4 z-50"
       style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
-      onClick={onClose}
     >
-      <div
-        className="bg-white rounded-lg shadow-xl p-6 w-96 max-w-[90%]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-bold mb-4 text-gray-800">{title}</h2>
-        <p className="text-gray-600 mb-6">{message}</p>
-        <div className="flex justify-end">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative">
+        {/* X 버튼 */}
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+        >
+          <X size={24} />
+        </button>
+
+        {/* 경고 아이콘 */}
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+            <AlertCircle className="w-10 h-10 text-blue-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">알림</h2>
+          <p className="text-gray-600">{message}</p>
+        </div>
+
+        {/* 확인 버튼 */}
+        <div className="flex justify-center">
           <button
-            onClick={onClose}
-            className="px-6 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
+            onClick={handleClose}
+            className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
           >
             확인
           </button>
@@ -51,4 +59,6 @@ export const WarningModal = ({
       </div>
     </div>
   );
-};
+
+  return createPortal(modalContent, document.body);
+}

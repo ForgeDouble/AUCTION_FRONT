@@ -3,6 +3,7 @@ import { createContext, useContext } from "react";
 interface ModalContextType {
   showLogin: () => void;
   showError: (message?: string) => void;
+  showWarning: (message: string) => void;
   showLoading: (message?: string) => void;
   hideLoading: () => void;
 }
