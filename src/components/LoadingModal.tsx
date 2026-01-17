@@ -7,7 +7,7 @@ interface LoadingModalProps {
 }
 
 export default function LoadingModal({
-  message = "처리 중입니다...",
+  message = "로딩 중입니다...",
 }: LoadingModalProps) {
   // 모달이 열릴 때 배경 스크롤 방지
   useEffect(() => {

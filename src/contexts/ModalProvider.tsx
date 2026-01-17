@@ -23,7 +23,7 @@ export default function ModalProvider({ children }: ModalProviderProps) {
     setShowErrorModal(true);
   };
 
-  const showLoading = (message = "처리 중입니다...") => {
+  const showLoading = (message = "로딩 중입니다...") => {
     setLoadingMessage(message);
     setShowLoadingModal(true);
   };
