@@ -17,10 +17,12 @@ import {
 import { useAuth } from "../../../hooks/useAuth";
 import { type UserDto } from "../MyPageDto";
 import { fetchLoginUser } from "../MyPageApi";
+import { useModal } from "@/contexts/ModalContext";
 
 const MyProfile = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { showLogin, showError } = useModal();
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -46,6 +48,11 @@ const MyProfile = () => {
   const loadLoginUser = async () => {
     try {
       const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        showLogin();
+        console.error("Missing AccessToken");
+        return;
+      }
       const data = await fetchLoginUser(token);
       const userProfile = {
         ...data.result,
@@ -56,8 +63,7 @@ const MyProfile = () => {
       console.log(data);
     } catch (error) {
       console.error(error);
-    } finally {
-      // setLoading(false);
+      showError();
     }
   };
 

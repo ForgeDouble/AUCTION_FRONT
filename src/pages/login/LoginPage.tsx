@@ -1,4 +1,3 @@
-// login/loginpage.tsx
 import React, { useState } from "react";
 import {
   Gavel,
@@ -11,10 +10,10 @@ import {
   Star,
   Users,
   Heart,
+  Loader2,
 } from "lucide-react";
 import { fetchLogin } from "./LoginApi";
 
-import { WarningModal } from "../../components/WarningModal";
 import { useAuth } from "../../hooks/useAuth";
 import type { loginRequest } from "./LoginDto";
 import { requestFcmToken } from "@/firebase/firebase";
@@ -27,19 +26,17 @@ const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   // 비밀번호 기억하기
-  const [rememberMe, setRememberMe] = useState(false);
-  // 로딩 상태
-  const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState<boolean>(false);
+  /** 로딩 상태 */
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   // 에러 상태
   const [error, setError] = useState<string | null>(null);
-  // 경고창
-  const [warningOpen, setWarningOpen] = useState(false);
 
-  const { userEmail, isAuthenticated, checkAuth } = useAuth();
+  const { checkAuth } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
 
     try {
@@ -52,47 +49,44 @@ const LoginPage = () => {
       localStorage.setItem("userId", email);
       await checkAuth();
 
-      try {  
-        const alreadyRegistered = localStorage.getItem("fcm_registered") === "true";  
+      try {
+        const alreadyRegistered =
+          localStorage.getItem("fcm_registered") === "true";
 
-        const fcmToken = await requestFcmToken();  
+        const fcmToken = await requestFcmToken();
 
-        if (fcmToken) {  
-          const prevToken = localStorage.getItem("fcm_token");  
+        if (fcmToken) {
+          const prevToken = localStorage.getItem("fcm_token");
 
-          if (!alreadyRegistered || prevToken !== fcmToken) {  
-            await registerDeviceToken(fcmToken);  
+          if (!alreadyRegistered || prevToken !== fcmToken) {
+            await registerDeviceToken(fcmToken);
 
-            localStorage.setItem("fcm_registered", "true");  
-            localStorage.setItem("fcm_token", fcmToken);  
-          }  
-        } else {  
-          console.warn("FCM 토큰 없음 (권한 거부 또는 오류)");  
-        }  
-      } catch (fcmError) {  
-        console.error("로그인 후 FCM 등록 중 오류:", fcmError);  
+            localStorage.setItem("fcm_registered", "true");
+            localStorage.setItem("fcm_token", fcmToken);
+          }
+        } else {
+          console.warn("FCM 토큰 없음 (권한 거부 또는 오류)");
+        }
+      } catch (fcmError) {
+        console.error("로그인 후 FCM 등록 중 오류:", fcmError);
       }
 
       window.location.replace("/");
     } catch (err) {
-      let errorMessage = "로그인에 실패했습니다.";
       if (err instanceof Error) {
         if (err.message.includes("401")) {
-          errorMessage = "이메일 또는 비밀번호가 올바르지 않습니다.";
-        } else if (err.message.includes("404")) {
-          errorMessage = "존재하지 않는 계정입니다.";
-        } else if (err.message.includes("500")) {
-          errorMessage = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-        } else if (err.message.includes("Network")) {
-          errorMessage = "네트워크 연결을 확인해주세요.";
+          console.error(err);
+          setError("이메일 또는 비밀번호가 일치하지 않습니다.");
+        } else if (err.message.includes("403")) {
+          console.error(err);
+          setError("정지된 계정입니다.");
         } else {
-          errorMessage = err.message;
+          console.error(err);
+          setError("서버 오류가 발생했습니다.");
         }
       }
-      setError(errorMessage);
-      setWarningOpen(true);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -133,7 +127,6 @@ const LoginPage = () => {
           </div>
 
           <div className="space-y-6">
-
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 이메일
@@ -148,33 +141,37 @@ const LoginPage = () => {
                   className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
                 />
               </div>
-            </div>
 
-            {/* 비밀번호 입력 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                비밀번호
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="비밀번호를 입력하세요"
-                  className="w-full pl-12 pr-12 py-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
+              {/* 비밀번호 입력 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  비밀번호
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="비밀번호를 입력하세요"
+                    className="w-full pl-12 pr-12 py-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                {/* 에러 메시지 공간 확보 */}
+                <div className="h-6 mt-1">
+                  {error && <div className="text-red-500 text-sm">{error}</div>}
+                </div>
               </div>
             </div>
 
@@ -199,10 +196,17 @@ const LoginPage = () => {
             {/* 로그인 버튼 */}
             <button
               onClick={handleSubmit}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105 font-bold flex items-center justify-center"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105 font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              로그인하기
-              <ArrowRight className="ml-2 h-5 w-5" />
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              ) : (
+                <>
+                  로그인하기
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
             </button>
 
             {/* 소셜 로그인 구분선 */}
@@ -325,12 +329,6 @@ const LoginPage = () => {
         <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl"></div>
         <div className="absolute -top-32 -right-16 w-48 h-48 bg-pink-500/20 rounded-full blur-3xl"></div>
       </div>
-      <WarningModal
-        isOpen={warningOpen}
-        onClose={() => setWarningOpen(false)}
-        title="로그인 실패"
-        message={error}
-      />
     </div>
   );
 };

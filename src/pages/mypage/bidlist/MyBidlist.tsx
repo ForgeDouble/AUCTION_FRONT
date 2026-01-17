@@ -4,8 +4,10 @@ import { fetchBidsByUser } from "../MyPageApi";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { BidListDto, PageInfo } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
+import { useModal } from "@/contexts/ModalContext";
 
 const MyBidlist = () => {
+  const { showLogin, showError } = useModal();
   const [searchParams, setSearchParams] = useSearchParams();
   const [bids, setBids] = useState<BidListDto[]>([]);
   const [currentPage, setCurrentPage] = useState(
@@ -132,6 +134,11 @@ const MyBidlist = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        showLogin();
+        console.error("Missing AccessToken");
+        return;
+      }
       const data = await fetchBidsByUser(token, page, size);
       setBids(data.result.content);
       setPageInfo({
@@ -144,6 +151,7 @@ const MyBidlist = () => {
       console.log(data.result);
     } catch (error) {
       console.error(error);
+      showError();
     } finally {
       setLoading(false);
     }

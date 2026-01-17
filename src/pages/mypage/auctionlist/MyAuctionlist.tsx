@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Clock, Eye } from "lucide-react";
 import { fetchProductsByUser } from "../MyPageApi";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { PageInfo } from "../MyPageDto";
+import type { PageInfo, ProductListDto } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
+import { useModal } from "@/contexts/ModalContext";
 
 // Placeholder image component
 const PlaceholderImg = () => (
@@ -12,17 +13,8 @@ const PlaceholderImg = () => (
   </div>
 );
 
-interface ProductListDto {
-  productId: number;
-  productName: string;
-  previewImageUrl?: string;
-  latestBidAmount: number;
-  bidCount: number;
-  status: "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";
-  auctionEndTime?: string;
-}
-
 const MyAuctionlist = () => {
+  const { showLogin, showError } = useModal();
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<ProductListDto[]>([]);
   const [currentPage, setCurrentPage] = useState(
@@ -100,6 +92,12 @@ const MyAuctionlist = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        showLogin();
+        console.error("Missing AccessToken");
+        return;
+      }
+
       const data = await fetchProductsByUser(token, page, size);
       setProducts(data.result.content);
       setPageInfo({
@@ -112,6 +110,7 @@ const MyAuctionlist = () => {
       console.log(data);
     } catch (error) {
       console.error(error);
+      showError();
     } finally {
       setLoading(false);
     }

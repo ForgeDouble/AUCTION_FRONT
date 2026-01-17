@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Clock,
@@ -22,9 +22,11 @@ import type { ParentCategoriesDto, Top3ProductDto } from "./HomeDto";
 import { useNavigate } from "react-router-dom";
 import PlaceHolder from "@/components/PlaceHolder";
 import dayjs from "dayjs";
+import { useModal } from "@/contexts/ModalContext";
 
 const Home = () => {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const { showError } = useModal();
+  const navigate = useNavigate();
 
   /* 입찰수 상위 3개 상품들 */
   const [products, setProducts] = useState<Top3ProductDto[]>([]);
@@ -37,16 +39,7 @@ const Home = () => {
     Record<number, { hours: number; minutes: number; seconds: number }>
   >({});
 
-  const navigate = useNavigate();
-
-  // 슬라이드 자동 전환 (일단 유지)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % 3);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, []);
-
+  /** 카테고리 아이콘 */
   const categoryIcons: Record<string, LucideIcon> = {
     전자제품: Microwave,
     "패션/잡화": Shirt,
@@ -81,9 +74,8 @@ const Home = () => {
       const response = data.result;
       setProducts(response);
     } catch (error) {
+      showError("데이터를 불러오는데 실패했습니다.");
       console.error(error);
-    } finally {
-      // setLoading(false);
     }
   };
 
@@ -92,12 +84,10 @@ const Home = () => {
     try {
       const data = await fetchParentCategories();
       const categoryResponse = data.result;
-
       setParentCategories(categoryResponse);
     } catch (error) {
+      showError("데이터를 불러오는데 실패했습니다.");
       console.error(error);
-    } finally {
-      // setLoading(false);
     }
   };
 

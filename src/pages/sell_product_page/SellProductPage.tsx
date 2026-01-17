@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Upload, X, DollarSign, Package, Image } from "lucide-react";
+import { Upload, X, DollarSign, Package, Image, Loader2 } from "lucide-react";
 import {
-  Status,
+  type ImageDto,
   type ParentCategoriesDto,
   type ProductCreateDto,
 } from "./SellProductDto";
 import CategorySelector from "@/components/fcm/category_selector/CategorySelector";
 import { fetchCreateProduct, fetchParentCategories } from "./SellProductApi";
 import { useNavigate } from "react-router-dom";
+import { useModal } from "@/contexts/ModalContext";
 
 const SellProductPage = () => {
-  const [images, setImages] = useState<any[]>([]);
+  const { showError, showLogin, showWarning } = useModal();
+  const [images, setImages] = useState<ImageDto[]>([]);
   const [parentCategories, setParentCategories] = useState<
     ParentCategoriesDto[]
   >([]);
@@ -31,6 +33,7 @@ const SellProductPage = () => {
       setParentCategories(data.result);
     } catch (error) {
       console.error(error);
+      showError();
     }
   };
 
@@ -52,12 +55,12 @@ const SellProductPage = () => {
     e.preventDefault();
 
     if (images.length === 0) {
-      alert("최소 1개 이상의 이미지를 업로드해주세요.");
+      showWarning("최소 1개 이상의 이미지를 업로드해주세요.");
       return;
     }
 
     if (!formData.categoryId) {
-      alert("카테고리를 선택해주세요.");
+      showWarning("카테고리를 선택해주세요.");
       return;
     }
 
@@ -69,20 +72,20 @@ const SellProductPage = () => {
         productName: formData.productName,
         productContent: formData.productContent,
         price: Number(formData.price),
-        status: Status.READY,
+        status: "READY",
       };
 
       const token = localStorage.getItem("accessToken");
       if (token == null) {
-        throw Error("No Token");
+        console.error("Missing AccessToken");
+        showLogin();
         return;
       }
 
       const files = images.map((img) => img.file);
-      const response = await fetchCreateProduct(productData, files, token);
+      await fetchCreateProduct(productData, files, token);
 
-      alert(response.message || "상품이 등록되었습니다!");
-      navigate(`/auction_list`);
+      showWarning("상품이 등록되었습니다.");
 
       // 폼 초기화
       setFormData({
@@ -94,9 +97,10 @@ const SellProductPage = () => {
       setImages([]);
     } catch (error) {
       console.error("상품 등록 실패:", error);
-      alert("상품 등록에 실패했습니다. 다시 시도해주세요.");
+      showError("상품 등록에 실패했습니다. 다시 시도해주세요");
     } finally {
       setLoading(false);
+      navigate(`/auction_list`);
     }
   };
 
@@ -288,7 +292,11 @@ const SellProductPage = () => {
               disabled={loading}
               className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "등록 중..." : "상품 등록하기"}
+              {loading ? (
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              ) : (
+                "상품 등록하기"
+              )}
             </button>
           </div>
         </form>
