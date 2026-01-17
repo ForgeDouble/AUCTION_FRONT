@@ -14,7 +14,7 @@ export const fetchLoginUser = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    throw new Error(`Failed to fetch sellers: ${response.status}`);
   }
 
   return response.json();
@@ -107,7 +107,7 @@ export const fetchProductsByWishlist = async (
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    throw new Error(`Failed to fetch products: ${response.status}`);
   }
 
   return response.json();

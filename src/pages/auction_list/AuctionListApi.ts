@@ -15,7 +15,6 @@ export const fetchProducts = async (
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include",
     }
   );
 
@@ -36,12 +35,11 @@ export const fetchParentCategories = async (): Promise<
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // 필요하면 쿠키 포함
     }
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    throw new Error(`Failed to fetch categories: ${response.status}`);
   }
 
   return response.json();
@@ -59,7 +57,7 @@ export const fetchWishlistByUser = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    throw new Error(`Failed to fetch wishlist: ${response.status}`);
   }
   return response.json();
 };
