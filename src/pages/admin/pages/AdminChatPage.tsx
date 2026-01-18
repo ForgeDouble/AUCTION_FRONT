@@ -7,6 +7,8 @@ import {
   UserPlus,
   RefreshCw,
   SendHorizonal,
+  Paperclip,
+  X
 } from "lucide-react";
 import { adminApi } from "../adminApi";
 import type { AdminChatMemberRow, AdminChatMessageRow, AdminChatRoomRow } from "../adminTypes";
@@ -102,6 +104,17 @@ function initialFromName(name: string) {
   if (!s) return "?";
   return s[0].toUpperCase();
 }
+function isImageFile(nameOrUrlOrType: string) {
+  const v = String(nameOrUrlOrType ?? "").toLowerCase();
+  return (
+    v.startsWith("image/") ||
+    v.endsWith(".png") ||
+    v.endsWith(".jpg") ||
+    v.endsWith(".jpeg") ||
+    v.endsWith(".gif") ||
+    v.endsWith(".webp")
+  );
+}
 
 function Avatar(props: { name: string; url?: string | null; mine?: boolean }) {
   const { name, url, mine } = props;
@@ -158,6 +171,10 @@ export default function AdminChatPage() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const me = useMemo(() => String(adminEmail ?? "").trim().toLowerCase(), [adminEmail]);
+
+  const [pickedFiles, setPickedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId) ?? null,
@@ -290,10 +307,60 @@ export default function AdminChatPage() {
   const send = async () => {
     if (!activeRoomId) return;
     const text = input.trim();
-    if (!text) return;
+    const files = pickedFiles;
+
+    if (!text && files.length === 0) return;
+    if (uploading) return;
+
+    if (files.length > 0) {
+      setUploading(true);
+      try {
+        const uploaded = await adminApi.uploadChatFiles(files);
+
+        const pairs = uploaded.map((u, i) => ({ up: u, raw: files[i] }));
+
+        const imageUploads = pairs
+          .filter(p => isImageFile(p.raw.type || p.up.fileName || p.up.fileUrl))
+          .map(p => p.up);
+
+        const otherUploads = pairs
+          .filter(p => !isImageFile(p.raw.type || p.up.fileName || p.up.fileUrl))
+          .map(p => p.up);
+
+        // 이미지
+        if (imageUploads.length > 0) {
+          await adminApi.sendChatMessage({
+            roomId: activeRoomId,
+            messageType: "IMAGE",
+            message: text ? text : "",
+            files: imageUploads,
+          });
+        }
+
+        // 일반 파일
+        if (otherUploads.length > 0) {
+          await adminApi.sendChatMessage({
+            roomId: activeRoomId,
+            messageType: "FILE",
+            message: imageUploads.length > 0 ? "" : (text ? text : ""),
+            files: otherUploads,
+          });
+        }
+
+        setInput("");
+        clearPickedFiles();
+        return;
+      } finally {
+        setUploading(false);
+      }
+    }
 
     setInput("");
-    await adminApi.sendChatMessage({ roomId: activeRoomId, messageType: "TALK", message: text });
+    await adminApi.sendChatMessage({
+      roomId: activeRoomId,
+      messageType: "TALK",
+      message: text,
+    });
   };
 
   const openMembers = async () => {
@@ -323,6 +390,39 @@ export default function AdminChatPage() {
     } catch {}
   };
 
+  const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = Array.from(e.target.files ?? []);
+    if (list.length === 0) return;
+
+    const MAX_MB = 10;
+    const MAX = MAX_MB * 1024 * 1024;
+
+    const safe = list.filter(f => f.size <= MAX);
+    if (safe.length !== list.length) alert(`일부 파일이 ${MAX_MB}MB를 초과해서 제외됐습니다.`);
+
+    setPickedFiles(prev => {
+      const key = (f: File) => `${f.name}:${f.size}:${f.lastModified}`;
+      const set = new Set(prev.map(key));
+      const merged = [...prev];
+      for (const f of safe) {
+        const k = key(f);
+        if (!set.has(k)) {
+          set.add(k);
+          merged.push(f);
+        }
+      }
+      return merged;
+    });
+
+    e.target.value = "";
+  };
+
+  const removePickedFile = (idx: number) => {
+    setPickedFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const clearPickedFiles = () => setPickedFiles([]);
+
   useEffect(() => {
     void (async () => {
       try {
@@ -350,8 +450,8 @@ export default function AdminChatPage() {
   const roomList = rooms;
 
   const inputBase =
-    "w-full text-sm outline-none bg-transparent placeholder:text-gray-400 text-gray-900 resize-none " +
-    "min-h-[44px] max-h-[140px] px-3 py-2";
+  "w-full text-sm leading-5 outline-none bg-transparent placeholder:text-gray-400 text-gray-900 resize-none " +
+  "min-h-[44px] max-h-[140px] px-3 py-3";
 
   return (
     <div className="h-[calc(100vh-120px)]">
@@ -522,12 +622,49 @@ export default function AdminChatPage() {
                   const displayName = getDisplayName(m);
                   const role = getAuthority(m);
 
-                  const bubbleText =
-                    m.messageType === "IMAGE"
-                      ? "(이미지)"
-                      : m.messageType === "FILE"
-                      ? "(파일)"
-                      : m.message ?? "";
+                  const text = (m.message ?? "").trim();
+                  const files = Array.isArray(m.files) ? m.files : [];
+
+                  const bubbleNode =
+                    m.messageType === "IMAGE" ? (
+                      <div className="space-y-2">
+                        {text ? <div>{text}</div> : null}
+                        <div className="flex flex-wrap gap-2">
+                          {files.map((f, i) => (
+                            <a
+                              key={f.fileUrl + i}
+                              href={f.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block w-[180px] h-[120px] rounded-xl overflow-hidden border border-gray-200 bg-white"
+                              title={f.fileName}
+                            >
+                              <img src={f.fileUrl} alt={f.fileName} className="w-full h-full object-cover" />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    ) : m.messageType === "FILE" ? (
+                      <div className="space-y-2">
+                        {text ? <div>{text}</div> : null}
+                        <div className="space-y-1">
+                          {files.map((f, i) => (
+                            <a
+                              key={f.fileUrl + i}
+                              href={f.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block text-sm underline text-gray-800 hover:text-gray-900"
+                              title={f.fileName}
+                            >
+                              {f.fileName}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>{text}</div>
+                    );
 
                   return (
                     <React.Fragment key={m.id || `${m.roomId}:${m.senderId}:${m.createdAt}:${idx}`}>
@@ -574,7 +711,7 @@ export default function AdminChatPage() {
                                 : "bg-white text-gray-900 border border-gray-200 rounded-2xl rounded-bl-md")
                             }
                           >
-                            {bubbleText}
+                            {bubbleNode}
                           </div>
 
                           {showTime ? (
@@ -611,14 +748,34 @@ export default function AdminChatPage() {
 
           {/* 입력 영역 */}
           <div className="p-3 border-t border-gray-100 bg-white">
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-2 flex items-end gap-2">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-2 flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf,.zip,.txt"
+                className="hidden"
+                onChange={onPickFiles}
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!activeRoomId || uploading}
+                title="첨부"
+                className="w-11 h-11 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center disabled:opacity-60"
+              >
+                <Paperclip className="w-5 h-5 text-gray-700" />
+              </button>
+
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 className={inputBase}
                 placeholder={activeRoomId ? "메시지를 입력하세요" : "채팅방을 선택하세요"}
-                disabled={!activeRoomId}
+                disabled={!activeRoomId || uploading}
                 onKeyDown={(e) => {
+                  if (uploading) return;
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     void send();
@@ -628,13 +785,41 @@ export default function AdminChatPage() {
 
               <button
                 onClick={() => void send()}
-                disabled={!activeRoomId}
+                disabled={!activeRoomId || uploading}
                 title="전송"
-                className="w-11 h-11 rounded-xl bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center disabled:opacity-60"
+                className="w-11 h-11 rounded-xl bg-gray-900 hover:bg-gray-800 text-white flex items-center justify-center disabled:opacity-60"
               >
-                <SendHorizonal className="w-5 h-5" />
+                {uploading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <SendHorizonal className="w-5 h-5" />}
               </button>
             </div>
+
+            {pickedFiles.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {pickedFiles.map((f, idx) => (
+                  <div
+                    key={`${f.name}:${f.size}:${f.lastModified}`}
+                    className="px-2 py-1 rounded-xl bg-white border border-gray-200 text-[12px] flex items-center gap-2"
+                  >
+                    <span className="max-w-[260px] truncate">{f.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePickedFile(idx)}
+                      className="p-1 rounded-lg hover:bg-gray-100"
+                      title="제거"
+                    >
+                      <X className="w-3 h-3 text-gray-500" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={clearPickedFiles}
+                  className="text-[12px] px-2 py-1 rounded-xl border border-gray-200 hover:bg-gray-50"
+                >
+                  전체 제거
+                </button>
+              </div>
+            ) : null}
 
             <div className="mt-1 text-[11px] text-gray-400">
               Enter: 전송, Shift+Enter: 줄바꿈

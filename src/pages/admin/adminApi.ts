@@ -304,7 +304,7 @@ function normalizeMember(x: any): AdminChatMemberRow {
 }
 
 export const adminApi = {
-
+  
   getOverview: () =>
     request<CommonResDto<AdminOverviewResponse>>("/admin/overview").then((r) => unwrap<AdminOverviewResponse>(r)),
 
@@ -678,6 +678,34 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }).then((r) => unwrap<void>(r)),
+
+  uploadChatFile: async (file: File) => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) throw new Error("token missing");
+
+    const base = import.meta.env.VITE_API_BASE as string;
+    const fd = new FormData();
+    fd.append("file", file);
+
+    const res = await fetch(`${base}/chat/file/upload`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: fd,
+    });
+
+    const json = await res.json().catch(() => ({} as any));
+    if (!res.ok) throw new Error(json?.statusMessage ?? json?.status_message ?? json?.message ?? "upload failed");
+
+    const payload = (json?.data ?? json?.result ?? json?.payload ?? json) as any;
+    return {
+    fileName: String(payload?.fileName ?? payload?.file_name ?? file.name),
+    fileUrl: String(payload?.fileUrl ?? payload?.file_url ?? ""),
+    };
+  },
+
+  uploadChatFiles: async (files: File[]) => {
+    return Promise.all(files.map((f) => adminApi.uploadChatFile(f)));
+  },  
 };
 
 
