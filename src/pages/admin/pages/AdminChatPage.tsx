@@ -362,7 +362,7 @@ export default function AdminChatPage() {
           </div>
           <div>
             <div className="text-sm font-bold text-gray-900">관리자 채팅</div>
-            <div className="text-[11px] text-gray-500">라운지 / 운영진 그룹 / 1:1</div>
+            <div className="text-[11px] text-gray-500">통합 / 운영진 그룹 / 1:1</div>
           </div>
           {totalUnread > 0 ? (
             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-red-50 text-red-700 border border-red-200">
@@ -377,7 +377,7 @@ export default function AdminChatPage() {
             className="px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm hover:bg-gray-50"
             title="운영자 단체방 참가"
           >
-            라운지
+            통합
           </button>
 
           <button
@@ -566,14 +566,24 @@ export default function AdminChatPage() {
                             </div>
                           ) : null}
 
-                          <div className={"inline-block px-3 py-2 text-sm leading-relaxed shadow-sm " + (mine
-                            ? "bg-violet-600 text-white rounded-2xl rounded-br-md"
-                            : "bg-white text-gray-900 border border-gray-200 rounded-2xl rounded-bl-md")}>
+                          <div
+                            className={
+                              "inline-block px-3 py-2 text-sm leading-relaxed shadow-sm " +
+                              (mine
+                                ? "bg-violet-50 text-gray-900 border border-violet-200 ring-1 ring-violet-100 rounded-2xl rounded-br-md"
+                                : "bg-white text-gray-900 border border-gray-200 rounded-2xl rounded-bl-md")
+                            }
+                          >
                             {bubbleText}
                           </div>
 
                           {showTime ? (
-                            <div className={"mt-1 text-[10px] text-gray-400 " + (mine ? "text-right" : "text-left")}>
+                            <div
+                              className={
+                                "mt-1 text-[11px] text-gray-600 font-medium " +
+                                (mine ? "text-right" : "text-left")
+                              }
+                            >
                               {kstTime(m.createdAt)}
                             </div>
                           ) : null}
