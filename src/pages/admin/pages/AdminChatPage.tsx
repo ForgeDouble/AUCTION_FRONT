@@ -1,10 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { MessagesSquare, Plus, Users, LogOut, UserPlus, RefreshCw } from "lucide-react";
+import {
+  MessagesSquare,
+  Plus,
+  Users,
+  LogOut,
+  UserPlus,
+  RefreshCw,
+  SendHorizonal,
+} from "lucide-react";
 import { adminApi } from "../adminApi";
 import type { AdminChatMemberRow, AdminChatMessageRow, AdminChatRoomRow } from "../adminTypes";
 
 import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client"
+import SockJS from "sockjs-client";
+import { useAdminStore } from "../AdminContext";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
 
@@ -22,6 +31,20 @@ function kstTime(iso?: string | null) {
   return `${mm}.${dd} ${hh}:${mi}`;
 }
 
+function kstDayLabel(iso?: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}.${mm}.${dd}`;
+}
+
+function dayKey(iso?: string | null) {
+  if (!iso) return "";
+  return String(iso).slice(0, 10);
+}
+
 function uniqById(list: AdminChatMessageRow[]) {
   const seen = new Set<string>();
   const out: AdminChatMessageRow[] = [];
@@ -34,7 +57,88 @@ function uniqById(list: AdminChatMessageRow[]) {
   return out;
 }
 
+function emailLike(x?: string | null) {
+  const s = String(x ?? "").trim();
+  return s.includes("@") ? s : "";
+}
+
+function nameFromEmail(email: string) {
+  const at = email.indexOf("@");
+  return at > 0 ? email.slice(0, at) : email;
+}
+
+function getSenderEmail(m: AdminChatMessageRow) {
+  // 서버가 senderId를 email로 주는 경우가 많아서 2순위로 둠
+  return emailLike(m.sender?.email) || emailLike(m.senderId) || "";
+}
+
+function getDisplayName(m: AdminChatMessageRow) {
+  const nick = m.sender?.nickname?.trim();
+  if (nick) return nick;
+
+  const em = getSenderEmail(m);
+  if (em) return nameFromEmail(em);
+
+  return (m.senderId ?? "익명").toString();
+}
+
+function getAuthority(m: AdminChatMessageRow) {
+  const raw = (m.sender?.authority ?? "").toString().toUpperCase();
+  if (raw.includes("ADMIN")) return "ADMIN";
+  if (raw.includes("INQUIRY")) return "INQUIRY";
+  if (raw.includes("USER")) return "USER";
+  return "";
+}
+
+function roleChipClass(role: string) {
+  if (role === "ADMIN") return "bg-violet-50 text-violet-700 border-violet-200";
+  if (role === "INQUIRY") return "bg-sky-50 text-sky-700 border-sky-200";
+  if (role === "USER") return "bg-gray-50 text-gray-700 border-gray-200";
+  return "bg-gray-50 text-gray-600 border-gray-200";
+}
+
+function initialFromName(name: string) {
+  const s = (name ?? "").trim();
+  if (!s) return "?";
+  return s[0].toUpperCase();
+}
+
+function Avatar(props: { name: string; url?: string | null; mine?: boolean }) {
+  const { name, url, mine } = props;
+
+  if (url) {
+    return (
+      <div className="w-9 h-9 rounded-full overflow-hidden border border-gray-200 bg-white shrink-0">
+        <img src={url} alt={name} className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={
+        "w-9 h-9 rounded-full flex items-center justify-center shrink-0 border " +
+        (mine ? "bg-violet-600 text-white border-violet-200" : "bg-gray-100 text-gray-700 border-gray-200")
+      }
+    >
+      <span className="text-sm font-semibold">{initialFromName(name)}</span>
+    </div>
+  );
+}
+
+function DateDivider(props: { label: string }) {
+  return (
+    <div className="py-2 flex items-center justify-center">
+      <div className="px-3 py-1 rounded-full border border-gray-200 bg-white text-[11px] text-gray-600 shadow-sm">
+        {props.label}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminChatPage() {
+  const { adminEmail } = useAdminStore();
+
   const [rooms, setRooms] = useState<AdminChatRoomRow[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
 
@@ -51,15 +155,32 @@ export default function AdminChatPage() {
   const clientRef = useRef<Client | null>(null);
   const subRef = useRef<any>(null);
 
-  const activeRoom = useMemo(() => rooms.find((r) => r.id === activeRoomId) ?? null, [rooms, activeRoomId]);
-  const activeMessages = useMemo(() => (activeRoomId ? messages[activeRoomId] ?? [] : []), [messages, activeRoomId]);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  const me = useMemo(() => String(adminEmail ?? "").trim().toLowerCase(), [adminEmail]);
+
+  const activeRoom = useMemo(
+    () => rooms.find((r) => r.id === activeRoomId) ?? null,
+    [rooms, activeRoomId]
+  );
+  const activeMessages = useMemo(
+    () => (activeRoomId ? messages[activeRoomId] ?? [] : []),
+    [messages, activeRoomId]
+  );
+
+  useEffect(() => {
+    // 방 바뀌거나 메시지 늘어나면 아래로 스크롤
+    if (!activeRoomId) return;
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [activeRoomId, activeMessages.length]);
 
   const refreshRooms = async () => {
     setLoadingRooms(true);
     try {
       const list = await adminApi.getMyChatRooms();
-      // recentTime DESC 정렬
-      const sorted = list.slice().sort((a, b) => String(b.recentTime ?? "").localeCompare(String(a.recentTime ?? "")));
+      const sorted = list
+        .slice()
+        .sort((a, b) => String(b.recentTime ?? "").localeCompare(String(a.recentTime ?? "")));
       setRooms(sorted);
     } finally {
       setLoadingRooms(false);
@@ -88,7 +209,6 @@ export default function AdminChatPage() {
     client.activate();
     clientRef.current = client;
 
-    // connected 대기
     await new Promise<void>((resolve) => {
       const t = setInterval(() => {
         if (client.connected) {
@@ -102,7 +222,6 @@ export default function AdminChatPage() {
   const subscribeRoom = async (roomId: string) => {
     await ensureStompConnected();
 
-    // 기존 구독 해제
     try {
       subRef.current?.unsubscribe?.();
     } catch {}
@@ -129,15 +248,19 @@ export default function AdminChatPage() {
           return { ...prev, [roomId]: next };
         });
 
-        // 룸 리스트의 recent 갱신(중복으로 2번 들어와도 화면은 안전)
         setRooms((prev) =>
           prev.map((r) =>
             r.id === roomId
               ? {
                   ...r,
-                  recentText: msg.messageType === "FILE" ? "파일을 보냈습니다." : msg.messageType === "IMAGE" ? "이미지를 보냈습니다." : msg.message ?? "",
+                  recentText:
+                    msg.messageType === "FILE"
+                      ? "파일을 보냈습니다."
+                      : msg.messageType === "IMAGE"
+                      ? "이미지를 보냈습니다."
+                      : msg.message ?? "",
                   recentTime: msg.createdAt ?? r.recentTime ?? null,
-                  unread: r.id === activeRoomId ? 0 : Math.max(0, Number(r.unread ?? 0) + 1),
+                  unread: r.id === roomId ? 0 : Math.max(0, Number(r.unread ?? 0) + 1),
                 }
               : r
           )
@@ -171,8 +294,6 @@ export default function AdminChatPage() {
 
     setInput("");
     await adminApi.sendChatMessage({ roomId: activeRoomId, messageType: "TALK", message: text });
-
-    // 메시지는 서버 브로드캐스트로 들어오게(중복 방지)
   };
 
   const openMembers = async () => {
@@ -204,7 +325,6 @@ export default function AdminChatPage() {
 
   useEffect(() => {
     void (async () => {
-      // 관리자 채팅은 “라운지”가 기본 entry 포인트가 제일 깔끔함
       try {
         await openLounge();
       } catch {
@@ -222,13 +342,16 @@ export default function AdminChatPage() {
     };
   }, []);
 
-  const totalUnread = useMemo(() => rooms.reduce((a, r) => a + Number(r.unread ?? 0), 0), [rooms]);
+  const totalUnread = useMemo(
+    () => rooms.reduce((a, r) => a + Number(r.unread ?? 0), 0),
+    [rooms]
+  );
 
   const roomList = rooms;
 
   const inputBase =
-    "mt-1 w-full px-3 py-2 rounded-xl border text-sm outline-none bg-white " +
-    "focus:ring-2 focus:ring-violet-200 placeholder:text-gray-300 text-gray-900 border-gray-200";
+    "w-full text-sm outline-none bg-transparent placeholder:text-gray-400 text-gray-900 resize-none " +
+    "min-h-[44px] max-h-[140px] px-3 py-2";
 
   return (
     <div className="h-[calc(100vh-120px)]">
@@ -268,7 +391,10 @@ export default function AdminChatPage() {
           <button
             onClick={refreshRooms}
             disabled={loadingRooms}
-            className={"px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 " + (loadingRooms ? "opacity-60" : "hover:bg-gray-50")}
+            className={
+              "px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 " +
+              (loadingRooms ? "opacity-60" : "hover:bg-gray-50")
+            }
           >
             <RefreshCw className={"w-4 h-4 " + (loadingRooms ? "animate-spin" : "")} />
             새로고침
@@ -292,8 +418,8 @@ export default function AdminChatPage() {
                   key={r.id}
                   onClick={() => void selectRoom(r.id)}
                   className={
-                    "w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 " +
-                    (active ? "bg-violet-50" : "bg-white")
+                    "w-full text-left px-4 py-3 border-b border-gray-50 transition " +
+                    (active ? "bg-violet-50" : "bg-white hover:bg-gray-50")
                   }
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -302,7 +428,9 @@ export default function AdminChatPage() {
                       <div className="text-[12px] text-gray-500 truncate">{r.recentText ?? ""}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[11px] text-gray-400 whitespace-nowrap">{kstTime(r.recentTime)}</div>
+                      <div className="text-[11px] text-gray-400 whitespace-nowrap">
+                        {kstTime(r.recentTime)}
+                      </div>
                       {Number(r.unread ?? 0) > 0 ? (
                         <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-red-50 text-red-700 border border-red-200">
                           {r.unread}
@@ -322,10 +450,15 @@ export default function AdminChatPage() {
 
         {/* Right: messages */}
         <div className="lg:col-span-8 bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-          <div className="p-3 border-b border-gray-100 flex items-center justify-between">
+          {/* 헤더 */}
+          <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-white">
             <div>
-              <div className="text-sm font-bold text-gray-900">{activeRoom?.roomName ?? "채팅방을 선택하세요"}</div>
-              <div className="text-[11px] text-gray-500">{activeRoomId ? `roomId: ${activeRoomId}` : ""}</div>
+              <div className="text-sm font-bold text-gray-900">
+                {activeRoom?.roomName ?? "채팅방을 선택하세요"}
+              </div>
+              <div className="text-[11px] text-gray-500">
+                {activeRoomId ? `roomId: ${activeRoomId}` : ""}
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -358,32 +491,121 @@ export default function AdminChatPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* 메시지 영역 */}
+          <div className="flex-1 overflow-y-auto p-4 bg-gray-50/40">
             {!activeRoomId ? (
-              <div className="text-center text-gray-500 text-sm mt-10">좌측에서 채팅방을 선택해 주세요.</div>
+              <div className="text-center text-gray-500 text-sm mt-10">
+                좌측에서 채팅방을 선택해 주세요.
+              </div>
             ) : (
-              activeMessages.map((m) => {
-                const mine = false; // 백엔드에서 current user email을 프론트가 알면 비교 가능(필요하면 추가해줄게)
-                const nick = m.sender?.nickname ?? m.senderId;
-                return (
-                  <div key={m.id} className={"max-w-[80%] " + (mine ? "ml-auto text-right" : "")}>
-                    <div className="text-[11px] text-gray-500 mb-1">{nick}</div>
-                    <div className={"px-3 py-2 rounded-2xl border text-sm " + (mine ? "bg-violet-50 border-violet-100" : "bg-white border-gray-200")}>
-                      {m.message}
-                    </div>
-                    <div className="text-[10px] text-gray-400 mt-1">{kstTime(m.createdAt)}</div>
-                  </div>
-                );
-              })
+              <div className="space-y-2">
+                {activeMessages.map((m, idx) => {
+                  const senderEmail = getSenderEmail(m);
+                  const mine = me && senderEmail && senderEmail.toLowerCase() === me;
+
+                  const prev = idx > 0 ? activeMessages[idx - 1] : null;
+                  const next = idx < activeMessages.length - 1 ? activeMessages[idx + 1] : null;
+
+                  const prevKey = prev ? (getSenderEmail(prev) || prev.senderId || "") : "";
+                  const curKey = senderEmail || m.senderId || "";
+                  const nextKey = next ? (getSenderEmail(next) || next.senderId || "") : "";
+
+                  const sameAsPrev = Boolean(prev) && prevKey === curKey;
+                  const sameAsNext = Boolean(next) && nextKey === curKey;
+
+                  const showMeta = !sameAsPrev;
+                  const showTime = !sameAsNext;
+
+                  const showDateDivider =
+                    idx === 0 || dayKey(prev?.createdAt) !== dayKey(m.createdAt);
+
+                  const displayName = getDisplayName(m);
+                  const role = getAuthority(m);
+
+                  const bubbleText =
+                    m.messageType === "IMAGE"
+                      ? "(이미지)"
+                      : m.messageType === "FILE"
+                      ? "(파일)"
+                      : m.message ?? "";
+
+                  return (
+                    <React.Fragment key={m.id || `${m.roomId}:${m.senderId}:${m.createdAt}:${idx}`}>
+                      {showDateDivider ? (
+                        <DateDivider label={kstDayLabel(m.createdAt)} />
+                      ) : null}
+
+                      <div className={"flex " + (mine ? "justify-end" : "justify-start")}>
+                        {/* 상대 아바타 */}
+                        {!mine ? (
+                          <div className={"mr-2 " + (showMeta ? "" : "opacity-0")}>
+                            <Avatar
+                              name={displayName}
+                              url={m.sender?.profileImageUrl}
+                              mine={false}
+                            />
+                          </div>
+                        ) : null}
+
+                        <div className={"max-w-[75%] " + (mine ? "text-right" : "text-left")}>
+                          {showMeta ? (
+                            <div className={"mb-1 flex items-center gap-2 " + (mine ? "justify-end" : "justify-start")}>
+                              <div className="text-[12px] font-semibold text-gray-800">
+                                {displayName}
+                              </div>
+                              {role ? (
+                                <span
+                                  className={
+                                    "text-[10px] px-2 py-0.5 rounded-full border " +
+                                    roleChipClass(role)
+                                  }
+                                >
+                                  {role}
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : null}
+
+                          <div className={"inline-block px-3 py-2 text-sm leading-relaxed shadow-sm " + (mine
+                            ? "bg-violet-600 text-white rounded-2xl rounded-br-md"
+                            : "bg-white text-gray-900 border border-gray-200 rounded-2xl rounded-bl-md")}>
+                            {bubbleText}
+                          </div>
+
+                          {showTime ? (
+                            <div className={"mt-1 text-[10px] text-gray-400 " + (mine ? "text-right" : "text-left")}>
+                              {kstTime(m.createdAt)}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {/* 내 아바타 */}
+                        {mine ? (
+                          <div className={"ml-2 " + (showMeta ? "" : "opacity-0")}>
+                            <Avatar
+                              name={displayName}
+                              url={m.sender?.profileImageUrl}
+                              mine={true}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+
+                <div ref={bottomRef} />
+              </div>
             )}
           </div>
 
-          <div className="p-3 border-t border-gray-100">
-            <div className="flex items-end gap-2">
+          {/* 입력 영역 */}
+          <div className="p-3 border-t border-gray-100 bg-white">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-2 flex items-end gap-2">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                className={inputBase + " resize-none h-[44px]"}
+                className={inputBase}
                 placeholder={activeRoomId ? "메시지를 입력하세요" : "채팅방을 선택하세요"}
                 disabled={!activeRoomId}
                 onKeyDown={(e) => {
@@ -393,15 +615,20 @@ export default function AdminChatPage() {
                   }
                 }}
               />
+
               <button
                 onClick={() => void send()}
                 disabled={!activeRoomId}
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-60"
+                title="전송"
+                className="w-11 h-11 rounded-xl bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center disabled:opacity-60"
               >
-                전송
+                <SendHorizonal className="w-5 h-5" />
               </button>
             </div>
-            <div className="mt-1 text-[11px] text-gray-400">Enter: 전송, Shift+Enter: 줄바꿈</div>
+
+            <div className="mt-1 text-[11px] text-gray-400">
+              Enter: 전송, Shift+Enter: 줄바꿈
+            </div>
           </div>
         </div>
       </div>
@@ -582,7 +809,10 @@ function CreateGroupModal(props: { onClose: () => void; onCreated: (roomId: stri
         <div className="text-[11px] text-gray-500 mb-2">초대할 운영진 선택</div>
         <div className="max-h-[280px] overflow-y-auto border border-gray-200 rounded-xl">
           {candidates.map((c) => (
-            <label key={c.email} className="flex items-center justify-between px-3 py-2 border-b border-gray-50 cursor-pointer hover:bg-gray-50">
+            <label
+              key={c.email}
+              className="flex items-center justify-between px-3 py-2 border-b border-gray-50 cursor-pointer hover:bg-gray-50"
+            >
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-gray-900 truncate">{c.nickname ?? c.email}</div>
                 <div className="text-[11px] text-gray-500 truncate">{c.email}</div>
@@ -595,7 +825,9 @@ function CreateGroupModal(props: { onClose: () => void; onCreated: (roomId: stri
               </div>
             </label>
           ))}
-          {candidates.length === 0 ? <div className="p-6 text-center text-sm text-gray-500">대상이 없습니다.</div> : null}
+          {candidates.length === 0 ? (
+            <div className="p-6 text-center text-sm text-gray-500">대상이 없습니다.</div>
+          ) : null}
         </div>
       </div>
 
