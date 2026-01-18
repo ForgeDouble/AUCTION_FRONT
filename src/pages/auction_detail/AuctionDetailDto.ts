@@ -30,4 +30,5 @@ export interface SellerDto {
   profileImageUrl: string | null;
   createdAt: string;
   selledBidCount: number;
+  email: string;
 }

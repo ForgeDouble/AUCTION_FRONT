@@ -3,6 +3,7 @@ import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import ReportModal from "@/components/report/ReportModal";
+import { openRoom } from "@/api/chatApi";
 import {
   Heart,
   Share2,
@@ -357,6 +358,45 @@ const AuctionDetail = () => {
   const prevImage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
+
+  const openRoomWindow = (roomId: string) => {
+    const w = 420, h = 720;
+    const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2);
+    const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2);
+
+    window.open(
+      "/chat?roomId=" + encodeURIComponent(roomId),
+      "chat_room_" + roomId,
+      "popup=yes,width=" + w + ",height=" + h + ",left=" + left + ",top=" + top + ",resizable=yes,scrollbars=yes"
+    );
+  };
+
+  const handleContactSeller = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    const sellerEmail = sellerInfo?.email;
+    if (!sellerEmail) {
+      alert("판매자 이메일 정보가 없어 채팅을 열 수 없습니다. (sellerInfo.email 누락)");
+      return;
+    }
+
+    try {
+      const roomId = await openRoom(token, { targetEmail: sellerEmail, adminChat: false });
+      if (!roomId) {
+        alert("채팅방 생성/조회에 실패했습니다.");
+        return;
+      }
+      openRoomWindow(roomId);
+    } catch (e: any) {
+      console.error(e);
+      alert("채팅방 연결 실패\n" + String(e?.message ?? ""));
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -723,7 +763,10 @@ const AuctionDetail = () => {
                 </div> */}
               </div>
 
-              <button className="w-full mt-4 bg-white/10 border border-white/20 text-white py-2 rounded-lg hover:bg-white/20 transition-all duration-300">
+              <button
+                onClick={handleContactSeller}
+                className="w-full mt-4 bg-white/10 border border-white/20 text-white py-2 rounded-lg hover:bg-white/20 transition-all duration-300"
+              >
                 <MessageCircle className="h-4 w-4 inline mr-2" />
                 판매자 문의
               </button>
