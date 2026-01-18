@@ -449,9 +449,9 @@ export default function AdminChatPage() {
 
   const roomList = rooms;
 
-  const inputBase =
-  "w-full text-sm leading-5 outline-none bg-transparent placeholder:text-gray-400 text-gray-900 resize-none " +
-  "min-h-[44px] max-h-[140px] px-3 py-3";
+const inputBase =
+"w-full text-sm leading-[20px] outline-none bg-transparent text-gray-900 resize-none " +
+"min-h-[44px] max-h-[140px] px-3 py-[12px]";
 
   return (
     <div className="h-[calc(100vh-120px)]">
@@ -748,7 +748,7 @@ export default function AdminChatPage() {
 
           {/* 입력 영역 */}
           <div className="p-3 border-t border-gray-100 bg-white">
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-2 flex items-center gap-2">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-1.5 flex items-center gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
