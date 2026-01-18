@@ -21,3 +21,8 @@ export interface PageResponse<T> {
   number: number;
   size: number;
 }
+
+export interface UserTokenDto {
+  email: string;
+  authority: "USER" | "ADMIN" | "INQUIRY";
+}
