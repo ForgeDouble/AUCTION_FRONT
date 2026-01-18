@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
+import ReportModal from "@/components/report/ReportModal";
 import {
   Heart,
   Share2,
@@ -52,6 +53,11 @@ const AuctionDetail = () => {
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 실시간 입찰 내역 저장
   const [stompClient, setStompClient] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  // 신고 모달 연결
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportMode, setReportMode] = useState<"USER" | "PRODUCT">("USER");
+
 
   const calculateTimeLeft = (endTime: string) => {
     const now = dayjs();
@@ -664,10 +670,20 @@ const AuctionDetail = () => {
             <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-white">판매자 정보</h3>
-                <div className="flex items-center text-gray-400 hover:text-red-400 transition-colors cursor-pointer">
-                  <Siren className="h-4 w-4 mr-1" />
-                  <span className="text-sm">신고하기</span>
-                </div>
+                  <div
+                    className="flex items-center text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (!sellerInfo?.userId) {
+                        alert("판매자 정보(userId)가 없어 신고할 수 없습니다.");
+                        return;
+                      }
+                      setReportMode("USER");
+                      setReportOpen(true);
+                    }}
+                  >
+                    <Siren className="h-4 w-4 mr-1" />
+                    <span className="text-sm">신고하기</span>
+                  </div>
               </div>
 
               <div className="flex items-center mb-4">
@@ -785,8 +801,18 @@ const AuctionDetail = () => {
           </div>
         </div>
       </div>
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        mode={reportMode}
+        targetUserId={sellerInfo?.userId}
+        targetUserName={sellerInfo?.nickname}
+      />
     </div>
+
+    
   );
+
 };
 
 export default AuctionDetail;
