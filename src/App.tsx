@@ -21,6 +21,8 @@ import MyBidlist from "./pages/mypage/bidlist/MyBidlist";
 import MyAuctionlist from "./pages/mypage/auctionlist/MyAuctionlist";
 import MyProfile from "./pages/mypage/profile/MyProfile";
 import ModalProvider from "./contexts/ModalProvider";
+import ProtectedRoute from "./components/route/ProtectedRoute";
+import PublicRoute from "./components/route/PublicRoute";
 
 function App() {
   const location = useLocation();
@@ -36,8 +38,23 @@ function App() {
           {/* 1) 기본 화면: backgroundLocation이 있으면 "뒤에 깔릴 화면"을 그걸로 렌더 */}
           <Routes location={backgroundLocation || location}>
             {/* 팝업 전용: Navbar 없이 렌더링 */}
-            <Route path="/chat-popup" element={<ChatListPopup />} />
-            <Route path="/admin/*" element={<AdminDashboard />} />
+            <Route
+              path="/chat-popup"
+              element={
+                <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                  <ChatListPopup />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/*"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN", "INQUIRY"]}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
 
             {/* 일반 페이지는 Navbar 래핑 */}
             <Route element={<Navbar />}>
@@ -46,18 +63,82 @@ function App() {
                 path="/auction_detail/:productId"
                 element={<AuctionDetail />}
               />
-              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/login"
+                element={
+                  <PublicRoute redirectTo="/">
+                    <LoginPage />
+                  </PublicRoute>
+                }
+              />
               <Route path="/auction_list" element={<AuctionListPage />} />
-              <Route path="/mypage/profile" element={<MyProfile />} />
-              <Route path="/mypage/wishlist" element={<MyWishlist />} />
-              <Route path="/mypage/bidlist" element={<MyBidlist />} />
-              <Route path="/mypage/auctionlist" element={<MyAuctionlist />} />
-              <Route path="/sell_product" element={<SellProductPage />} />
-              <Route path="/register" element={<RegisterPage />} />
+              <Route
+                path="/mypage/profile"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                    <MyProfile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mypage/wishlist"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                    <MyWishlist />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mypage/bidlist"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                    <MyBidlist />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mypage/auctionlist"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                    <MyAuctionlist />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sell_product"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                    <SellProductPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/register"
+                element={
+                  <PublicRoute redirectTo="/">
+                    <RegisterPage />
+                  </PublicRoute>
+                }
+              />
             </Route>
 
-            <Route path="/chat-list" element={<ChatListPopup />} />
-            <Route path="/chat" element={<ChatRoomPopup />} />
+            <Route
+              path="/chat-list"
+              element={
+                <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                  <ChatListPopup />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat"
+              element={
+                <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                  <ChatRoomPopup />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
 
           {/* 2) 모달 화면: backgroundLocation이 있을 때만 "위에 덮는 모달" 렌더 */}
