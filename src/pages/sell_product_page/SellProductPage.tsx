@@ -105,7 +105,7 @@ const SellProductPage = () => {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -116,11 +116,11 @@ const SellProductPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 py-8 px-4 pt-20">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 pt-20">
       <div className="max-w-4xl mx-auto">
         {/* 헤더 */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-bold bg-[rgb(118,90,255)] bg-clip-text text-transparent mb-2">
             상품 판매하기
           </h1>
           <p className="text-gray-600">경매로 당신의 물건을 판매해보세요</p>
@@ -133,14 +133,14 @@ const SellProductPage = () => {
           {/* 이미지 업로드 섹션 */}
           <div>
             <label className="flex items-center text-lg font-semibold text-gray-800 mb-4">
-              <Image className="mr-2 text-purple-600" size={24} />
+              <Image className="mr-2 text-[rgb(118,90,255)]" size={24} />
               상품 이미지 (최대 10장) *
             </label>
 
             <div className="grid grid-cols-5 gap-4">
               {/* 이미지 업로드 버튼 */}
               {images.length < 10 && (
-                <label className="aspect-square border-2 border-dashed border-gray-300 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all cursor-pointer flex flex-col items-center justify-center">
+                <label className="aspect-square border-2 border-dashed border-gray-300 rounded-xl hover:border-[rgb(118,90,255)] hover:bg-blue-50 transition-all cursor-pointer flex flex-col items-center justify-center">
                   <input
                     type="file"
                     multiple
@@ -165,7 +165,7 @@ const SellProductPage = () => {
                     className="w-full h-full object-cover"
                   />
                   {index === 0 && (
-                    <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs px-2 py-1 rounded-full">
+                    <div className="absolute top-2 left-2 bg-[rgb(118,90,255)] text-white text-xs px-2 py-1 rounded-full">
                       대표
                     </div>
                   )}
@@ -189,7 +189,7 @@ const SellProductPage = () => {
             {/* 상품명 */}
             <div className="md:col-span-2">
               <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                <Package className="mr-2 text-purple-600" size={18} />
+                <Package className="mr-2 text-[rgb(118,90,255)]" size={18} />
                 상품명 *
               </label>
               <input
@@ -198,7 +198,7 @@ const SellProductPage = () => {
                 value={formData.productName}
                 onChange={handleChange}
                 placeholder="상품명을 입력하세요"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(118,90,255)] focus:border-transparent"
                 required
               />
             </div>
@@ -224,7 +224,7 @@ const SellProductPage = () => {
             {/* 시작 가격 */}
             <div>
               <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                <DollarSign className="mr-2 text-purple-600" size={18} />
+                <DollarSign className="mr-2 text-[rgb(118,90,255)]" size={18} />
                 시작 가격 *
               </label>
               <div className="relative">
@@ -235,7 +235,7 @@ const SellProductPage = () => {
                   onChange={handleChange}
                   placeholder="0"
                   min="0"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(118,90,255)] focus:border-transparent"
                   required
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">
@@ -256,7 +256,7 @@ const SellProductPage = () => {
               onChange={handleChange}
               placeholder="상품에 대해 자세히 설명해주세요"
               rows={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(118,90,255)] focus:border-transparent resize-none"
               required
             />
             <p className="text-sm text-gray-500 mt-2">
@@ -266,11 +266,11 @@ const SellProductPage = () => {
           </div>
 
           {/* 주의사항 */}
-          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-            <h3 className="font-semibold text-purple-900 mb-2">
+          <div className="bg-blue-300/20 border border-[rgb(118,90,255)] rounded-xl p-4">
+            <h3 className="font-semibold text-gray-900 mb-2">
               판매 시 유의사항
             </h3>
-            <ul className="text-sm text-purple-800 space-y-1">
+            <ul className="text-sm text-gray-600 space-y-1">
               <li>• 정확한 상품 정보를 입력해주세요</li>
               <li>• 실물과 동일한 사진을 업로드해주세요</li>
               <li>• 경매 시작 후에는 취소가 불가능합니다</li>
@@ -290,7 +290,7 @@ const SellProductPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-4 bg-[rgb(118,90,255)] text-white rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 text-white animate-spin" />
