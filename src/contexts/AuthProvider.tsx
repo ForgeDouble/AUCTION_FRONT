@@ -14,17 +14,25 @@ type JwtPayload = {
   sub?: string;
 };
 
-function decodeBase64Url(input: string) {
+// payload 된 것들 푸는 코드 이를 통해서 한글 깨짐 방지
+function decodeBase64UrlUtf8(input: string) {
   const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
   const pad = "=".repeat((4 - (base64.length % 4)) % 4);
-  return atob(base64 + pad);
+  const bin = atob(base64 + pad);
+
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) {
+    bytes[i] = bin.charCodeAt(i);
+  }
+
+  return new TextDecoder("utf-8").decode(bytes);
 }
 
 function parseJwt(token: string): JwtPayload | null {
   try {
     const parts = token.split(".");
   if (parts.length < 2) return null;
-    const json = decodeBase64Url(parts[1]);
+    const json = decodeBase64UrlUtf8(parts[1]);
     return JSON.parse(json);
   } catch {
     return null;
