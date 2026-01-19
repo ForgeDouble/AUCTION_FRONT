@@ -1,8 +1,9 @@
+import type { Authority } from "@/type/CommonType";
 import { createContext } from "react";
 
 export interface AuthContextType {
   userEmail: string | null;
-  authority: string | null;
+  authority: Authority | null;
   isAuthenticated: boolean;
   loading: boolean;
   checkAuth: () => Promise<void>;

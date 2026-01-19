@@ -2,10 +2,11 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { fetchLoginEmail } from "../api/authApi";
 import { AuthContext } from "./AuthContext";
+import type { Authority } from "@/type/CommonType";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [authority, setAuthority] = useState<string | null>(null);
+  const [authority, setAuthority] = useState<Authority | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
