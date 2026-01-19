@@ -1,9 +1,24 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import AuthButtons from "./AuthButtons";
 import logoBid from "@/assets/bid-logo.png";
+import { useModal } from "@/contexts/ModalContext";
+import { useAuth } from "@/hooks/useAuth";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { showLogin } = useModal();
+  const { isAuthenticated } = useAuth();
+
+  const navigateSellProduct = () => {
+    if (!isAuthenticated) {
+      showLogin();
+      console.error("Missing AccessToken");
+      return;
+    }
+
+    navigate("/sell_product");
+  };
+
   return (
     <>
       <nav className="bg-black/20 backdrop-blur-lg border-b border-white/10 fixed top-0 left-0 right-0 z-50">
@@ -38,7 +53,7 @@ const Navbar = () => {
               <button
                 type="button"
                 className="text-gray-100 hover:text-white transition-colors cursor-pointer"
-                onClick={() => navigate("/sell_product")}
+                onClick={() => navigateSellProduct()}
               >
                 판매하기
               </button>
