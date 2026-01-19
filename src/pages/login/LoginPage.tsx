@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, UserPlus, HelpCircle } from "lucide-react";
 import { fetchLogin } from "./LoginApi";
 import { WarningModal } from "../../components/WarningModal";
@@ -6,6 +7,7 @@ import { useAuth } from "../../hooks/useAuth";
 import type { loginRequest } from "./LoginDto";
 
 const LoginPage = () => {
+  const nav = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -132,9 +134,10 @@ const LoginPage = () => {
             <div className="mt-8 pt-7 border-t border-gray-50 text-center">
               <button 
                 type="button"
+                onClick={() => nav("/register")}
                 className="inline-flex items-center justify-center gap-2 text-gray-500 hover:text-[#7C3AED] transition-all group"
               >
-                <span className="text-[14px] font-semibold">아직 비드 회원이 아니신가요?</span>
+                <span className="text-[14px] font-semibold">아직 BID의 회원이 아니신가요?</span>
                 <span className="text-[14px] font-black border-b-2 border-transparent group-hover:border-[#7C3AED] pb-px">회원가입</span>
               </button>
             </div>
