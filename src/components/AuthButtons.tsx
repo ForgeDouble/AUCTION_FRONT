@@ -18,7 +18,7 @@ type NotificationItem = {
 
 function useClickOutside(
   ref: React.RefObject<HTMLDivElement | null>,
-  onClose: () => void
+  onClose: () => void,
 ) {
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -326,7 +326,7 @@ export default function AuthButtons() {
 
   const unreadTotal = Object.values(unread || {}).reduce(
     (a, b) => a + (b || 0),
-    0
+    0,
   );
 
   const handleLogout = () => {
@@ -350,7 +350,7 @@ export default function AuthButtons() {
         left +
         ",top=" +
         top +
-        ",resizable=yes,scrollbars=yes"
+        ",resizable=yes,scrollbars=yes",
     );
   };
 
@@ -367,7 +367,7 @@ export default function AuthButtons() {
         </button>
         <button
           type="button"
-          className="bg-purple-600 text-white px-6 py-2 rounded-full hover:bg-purple-700 transition-colors cursor-pointer"
+          className="bg-[rgb(118,90,255)] text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors cursor-pointer"
           onClick={() => navigate("/register")}
         >
           회원가입
