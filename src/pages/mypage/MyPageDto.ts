@@ -6,6 +6,8 @@ export interface UserProfile {
   joinDate: string;
 }
 
+export type Gender = "M" | "W";
+
 export interface UserDto {
   userId: number;
   name: string;
@@ -14,11 +16,22 @@ export interface UserDto {
   phone: string;
   address: string;
   birthday: string;
-  gender: string;
+  gender: Gender;
   profileImageUrl: string | null;
   warning: number;
   createdAt: string;
 }
+
+export interface UserUpdateDto {
+  name: string;
+  nickname: string;
+  phone: string;
+  address: string;
+  birthday: string;
+  gender: Gender;
+}
+
+export type Status = "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";
 
 export interface ProductListDto {
   productId: number;
@@ -27,7 +40,7 @@ export interface ProductListDto {
   previewImageUrl?: string;
   latestBidAmount: number;
   bidCount: number;
-  status: "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";
+  status: Status;
   auctionEndTime?: string;
 }
 

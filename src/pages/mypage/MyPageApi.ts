@@ -1,9 +1,14 @@
 import type { ApiResponse } from "../../type/CommonType";
 
-import type { BidListDto, ProductListDto, UserDto } from "./MyPageDto";
+import type {
+  BidListDto,
+  ProductListDto,
+  UserDto,
+  UserUpdateDto,
+} from "./MyPageDto";
 
 export const fetchLoginUser = async (
-  token: string | null
+  token: string | null,
 ): Promise<ApiResponse<UserDto>> => {
   const response = await fetch(`http://localhost:8080/user/detail`, {
     method: "GET",
@@ -23,7 +28,7 @@ export const fetchLoginUser = async (
 export const fetchProductsByUser = async (
   token: string | null,
   page: number = 0,
-  size: number = 10
+  size: number = 10,
 ): Promise<
   ApiResponse<{
     content: ProductListDto[];
@@ -41,7 +46,7 @@ export const fetchProductsByUser = async (
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   if (!response.ok) {
@@ -54,7 +59,7 @@ export const fetchProductsByUser = async (
 export const fetchBidsByUser = async (
   token: string | null,
   page: number = 0,
-  size: number = 10
+  size: number = 10,
 ): Promise<
   ApiResponse<{
     content: BidListDto[];
@@ -72,7 +77,7 @@ export const fetchBidsByUser = async (
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   if (!response.ok) {
@@ -85,7 +90,7 @@ export const fetchBidsByUser = async (
 export const fetchProductsByWishlist = async (
   token: string | null,
   page: number = 0,
-  size: number = 10
+  size: number = 10,
 ): Promise<
   ApiResponse<{
     content: ProductListDto[];
@@ -103,11 +108,39 @@ export const fetchProductsByWishlist = async (
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   if (!response.ok) {
     throw new Error(`Failed to fetch products: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+export const fetchUpdateUser = async (
+  token: string | null,
+  userUpdateDto: UserUpdateDto,
+): Promise<ApiResponse<null>> => {
+  const formData = new FormData();
+
+  formData.append("name", userUpdateDto.name);
+  formData.append("nickname", userUpdateDto.nickname);
+  formData.append("phone", userUpdateDto.phone);
+  formData.append("address", userUpdateDto.address);
+  formData.append("gender", userUpdateDto.gender);
+  formData.append("birthday", userUpdateDto.birthday);
+
+  const response = await fetch(`http://localhost:8080/user/update`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch UserUpdate: ${response.status}`);
   }
 
   return response.json();
