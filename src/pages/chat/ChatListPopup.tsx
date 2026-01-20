@@ -33,6 +33,7 @@ export default function ChatListPopup() {
         openAdminAndSelect();
       }}
       
+
       disabled={!canInquiry}
       className={
         "flex items-center gap-1 text-sm px-3 py-1.5 rounded-full transition " +
