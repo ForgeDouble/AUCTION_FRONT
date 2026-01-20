@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { fetchLogin } from "./LoginApi";
 import { useAuth } from "../../hooks/useAuth";
 import type { loginRequest } from "./LoginDto";
 
 const LoginPage = () => {
   const nav = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberEmail, setRememberEmail] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [warningOpen, setWarningOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [rememberEmail, setRememberEmail] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { checkAuth } = useAuth();
 
@@ -43,9 +42,19 @@ const LoginPage = () => {
       await checkAuth();
 
       window.location.replace("/");
-    } catch (err: any) {
-      setError("입력하신 정보가 정확하지 않습니다.");
-      setWarningOpen(true);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes("401")) {
+          console.error(error);
+          setErrorMessage("이메일 또는 비밀번호가 일치하지 않습니다.");
+        } else if (error.message.includes("403")) {
+          console.error(error);
+          setErrorMessage("정지된 계정입니다.");
+        } else {
+          console.error(error);
+          setErrorMessage("서버에서 오류가 발생했습니다.");
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -57,13 +66,13 @@ const LoginPage = () => {
         {/* 정갈한 BID 로고 */}
         <div className="mb-10 text-center">
           <div className="flex items-center justify-center gap-1.5 mb-2">
-            <div className="w-8 h-8 bg-[#7C3AED] rounded-lg flex items-center justify-center shadow-sm shadow-[#7C3AED]/20">
+            <div className="w-8 h-8 bg-[rgb(118,90,255)] rounded-lg flex items-center justify-center shadow-sm shadow-[rgb(118,90,255)]/20">
               <span className="text-white text-[14px] font-black tracking-tighter">
                 B
               </span>
             </div>
             <h1 className="text-3xl font-black text-[#1F2937] tracking-[ -0.05em]">
-              BID<span className="text-[#7C3AED]">.</span>
+              BID<span className="text-[rgb(118,90,255)]">.</span>
             </h1>
           </div>
           <p className="text-gray-500 font-medium text-sm">
@@ -82,7 +91,7 @@ const LoginPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="이메일 주소"
-                  className="w-full h-13 pl-4 pr-4 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-[#7C3AED] focus:ring-4 focus:ring-[#7C3AED]/5 outline-none transition-all text-[15px] font-semibold text-gray-800 placeholder-gray-400"
+                  className="w-full h-13 pl-4 pr-4 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-[rgb(118,90,255)] focus:ring-4 focus:ring-[rgb(118,90,255)]/5 outline-none transition-all text-[15px] font-semibold text-gray-800 placeholder-gray-400"
                 />
               </div>
 
@@ -94,7 +103,7 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="비밀번호"
-                  className="w-full h-13 pl-4 pr-12 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-[#7C3AED] focus:ring-4 focus:ring-[#7C3AED]/5 outline-none transition-all text-[15px] font-semibold text-gray-800 placeholder-gray-400"
+                  className="w-full h-13 pl-4 pr-12 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-[rgb(118,90,255)] focus:ring-4 focus:ring-[rgb(118,90,255)]/5 outline-none transition-all text-[15px] font-semibold text-gray-800 placeholder-gray-400"
                 />
                 <button
                   type="button"
@@ -144,23 +153,31 @@ const LoginPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-13 bg-[#7C3AED] hover:bg-[#6D28D9] disabled:bg-gray-200 text-white rounded-2xl font-black text-[16px] transition-all shadow-lg shadow-[#7C3AED]/10 active:scale-[0.99] mt-2"
+                className="flex items-center justify-center w-full h-13 bg-[rgb(118,90,255)] hover:bg-[rgb(90,58,252)] disabled:bg-gray-200 text-white rounded-2xl font-black text-[16px] transition-all shadow-lg shadow-[#7C3AED]/10 active:scale-[0.99] mt-2"
               >
-                {loading ? "로그인 중" : "로그인"}
+                {loading ? (
+                  <Loader2 className="w-5 h-5 text-white animate-spin" />
+                ) : (
+                  "로그인"
+                )}
               </button>
             </form>
 
+            <div className="flex justify-center mt-4">
+              <span className="text-red-600">{errorMessage}</span>
+            </div>
+
             {/* 회원가입 섹션 (자연스럽게 하단에 통합) */}
-            <div className="mt-8 pt-7 border-t border-gray-50 text-center">
+            <div className="mt-4 pt-3 border-t border-gray-50 text-center">
               <button
                 type="button"
                 onClick={() => nav("/register")}
-                className="inline-flex items-center justify-center gap-2 text-gray-500 hover:text-[#7C3AED] transition-all group"
+                className="inline-flex items-center justify-center gap-2 text-gray-500 hover:text-[rgb(118,90,255)] transition-all group cursor-pointer"
               >
                 <span className="text-[14px] font-semibold">
                   아직 BID의 회원이 아니신가요?
                 </span>
-                <span className="text-[14px] font-black border-b-2 border-transparent group-hover:border-[#7C3AED] pb-px">
+                <span className="text-[14px] font-black border-b-2 border-transparent group-hover:border-[rgb(118,90,255)] pb-px">
                   회원가입
                 </span>
               </button>
@@ -181,13 +198,6 @@ const LoginPage = () => {
           </button>
         </div>
       </div>
-
-      {/* <WarningModal
-        isOpen={warningOpen}
-        onClose={() => setWarningOpen(false)}
-        title="로그인 오류"
-        message={error}
-      /> */}
     </div>
   );
 };
