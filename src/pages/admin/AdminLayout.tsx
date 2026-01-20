@@ -1,7 +1,6 @@
 // src/pages/admin/AdminLayout.tsx
 import React, { useEffect, useState } from "react";
-// import React from "react";
-import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
+import { NavLink, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
   CalendarDays,
@@ -18,6 +17,7 @@ import {
   UserCircle2,
   Home,
   Clock,
+  MessagesSquare,
 } from "lucide-react";
 import { useAdminStore } from "./AdminContext";
 
@@ -65,9 +65,7 @@ function formatRemain(sec: number): string {
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
 
-  if (h > 0) {
-    return `로그아웃까지 ${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  }
+  if (h > 0) return `로그아웃까지 ${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   return `로그아웃까지 ${m}:${String(s).padStart(2, "0")}`;
 }
 
@@ -85,12 +83,15 @@ const SideItem: React.FC<{ to: string; icon: React.ElementType; label: string; b
         (isActive ? "bg-violet-600 text-white" : "text-gray-700 hover:bg-gray-100")
       }
     >
-      <span className="flex items-center gap-2">
-        <Icon className="w-4 h-4" />
-        <span className="font-medium">{label}</span>
+      <span className="flex items-center gap-2 min-w-0">
+        <Icon className="w-4 h-4 shrink-0" />
+        <span className="font-medium truncate">{label}</span>
       </span>
+
       {typeof badge === "number" && badge > 0 && (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-pink-600 text-white">{badge}</span>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-pink-600 text-white shrink-0">
+          {badge}
+        </span>
       )}
     </NavLink>
   );
@@ -98,6 +99,8 @@ const SideItem: React.FC<{ to: string; icon: React.ElementType; label: string; b
 
 const AdminLayout: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
   const {
     adminEmail,
     adminNick,
@@ -110,6 +113,7 @@ const AdminLayout: React.FC = () => {
     noticesCount,
     reportsOpenCount,
     extendAdminSession,
+    chatUnreadTotal,
   } = useAdminStore();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -118,36 +122,20 @@ const AdminLayout: React.FC = () => {
 
   useEffect(() => {
     const tick = () => setRemainSec(safeJwtRemainingSeconds());
-
     tick();
     const id = window.setInterval(tick, 1000);
 
     const onStorage = (e: StorageEvent) => {
-    if (e.key === "accessToken") tick();
+      if (e.key === "accessToken") tick();
     };
     window.addEventListener("storage", onStorage);
 
     return () => {
-    window.clearInterval(id);
-    window.removeEventListener("storage", onStorage);
+      window.clearInterval(id);
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
-  // const onRefresh = () => {
-    
-  //   if (location.pathname.startsWith("/admin/auctions")) {
-  //     const sp = new URLSearchParams(location.search);
-  //     const page = Number(sp.get("page") ?? "1");
-  //     const size = Number(sp.get("size") ?? "10");
 
-  //     void refreshAll({
-  //       auctionsPageUi: Number.isFinite(page) ? page : 1,
-  //       auctionsSize: Number.isFinite(size) ? size : 10,
-  //     });
-  //     return;
-  //   }
-
-  //   void refreshAll();
-  // };
   const onRefresh = async () => {
     if (refreshing) return;
     setRefreshing(true);
@@ -172,11 +160,15 @@ const AdminLayout: React.FC = () => {
     }
   };
 
+  const goChats = () => {
+    if (location.pathname.startsWith("/admin/chats")) return;
+    navigate("/admin/chats");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200">
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-3">
-
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-white" />
@@ -192,7 +184,7 @@ const AdminLayout: React.FC = () => {
 
             <div>
               <div className="text-sm font-bold text-gray-900">경매 관리자</div>
-              <div className="text-[11px] text-gray-500">실시간 모니터링 / 신고 / 운영 일정</div>
+              <div className="text-[11px] text-gray-500">실시간 모니터링 / 신고 / 운영 일정 / 채팅</div>
             </div>
           </div>
 
@@ -209,6 +201,21 @@ const AdminLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* 상단 채팅 아이콘 */}
+            <button
+              onClick={goChats}
+              className="relative px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 hover:bg-gray-50"
+              title="운영 채팅"
+            >
+              <MessagesSquare className="w-4 h-4 text-gray-700" />
+              <span className="hidden md:inline">채팅</span>
+              {chatUnreadTotal > 0 && (
+                <span className="absolute -top-2 -right-2 text-[10px] px-2 py-0.5 rounded-full bg-pink-600 text-white">
+                  {chatUnreadTotal}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={onExtend}
               disabled={extending}
@@ -219,27 +226,20 @@ const AdminLayout: React.FC = () => {
               title="로그인 연장"
             >
               <Clock className={"w-4 h-4 text-gray-700 " + (extending ? "animate-spin" : "")} />
-              <span className="hidden md:inline w-[60px] text-center">
-                {extending ? "연장중" : "연장"}
-              </span>
+              <span className="hidden md:inline w-[60px] text-center">{extending ? "연장중" : "연장"}</span>
             </button>
 
             <button
-              onClick={onRefresh}         
-              disabled={refreshing}     
+              onClick={onRefresh}
+              disabled={refreshing}
               className={
                 "px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 " +
                 (refreshing ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
               }
               title="새로고침"
             >
-              <RefreshCw
-                className={"w-4 h-4 text-gray-700 " + (refreshing ? "animate-spin" : "")}
-              />
-
-              <span className="hidden md:inline w-[60px] text-center">
-                {refreshing ? "Refreshing" : "Refresh"}
-              </span>
+              <RefreshCw className={"w-4 h-4 text-gray-700 " + (refreshing ? "animate-spin" : "")} />
+              <span className="hidden md:inline w-[60px] text-center">{refreshing ? "Refreshing" : "Refresh"}</span>
             </button>
 
             <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
@@ -256,7 +256,6 @@ const AdminLayout: React.FC = () => {
 
         <div className="max-w-[1600px] mx-auto px-4 pb-2 flex items-center justify-between">
           <div className="text-[11px] text-gray-500">Last updated: {formatKST(lastUpdatedAt)}</div>
-
           <div className="flex items-center gap-1 text-[11px] text-black-600">
             <Clock className="w-3.5 h-3.5" />
             <span>{formatRemain(remainSec)}</span>
@@ -283,6 +282,10 @@ const AdminLayout: React.FC = () => {
             <SideItem to="/admin/reports" icon={Siren} label="신고 관리" badge={reportsOpenCount} />
             <SideItem to="/admin/calendar" icon={CalendarDays} label="운영 캘린더" />
             <SideItem to="/admin/notices" icon={Megaphone} label="인수인계/공지" badge={noticesCount} />
+
+            {/* 채팅 메뉴(추가) */}
+            <SideItem to="/admin/chats" icon={MessagesSquare} label="운영 채팅" badge={chatUnreadTotal} />
+
             <SideItem to="/admin/users" icon={Users} label="유저/권한 관리" />
 
             <NavLink

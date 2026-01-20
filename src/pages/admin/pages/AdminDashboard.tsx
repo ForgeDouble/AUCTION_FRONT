@@ -10,6 +10,7 @@ import AdminReportsPage from "./AdminReportsPage";
 import AdminCalendarPage from "./AdminCalendarPage";
 import AdminNoticesPage from "./AdminNoticesPage";
 import AdminUsersPage from "./AdminUsersPage";
+import AdminChatPage from "./AdminChatPage";
 
 const AdminDashboard: React.FC = () => {
   return (
@@ -22,6 +23,7 @@ const AdminDashboard: React.FC = () => {
           <Route path="calendar" element={<AdminCalendarPage />} />
           <Route path="notices" element={<AdminNoticesPage />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="chats" element={<AdminChatPage />} />
         </Route>
       </Routes>
     </AdminProvider>

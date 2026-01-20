@@ -1,10 +1,15 @@
 //pages/chat/ChatListPopup.tsx
 import React from "react";
 import { useChat } from "@/hooks/useChat";
+import { useAuth } from "@/hooks/useAuth";
 import { Plus } from "lucide-react";
+
 
 export default function ChatListPopup() {
   const { rooms, openAdminAndSelect } = useChat();
+
+  const { isAuthenticated, authority } = useAuth();
+  const canInquiry = isAuthenticated && authority === "USER";
 
   const openRoomWindow = (roomId: string) => {
     const w = 420, h = 720;
@@ -22,7 +27,26 @@ export default function ChatListPopup() {
     {/* 상단 바 */}
     <div className="sticky top-0 z-10 bg-white/70 backdrop-blur border-b border-black/5 px-4 py-3 flex items-center justify-between">
     <div className="font-bold text-gray-800">채팅</div>
-    <button onClick={openAdminAndSelect} className="flex items-center gap-1 text-sm bg-purple-600 text-white px-3 py-1.5 rounded-full hover:bg-purple-700" title="관리자에게 문의하기" >
+    <button type="button"
+      onClick={() => {
+        if (!canInquiry) return;
+        openAdminAndSelect();
+      }}
+      
+
+      disabled={!canInquiry}
+      className={
+        "flex items-center gap-1 text-sm px-3 py-1.5 rounded-full transition " +
+        (canInquiry
+          ? "bg-purple-600 text-white hover:bg-purple-700"
+          : "bg-gray-200 text-gray-400 cursor-not-allowed")
+      }
+      title={
+        canInquiry
+          ? "관리자에게 문의하기"
+          : "문의하기는 USER 권한에서만 가능합니다."
+      }
+    >
       <Plus size={16} /> 문의하기
     </button>
     </div>
