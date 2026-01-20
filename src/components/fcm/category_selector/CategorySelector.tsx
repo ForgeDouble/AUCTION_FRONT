@@ -20,7 +20,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-left flex items-center justify-between"
+        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(118,90,255)] focus:border-transparent bg-white text-left flex items-center justify-between"
       >
         <span className={selectedCategory ? "text-gray-900" : "text-gray-400"}>
           {selectedCategory?.categoryName || "선택하세요"}
@@ -53,7 +53,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                       onClick={() => {
                         onSelectCategory(
                           parent.categoryId,
-                          parent.categoryName
+                          parent.categoryName,
                         );
                         setIsOpen(false);
                         setHoveredParentId(null);
@@ -89,7 +89,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                         onClick={() => {
                           onSelectCategory(
                             child.categoryId,
-                            child.categoryName
+                            child.categoryName,
                           );
                           setIsOpen(false);
                           setHoveredParentId(null);

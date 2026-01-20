@@ -1,4 +1,3 @@
-// contexts/authprovider.tsx
 import { useState, useEffect, type ReactNode } from "react";
 import { fetchLoginEmail } from "../api/authApi";
 import { AuthContext, type Authority } from "./AuthContext";
@@ -45,7 +44,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [nickname, setNickname] = useState<string | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [authority, setAuthority] = useState<Authority | null>(null);
-
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -56,6 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setProfileImageUrl(null);
     setAuthority(null);
     setIsAuthenticated(false);
+    setLoading(false);
   };
 
   const checkAuth = async () => {
@@ -64,12 +63,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!token) {
         clearAuth();
-        setLoading(false);
         return;
       }
 
       const response = await fetchLoginEmail(token);
-
       const payload = parseJwt(token);
 
       const emailFromServer = response?.result ?? null;
@@ -89,7 +86,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setNickname(payload?.nick ?? null);
       setProfileImageUrl(payload?.purl ?? null);
       setAuthority((payload?.authority as Authority) ?? null);
-
       setIsAuthenticated(true);
     } catch (err) {
       console.error("인증 확인 실패:", err);
@@ -111,7 +107,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{userEmail, userId, nickname, profileImageUrl, authority, isAuthenticated, loading, checkAuth, logout, }}>
+      value={{
+        userEmail,
+        userId,
+        nickname,
+        profileImageUrl,
+        authority,
+        isAuthenticated,
+        loading,
+        checkAuth,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

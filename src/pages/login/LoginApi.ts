@@ -11,11 +11,10 @@ export const fetchLogin = async (
       "Content-Type": "application/json",
     },
     body: JSON.stringify(loginDto),
-    credentials: "include", // 필요하면 쿠키 포함
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    throw new Error(`Failed to fetch login: ${response.status}`);
   }
 
   return response.json();

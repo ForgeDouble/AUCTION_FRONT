@@ -9,7 +9,6 @@ export const fetchBidsFromRedis = async (
     headers: {
       "Content-Type": "application/json",
     },
-    credentials: "include", // 필요하면 쿠키 포함
   });
 
   if (!response.ok) {
@@ -27,7 +26,6 @@ export const fetchProductById = async (
     headers: {
       "Content-Type": "application/json",
     },
-    credentials: "include",
   });
 
   if (!response.ok) {
@@ -47,7 +45,6 @@ export const fetchSellerByProductId = async (
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include",
     }
   );
 
@@ -66,7 +63,6 @@ export const fetchBidsFromDB = async (
     headers: {
       "Content-Type": "application/json",
     },
-    credentials: "include",
   });
 
   if (!response.ok) {
@@ -88,7 +84,6 @@ export const fetchIsWishlisted = async (
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      credentials: "include",
     }
   );
 

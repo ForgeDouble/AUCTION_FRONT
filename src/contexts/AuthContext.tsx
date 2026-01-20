@@ -1,3 +1,4 @@
+import type { Authority } from "@/type/CommonType";
 import { createContext } from "react";
 
 export type Authority = "USER" | "ADMIN" | "INQUIRY" | string;
@@ -8,7 +9,6 @@ export interface AuthContextType {
   nickname: string | null;
   profileImageUrl: string | null;
   authority: Authority | null;
-
   isAuthenticated: boolean;
   loading: boolean;
   checkAuth: () => Promise<void>;
@@ -21,7 +21,6 @@ export const AuthContext = createContext<AuthContextType>({
   nickname: null,
   profileImageUrl: null,
   authority: null,
-  
   isAuthenticated: false,
   loading: true,
   checkAuth: async () => {},

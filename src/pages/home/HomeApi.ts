@@ -12,7 +12,7 @@ export const fetchTop3Products = async (): Promise<
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    throw new Error(`Failed to fetch Products: ${response.status}`);
   }
 
   return response.json();
@@ -29,7 +29,7 @@ export const fetchParentCategories = async (): Promise<
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    throw new Error(`Failed to fetch categories: ${response.status}`);
   }
 
   return response.json();

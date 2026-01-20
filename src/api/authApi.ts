@@ -1,9 +1,9 @@
 // api/authApi.ts
-import type { ApiResponse } from "../type/CommonType";
+import type { ApiResponse, UserTokenDto } from "../type/CommonType";
 
 export const fetchLoginEmail = async (
-  token: string
-): Promise<ApiResponse<string>> => {
+  token: string,
+): Promise<ApiResponse<UserTokenDto>> => {
   const response = await fetch(`http://localhost:8080/user/verify-token`, {
     method: "GET",
     headers: {

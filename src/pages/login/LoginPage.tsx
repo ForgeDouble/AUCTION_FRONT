@@ -26,8 +26,10 @@ const LoginPage = () => {
     }
   }, []);
 
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     if (loading) return;
     setLoading(true);
 
@@ -41,12 +43,14 @@ const LoginPage = () => {
       localStorage.setItem("accessToken", result.result.token);
       localStorage.setItem("userId", email);
       await checkAuth();
+
       window.location.replace("/");
     } catch (err: any) {
       setError("입력하신 정보가 정확하지 않습니다.");
       setWarningOpen(true);
+
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -67,6 +71,7 @@ const LoginPage = () => {
           <p className="text-gray-500 font-medium text-sm">스마트한 경매의 시작</p>
         </div>
 
+
         {/* 메인 로그인 컨테이너 */}
         <div className="bg-white rounded-[32px] shadow-[0_12px_40px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden transition-all">
           <div className="p-8 md:p-10">
@@ -74,6 +79,7 @@ const LoginPage = () => {
               
               {/* 이메일 입력 */}
               <div className="relative group">
+
                 <input
                   type="email"
                   value={email}
@@ -84,6 +90,7 @@ const LoginPage = () => {
               </div>
 
               {/* 비밀번호 입력 */}
+
               <div className="relative group">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -99,7 +106,9 @@ const LoginPage = () => {
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
+
               </div>
+
 
               {/* 로그인 보조 기능 */}
               <div className="flex items-center justify-between py-1">
@@ -118,6 +127,7 @@ const LoginPage = () => {
                   <span className="w-1 h-1 bg-gray-200 rounded-full" />
                   <button type="button" className="hover:text-gray-600 transition-colors">비밀번호 찾기</button>
                 </div>
+
               </div>
 
               {/* 로그인 버튼 (화살표 제거) */}
@@ -154,12 +164,14 @@ const LoginPage = () => {
         </div>
       </div>
 
+
       <WarningModal
         isOpen={warningOpen}
         onClose={() => setWarningOpen(false)}
         title="로그인 오류"
         message={error}
       />
+
     </div>
   );
 };

@@ -27,12 +27,11 @@ export const fetchCreateProduct = async (
       // 인증이 필요한 경우 Authorization 헤더 추가
       Authorization: `Bearer ${token}`,
     },
-    // credentials: 'include', // 쿠키 기반 인증을 사용하는 경우
     body: formData,
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch products: ${response.status}`);
+    throw new Error(`Failed to fetch product: ${response.status}`);
   }
 
   return await response.json();
@@ -46,11 +45,10 @@ export const fetchParentCategories = async (): Promise<
     headers: {
       "Content-Type": "application/json",
     },
-    credentials: "include", // 필요하면 쿠키 포함
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    throw new Error(`Failed to fetch categories: ${response.status}`);
   }
 
   return response.json();

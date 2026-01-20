@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Clock, Eye } from "lucide-react";
 import { fetchProductsByUser } from "../MyPageApi";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { PageInfo } from "../MyPageDto";
+import type { PageInfo, ProductListDto } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
+import { useModal } from "@/contexts/ModalContext";
 
 // Placeholder image component
 const PlaceholderImg = () => (
@@ -12,21 +13,12 @@ const PlaceholderImg = () => (
   </div>
 );
 
-interface ProductListDto {
-  productId: number;
-  productName: string;
-  previewImageUrl?: string;
-  latestBidAmount: number;
-  bidCount: number;
-  status: "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";
-  auctionEndTime?: string;
-}
-
 const MyAuctionlist = () => {
+  const { showLogin, showError } = useModal();
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<ProductListDto[]>([]);
   const [currentPage, setCurrentPage] = useState(
-    parseInt(searchParams.get("page") || "0")
+    parseInt(searchParams.get("page") || "0"),
   );
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     totalElements: 0,
@@ -100,6 +92,12 @@ const MyAuctionlist = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
+      if (token == null) {
+        showLogin();
+        console.error("Missing AccessToken");
+        return;
+      }
+
       const data = await fetchProductsByUser(token, page, size);
       setProducts(data.result.content);
       setPageInfo({
@@ -112,6 +110,7 @@ const MyAuctionlist = () => {
       console.log(data);
     } catch (error) {
       console.error(error);
+      showError();
     } finally {
       setLoading(false);
     }
@@ -134,17 +133,19 @@ const MyAuctionlist = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black pt-24 pb-12">
+    <div className="min-h-screen bg-gray-50 pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-4">
-            <div className="bg-black/40 backdrop-blur-lg rounded-2xl border border-white/10 p-8">
+            {/* 메인 컨테이너: 흰색 배경에 그림자 추가 */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-8">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">
+                {/* 제목: 검정색 텍스트 */}
+                <h2 className="text-2xl font-bold text-gray-900">
                   내가 등록한 경매
                 </h2>
                 {pageInfo.totalElements > 0 && (
-                  <span className="text-gray-400 text-sm">
+                  <span className="text-gray-500 text-sm">
                     총 {pageInfo.totalElements}개
                   </span>
                 )}
@@ -170,10 +171,11 @@ const MyAuctionlist = () => {
                               navigate(`/auction_detail/${product.productId}`);
                             }
                           }}
-                          className={`bg-white/5 rounded-xl p-4 border border-white/10 transition-all ${
+                          // 카드 스타일: 흰색 배경, 회색 테두리, 그림자 효과
+                          className={`bg-white rounded-xl p-4 border border-gray-200 transition-all ${
                             isClickable
-                              ? "hover:border-purple-500 cursor-pointer hover:transform hover:scale-105"
-                              : "opacity-60 cursor-not-allowed"
+                              ? "hover:border-purple-500 cursor-pointer hover:shadow-md hover:scale-[1.02]"
+                              : "opacity-60 cursor-not-allowed bg-gray-50"
                           }`}
                         >
                           <div className="relative mb-3">
@@ -181,17 +183,17 @@ const MyAuctionlist = () => {
                               <img
                                 src={product.previewImageUrl}
                                 alt={product.productName}
-                                className="w-full h-48 object-cover rounded-lg"
+                                className="w-full h-48 object-cover rounded-lg border border-gray-100"
                               />
                             ) : (
                               <PlaceholderImg />
                             )}
 
-                            {/* 상태 오버레이 */}
+                            {/* 상태 오버레이 (이미지 위 텍스트 가독성을 위해 어두운 배경 유지) */}
                             {(product.status === "READY" ||
                               product.status === "NOTSELLED" ||
                               product.status === "SELLED") && (
-                              <div className="absolute inset-0 bg-black/70 rounded-lg flex items-center justify-center">
+                              <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center">
                                 <div className="text-center">
                                   {product.status === "READY" ? (
                                     <>
@@ -214,19 +216,20 @@ const MyAuctionlist = () => {
 
                             {/* 상태 뱃지 - 우측 상단 */}
                             <div
-                              className={`absolute top-3 right-3 ${statusBadge.bgColor} ${statusBadge.textColor} px-3 py-1 rounded-full text-xs font-bold`}
+                              className={`absolute top-3 right-3 ${statusBadge.bgColor} ${statusBadge.textColor} px-3 py-1 rounded-full text-xs font-bold shadow-sm`}
                             >
                               {statusBadge.text}
                             </div>
                           </div>
 
-                          <h3 className="text-white font-semibold mb-3 line-clamp-2">
+                          {/* 상품명: 짙은 회색 */}
+                          <h3 className="text-gray-900 font-semibold mb-3 line-clamp-2">
                             {product.productName}
                           </h3>
 
                           <div className="space-y-2">
                             <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-400">
+                              <span className="text-gray-500">
                                 {product.status === "SELLED"
                                   ? "낙찰가"
                                   : "현재가"}
@@ -234,10 +237,10 @@ const MyAuctionlist = () => {
                               <span
                                 className={`font-bold ${
                                   product.status === "SELLED"
-                                    ? "text-purple-400"
+                                    ? "text-purple-600" // 가독성을 위해 조금 더 진하게
                                     : product.status === "NOTSELLED"
-                                    ? "text-gray-400"
-                                    : "text-green-400"
+                                      ? "text-gray-400"
+                                      : "text-green-600" // 흰 배경에 잘 보이도록 진한 초록
                                 }`}
                               >
                                 {product.latestBidAmount === 0
@@ -247,31 +250,32 @@ const MyAuctionlist = () => {
                             </div>
 
                             <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-400">입찰 수</span>
-                              <span className="text-white font-semibold">
+                              <span className="text-gray-500">입찰 수</span>
+                              <span className="text-gray-900 font-semibold">
                                 {product.bidCount - 1}건
                               </span>
                             </div>
 
+                            {/* 하단 메시지 영역 구분선: 연회색 */}
                             {product.status === "READY" && (
-                              <div className="mt-3 pt-3 border-t border-white/10">
-                                <p className="text-xs text-gray-400 text-center">
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <p className="text-xs text-gray-500 text-center">
                                   경매 시작 대기 중
                                 </p>
                               </div>
                             )}
 
                             {product.status === "NOTSELLED" && (
-                              <div className="mt-3 pt-3 border-t border-white/10">
-                                <p className="text-xs text-gray-400 text-center">
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <p className="text-xs text-gray-500 text-center">
                                   입찰자가 없어 유찰되었습니다
                                 </p>
                               </div>
                             )}
 
                             {product.status === "SELLED" && (
-                              <div className="mt-3 pt-3 border-t border-white/10">
-                                <p className="text-xs text-purple-400 text-center font-semibold">
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <p className="text-xs text-purple-600 text-center font-semibold">
                                   낙찰 완료
                                 </p>
                               </div>
