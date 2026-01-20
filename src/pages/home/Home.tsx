@@ -165,7 +165,7 @@ const Home = () => {
                   placeholder="원하는 아이템을 검색해보세요..."
                   className="w-full pl-12 pr-28 py-3.5 rounded-2xl bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/60 shadow-sm"
                 />
-                <button className="absolute right-2 top-1/2 -translate-y-1/2 px-6 py-2 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+                <button className="absolute right-2 top-1/2 -translate-y-1/2 px-6 py-2 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-semibold hover:bg-[rgb(90,58,252)] transition-colors cursor-pointer">
                   검색
                 </button>
               </div>
@@ -244,7 +244,7 @@ const Home = () => {
                         onClick={() =>
                           navigate(`/auction_detail/${item.productId}`)
                         }
-                        className="w-full bg-[rgb(118,90,255)] text-white py-2 rounded-xl hover:bg-blue-700 text-sm font-medium cursor-pointer transition-colors"
+                        className="w-full bg-[rgb(118,90,255)] text-white py-2 rounded-xl hover:bg-[rgb(90,58,252)] text-sm font-medium cursor-pointer transition-colors"
                       >
                         입찰 참여하기
                       </button>
@@ -369,7 +369,7 @@ const Home = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={() => navigate(`/register`)}
-                className="px-8 py-3 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-semibold hover:bg-blue-700 cursor-pointer transition-colors"
+                className="px-8 py-3 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-semibold hover:bg-[rgb(90,58,252)] cursor-pointer transition-colors"
               >
                 무료 회원가입
                 <ArrowRight className="inline-block ml-2 h-4 w-4" />
