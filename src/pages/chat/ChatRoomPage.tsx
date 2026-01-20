@@ -33,7 +33,7 @@ const ChatRoomPage: React.FC = () => {
     }
   };
 
-  // 방 제목 (리스트에 없을 때 대비)
+  // 방 제목
   const title =
     currentRoom?.title ||
     rooms.find((r) => r.roomId === roomId)?.title ||

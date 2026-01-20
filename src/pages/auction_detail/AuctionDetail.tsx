@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
+import ReportModal from "@/components/report/ReportModal";
+import { openRoom } from "@/api/chatApi";
 import {
   Heart,
   Share2,
@@ -52,6 +54,11 @@ const AuctionDetail = () => {
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 실시간 입찰 내역 저장
   const [stompClient, setStompClient] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  // 신고 모달 연결
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportMode, setReportMode] = useState<"USER" | "PRODUCT">("USER");
+
 
   const calculateTimeLeft = (endTime: string) => {
     const now = dayjs();
@@ -351,6 +358,45 @@ const AuctionDetail = () => {
   const prevImage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
+
+  const openRoomWindow = (roomId: string) => {
+    const w = 420, h = 720;
+    const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2);
+    const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2);
+
+    window.open(
+      "/chat?roomId=" + encodeURIComponent(roomId),
+      "chat_room_" + roomId,
+      "popup=yes,width=" + w + ",height=" + h + ",left=" + left + ",top=" + top + ",resizable=yes,scrollbars=yes"
+    );
+  };
+
+  const handleContactSeller = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    const sellerEmail = sellerInfo?.email;
+    if (!sellerEmail) {
+      alert("판매자 이메일 정보가 없어 채팅을 열 수 없습니다. (sellerInfo.email 누락)");
+      return;
+    }
+
+    try {
+      const roomId = await openRoom(token, { targetEmail: sellerEmail, adminChat: false });
+      if (!roomId) {
+        alert("채팅방 생성/조회에 실패했습니다.");
+        return;
+      }
+      openRoomWindow(roomId);
+    } catch (e: any) {
+      console.error(e);
+      alert("채팅방 연결 실패\n" + String(e?.message ?? ""));
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -664,10 +710,20 @@ const AuctionDetail = () => {
             <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-white">판매자 정보</h3>
-                <div className="flex items-center text-gray-400 hover:text-red-400 transition-colors cursor-pointer">
-                  <Siren className="h-4 w-4 mr-1" />
-                  <span className="text-sm">신고하기</span>
-                </div>
+                  <div
+                    className="flex items-center text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (!sellerInfo?.userId) {
+                        alert("판매자 정보(userId)가 없어 신고할 수 없습니다.");
+                        return;
+                      }
+                      setReportMode("USER");
+                      setReportOpen(true);
+                    }}
+                  >
+                    <Siren className="h-4 w-4 mr-1" />
+                    <span className="text-sm">신고하기</span>
+                  </div>
               </div>
 
               <div className="flex items-center mb-4">
@@ -707,7 +763,10 @@ const AuctionDetail = () => {
                 </div> */}
               </div>
 
-              <button className="w-full mt-4 bg-white/10 border border-white/20 text-white py-2 rounded-lg hover:bg-white/20 transition-all duration-300">
+              <button
+                onClick={handleContactSeller}
+                className="w-full mt-4 bg-white/10 border border-white/20 text-white py-2 rounded-lg hover:bg-white/20 transition-all duration-300"
+              >
                 <MessageCircle className="h-4 w-4 inline mr-2" />
                 판매자 문의
               </button>
@@ -785,8 +844,18 @@ const AuctionDetail = () => {
           </div>
         </div>
       </div>
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        mode={reportMode}
+        targetUserId={sellerInfo?.userId}
+        targetUserName={sellerInfo?.nickname}
+      />
     </div>
+
+    
   );
+
 };
 
 export default AuctionDetail;

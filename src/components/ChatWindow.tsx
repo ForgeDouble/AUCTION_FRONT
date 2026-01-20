@@ -86,7 +86,7 @@ export default function ChatWindow({ title, messages }: Props) {
               </div>
             ) : (
               <div className="flex justify-start mb-1">
-                <div className="flex items-start gap-2 max-w-[80%]"><div className="w-8 h-8 shrink-0 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 text-xs font-semibold overflow-hidden">
+                <div className="flex items-start gap-2 max-w-[80%] min-w-0"><div className="w-8 h-8 shrink-0 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 text-xs font-semibold overflow-hidden">
                     {m.senderProfileImageUrl ? (
                       <img
                         src={m.senderProfileImageUrl}
@@ -97,11 +97,11 @@ export default function ChatWindow({ title, messages }: Props) {
                       initial
                     )}
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col min-w-0">
                     <div className="text-[11px] text-gray-500 mb-0.5">
                       {nickname}
                     </div>
-                    <div className="max-w-[100%] rounded-2xl px-2 py-1.5 text-[13px] leading-snug shadow-sm bg-white text-gray-800 border border-black/5"> 
+                    <div className="max-w-full min-w-0 rounded-2xl px-2 py-1.5 text-[13px] leading-snug shadow-sm bg-white text-gray-800 border border-black/5"> 
                     {isImage ? ( <a href={m.content} target="_blank" rel="noreferrer" className="block" > <img src={m.content} alt="받은 이미지" className="max-w-[220px] max-h-[260px] rounded-xl object-cover" /> </a> ) : ( <div className="whitespace-pre-wrap break-words">{m.content}</div> )} 
                     <div className="text-gray-500 text-[10px] mt-0.5 text-right"> {showTime} </div> 
                   </div>
