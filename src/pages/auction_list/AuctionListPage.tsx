@@ -761,8 +761,8 @@ const AuctionListPage = () => {
                         <button
                           className={`px-6 py-2 rounded-xl transition-all duration-300 font-bold ${
                             auction.status === "READY"
-                              ? "w-full bg-[rgb(118,90,255)]  text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold cursor-not-allowed"
-                              : "w-full bg-[rgb(118,90,255)]  text-white py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-bold cursor-pointer"
+                              ? "w-full bg-[rgb(118,90,255)] text-white py-3 rounded-xl transition-all duration-300 font-bold cursor-not-allowed"
+                              : "w-full bg-[rgb(118,90,255)] text-white py-3 rounded-xl hover:bg-[rgb(90,58,252)] transition-all duration-300 font-bold cursor-pointer"
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -856,51 +856,51 @@ const AuctionListPage = () => {
                             </div>
                           </div>
 
-                          {/* 우측 하단: 찜 + (지역/입찰수 & 버튼) */}
-                          <div className="flex items-end space-x-3">
-                            {userEmail !== auction.userEmail && (
-                              <button
-                                className="text-gray-400 hover:text-red-500 transition-colors p-2 mb-1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleWishlistToggle(auction.productId);
-                                }}
-                              >
-                                {isWishlisted(auction.productId) ? (
-                                  <Heart
-                                    fill="#ef4444"
-                                    color="#ef4444"
-                                    size={22}
-                                  />
-                                ) : (
-                                  <Heart color="#9ca3af" size={22} />
-                                )}
-                              </button>
-                            )}
-
-                            {/* [변경 2] 지역이름과 입찰 수를 버튼 위로 배치 */}
-                            <div className="flex flex-col items-end space-y-2">
-                              <div className="flex items-center space-x-3 shrink-0 mb-1">
-                                <div className="flex items-center text-gray-500 text-xs">
-                                  <MapPin className="h-3.5 w-3.5 mr-1 text-gray-400" />
-                                  "지역이름"
-                                </div>
-                                <div className="flex items-center space-x-1.5 border-l border-gray-200 pl-3">
-                                  <span className="text-sm text-gray-500 uppercase">
-                                    입찰수
-                                  </span>
-                                  <span className="text-sm font-bold text-[rgb(118,90,255)]">
-                                    {auction.bidCount - 1}개
-                                  </span>
-                                </div>
+                          {/* [변경 2] 지역이름과 입찰 수를 버튼 위로 배치 */}
+                          <div className="flex flex-col items-end space-y-2">
+                            <div className="flex items-center space-x-3 shrink-0 mb-4">
+                              <div className="flex items-center text-gray-500 text-xs">
+                                <MapPin className="h-3.5 w-3.5 mr-1 text-gray-400" />
+                                "지역이름"
                               </div>
+                              <div className="flex items-center space-x-1.5 border-l border-gray-200 pl-3">
+                                <span className="text-sm text-gray-500 uppercase">
+                                  입찰수
+                                </span>
+                                <span className="text-sm font-bold text-[rgb(118,90,255)]">
+                                  {auction.bidCount - 1}개
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 우측 하단: 찜 + (지역/입찰수 & 버튼) */}
+                            <div className="flex items-end space-x-3">
+                              {userEmail !== auction.userEmail && (
+                                <button
+                                  className="text-gray-400 hover:text-red-500 transition-colors p-2 mb-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleWishlistToggle(auction.productId);
+                                  }}
+                                >
+                                  {isWishlisted(auction.productId) ? (
+                                    <Heart
+                                      fill="#ef4444"
+                                      color="#ef4444"
+                                      size={22}
+                                    />
+                                  ) : (
+                                    <Heart color="#9ca3af" size={22} />
+                                  )}
+                                </button>
+                              )}
 
                               {/* 참여하기 버튼 */}
                               <button
                                 className={`px-6 py-2.5 rounded-xl transition-all duration-300 font-bold shadow-md min-w-[100px] ${
                                   auction.status === "READY"
                                     ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
-                                    : "bg-[rgb(118,90,255)] text-white hover:bg-[rgb(118,90,255)] hover:scale-105 active:scale-95 cursor-pointer"
+                                    : "bg-[rgb(118,90,255)] text-white hover:bg-[rgb(90,58,252)] hover:scale-105 active:scale-95 cursor-pointer"
                                 }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -934,7 +934,7 @@ const AuctionListPage = () => {
                 className={`px-4 py-2 bg-white/10 border border-black/20 rounded-lg text-gray-900 transition-colors ${
                   currentPage === 0
                     ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-white/20"
+                    : "hover:bg-white/20 cursor-pointer "
                 }`}
               >
                 이전
@@ -960,8 +960,8 @@ const AuctionListPage = () => {
                     onClick={() => handlePageChange(pageNum)}
                     className={`px-4 py-2 rounded-lg transition-colors ${
                       pageNum === currentPage
-                        ? "bg-[rgb(118,90,255)] text-white"
-                        : "bg-white/10 border border-black/20 text-gray-900 hover:bg-white/20"
+                        ? "bg-[rgb(118,90,255)] text-white cursor-pointer"
+                        : "bg-white/10 border border-black/20 text-gray-900 hover:bg-white/20 cursor-pointer"
                     }`}
                   >
                     {pageNum + 1}
@@ -975,7 +975,7 @@ const AuctionListPage = () => {
                 className={`px-4 py-2 bg-white/10 border border-black/20 rounded-lg text-gray-900 transition-colors ${
                   currentPage === totalPages - 1
                     ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-white/20"
+                    : "hover:bg-white/20 cursor-pointer "
                 }`}
               >
                 다음

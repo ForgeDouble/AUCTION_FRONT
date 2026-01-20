@@ -367,7 +367,7 @@ export default function AuthButtons() {
         </button>
         <button
           type="button"
-          className="bg-[rgb(118,90,255)] text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors cursor-pointer"
+          className="bg-[rgb(118,90,255)] text-white px-6 py-2 rounded-full hover:bg-[rgb(90,58,252)] transition-colors cursor-pointer"
           onClick={() => navigate("/register")}
         >
           회원가입
