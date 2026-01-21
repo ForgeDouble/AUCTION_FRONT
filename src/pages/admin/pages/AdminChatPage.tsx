@@ -8,7 +8,9 @@ import {
   RefreshCw,
   SendHorizonal,
   Paperclip,
-  X
+  X,
+  Pencil,
+  Check
 } from "lucide-react";
 import { adminApi } from "../adminApi";
 import type { AdminChatMemberRow, AdminChatMessageRow, AdminChatRoomRow } from "../adminTypes";
@@ -70,7 +72,6 @@ function nameFromEmail(email: string) {
 }
 
 function getSenderEmail(m: AdminChatMessageRow) {
-  // 서버가 senderId를 email로 주는 경우가 많아서 2순위로 둠
   return emailLike(m.sender?.email) || emailLike(m.senderId) || "";
 }
 
@@ -175,6 +176,10 @@ export default function AdminChatPage() {
   const [pickedFiles, setPickedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
 
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId) ?? null,
@@ -292,6 +297,8 @@ export default function AdminChatPage() {
   };
 
   const selectRoom = async (roomId: string) => {
+    setEditingTitle(false);
+    setTitleDraft("");
     setActiveRoomId(roomId);
 
     await adminApi.enterChatRoom(roomId);
@@ -419,6 +426,55 @@ export default function AdminChatPage() {
 
   const removePickedFile = (idx: number) => {
     setPickedFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const canRename = useMemo(() => {
+    if (!activeRoomId || !activeRoom) return false;
+    const typeOk = activeRoom.roomType === "ADMIN_GROUP" || activeRoom.roomType === "STAFF_GROUP";
+    if (!typeOk) return false;
+
+    if ((activeRoom.roomName ?? "").trim() === "운영자 단체방") return false;
+
+    return true;
+  }, [activeRoomId, activeRoom]);
+
+  const beginEditTitle = () => {
+    if (!activeRoomId || !activeRoom) return;
+
+    if (!canRename) {
+      alert("이 방은 제목 변경이 불가합니다. (운영진 그룹방만 가능)");
+      return;
+    }
+
+    setTitleDraft((activeRoom?.roomName ?? "").trim());
+    setEditingTitle(true);
+  };
+
+  const cancelEditTitle = () => {
+    setEditingTitle(false);
+    setTitleDraft("");
+  };
+
+  const saveEditTitle = async () => {
+    if (!activeRoomId) return;
+
+    const next = String(titleDraft ?? "").trim();
+    if (!next) return;
+
+    setSavingTitle(true);
+    try {
+      await adminApi.renameChatRoomTitle(activeRoomId, next);
+      setRooms((prev) => prev.map((r) => (r.id === activeRoomId ? { ...r, roomName: next } : r)));
+
+      setEditingTitle(false);
+      setTitleDraft("");
+      await refreshRooms();
+    } catch (e: any) {
+      console.error(e);
+      alert(String(e?.message ?? "제목 변경 실패"));
+    } finally {
+      setSavingTitle(false);
+    }
   };
 
   const clearPickedFiles = () => setPickedFiles([]);
@@ -553,8 +609,66 @@ const inputBase =
           {/* 헤더 */}
           <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-white">
             <div>
-              <div className="text-sm font-bold text-gray-900">
-                {activeRoom?.roomName ?? "채팅방을 선택하세요"}
+
+              <div className="flex items-center gap-2">
+                {!editingTitle ? (
+                  <div className="text-sm font-bold text-gray-900">
+                    {activeRoom?.roomName ?? "채팅방을 선택하세요"}
+                  </div>
+                ) : (
+                  <input
+                    value={titleDraft}
+                    onChange={(e) => setTitleDraft(e.target.value)}
+                    disabled={savingTitle}
+                    className="text-sm font-bold text-gray-900 bg-transparent border-b border-gray-300 px-1 py-0.5 w-[260px] outline-none"
+                    placeholder="채팅방 제목 (30자 이하)"
+                    maxLength={30}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void saveEditTitle();
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        cancelEditTitle();
+                      }
+                    }}
+                  />
+                )}
+
+                {!editingTitle ? (
+                  <button
+                    type="button"
+                    onClick={beginEditTitle}
+                    title="제목 수정"
+                    className={"p-0 bg-transparent border-0 shadow-none " + (canRename ? "" : "opacity-40")}
+                  >
+                    <Pencil className="w-4 h-4 text-gray-700" />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void saveEditTitle()}
+                      disabled={savingTitle}
+                      title="저장 (Enter)"
+                      className="p-0 bg-transparent border-0 shadow-none"
+                    >
+                      {savingTitle ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 text-gray-700" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={cancelEditTitle}
+                      disabled={savingTitle}
+                      title="취소 (ESC)"
+                      className="p-0 bg-transparent border-0 shadow-none"
+                    >
+                      <X className="w-4 h-4 text-gray-700" />
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="text-[11px] text-gray-500">
                 {activeRoomId ? `roomId: ${activeRoomId}` : ""}

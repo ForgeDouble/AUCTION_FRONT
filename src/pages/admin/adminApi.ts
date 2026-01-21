@@ -258,10 +258,12 @@ function formatRoomNameFallback(x: any): string {
 }
 
 function normalizeChatRoom(x: any): AdminChatRoomRow {
+  const roomTypeRaw = String(x.roomType ?? x.type ?? x.room_type ?? "").trim();
+
   return {
     id: String(x.id ?? x.roomId ?? ""),
     roomName: formatRoomNameFallback(x),
-    roomType: (x.roomType ?? x.type ?? undefined) as any,
+    roomType: (roomTypeRaw ? roomTypeRaw.toUpperCase() : undefined) as any,
     adminChat: Boolean(x.adminChat ?? false),
     participantIds: Array.isArray(x.participantIds) ? x.participantIds.map(String) : undefined,
     recentText: x.recentText != null ? String(x.recentText) : null,
@@ -705,7 +707,13 @@ export const adminApi = {
 
   uploadChatFiles: async (files: File[]) => {
     return Promise.all(files.map((f) => adminApi.uploadChatFile(f)));
-  },  
+  }, 
+  
+  renameChatRoomTitle: (roomId: string, title: string) =>
+  request<CommonResDto<void>>(`/chat/room/${encodeURIComponent(roomId)}/title`, {
+    method: "PATCH",
+    body: JSON.stringify({ title: String(title ?? "").trim() }),
+  }).then((r) => unwrap<void>(r)),
 };
 
 
