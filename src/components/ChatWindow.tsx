@@ -111,6 +111,7 @@ export default function ChatWindow({ title, messages }: Props) {
             )}
           </React.Fragment>
         );
+        console.log("me:", userEmail, "senderId:", m.senderId);
       })}
       <div ref={bottomRef} />
     </div>

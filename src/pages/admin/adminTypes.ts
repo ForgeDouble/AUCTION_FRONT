@@ -214,6 +214,8 @@ export type AdminChatRoomRow = {
   recentText?: string | null;
   recentTime?: string | null;
   unread?: number;
+  // canRename?: boolean
+  // roomKey?: string
 };
 
 export type AdminChatFileRow = {

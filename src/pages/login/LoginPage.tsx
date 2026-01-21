@@ -1,9 +1,14 @@
+// login/LoginPage.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { fetchLogin } from "./LoginApi";
 import { useAuth } from "../../hooks/useAuth";
 import type { loginRequest } from "./LoginDto";
+
+// ✅ FCM 추가
+import { requestFcmToken } from "@/firebase/firebase";
+import { registerDeviceToken } from "../../api/pushApi";
 
 const LoginPage = () => {
   const nav = useNavigate();
@@ -29,6 +34,7 @@ const LoginPage = () => {
 
     if (loading) return;
     setLoading(true);
+    setErrorMessage(null);
 
     try {
       const loginData: loginRequest = { email, password };
@@ -39,7 +45,31 @@ const LoginPage = () => {
 
       localStorage.setItem("accessToken", result.result.token);
       localStorage.setItem("userId", email);
+
       await checkAuth();
+
+      // ✅ 로그인 성공 후 FCM 토큰 등록 로직 삽입
+      try {
+        const alreadyRegistered =
+          localStorage.getItem("fcm_registered") === "true";
+
+        const fcmToken = await requestFcmToken();
+
+        if (fcmToken) {
+          const prevToken = localStorage.getItem("fcm_token");
+
+          if (!alreadyRegistered || prevToken !== fcmToken) {
+            await registerDeviceToken(fcmToken);
+
+            localStorage.setItem("fcm_registered", "true");
+            localStorage.setItem("fcm_token", fcmToken);
+          }
+        } else {
+          console.warn("FCM 토큰 없음 (권한 거부 또는 오류)");
+        }
+      } catch (fcmError) {
+        console.error("로그인 후 FCM 등록 중 오류:", fcmError);
+      }
 
       window.location.replace("/");
     } catch (error) {
@@ -54,6 +84,8 @@ const LoginPage = () => {
           console.error(error);
           setErrorMessage("서버에서 오류가 발생했습니다.");
         }
+      } else {
+        setErrorMessage("로그인에 실패했습니다.");
       }
     } finally {
       setLoading(false);
@@ -96,7 +128,6 @@ const LoginPage = () => {
               </div>
 
               {/* 비밀번호 입력 */}
-
               <div className="relative group">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -149,7 +180,7 @@ const LoginPage = () => {
                 </div>
               </div>
 
-              {/* 로그인 버튼 (화살표 제거) */}
+              {/* 로그인 버튼 */}
               <button
                 type="submit"
                 disabled={loading}
@@ -163,11 +194,13 @@ const LoginPage = () => {
               </button>
             </form>
 
-            <div className="flex justify-center mt-4">
-              <span className="text-red-600">{errorMessage}</span>
+            <div className="flex justify-center mt-4 min-h-[24px]">
+              {errorMessage ? (
+                <span className="text-red-600">{errorMessage}</span>
+              ) : null}
             </div>
 
-            {/* 회원가입 섹션 (자연스럽게 하단에 통합) */}
+            {/* 회원가입 섹션 */}
             <div className="mt-4 pt-3 border-t border-gray-50 text-center">
               <button
                 type="button"

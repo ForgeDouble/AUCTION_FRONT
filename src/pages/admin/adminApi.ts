@@ -269,6 +269,8 @@ function normalizeChatRoom(x: any): AdminChatRoomRow {
     recentText: x.recentText != null ? String(x.recentText) : null,
     recentTime: x.recentTime != null ? String(x.recentTime) : null,
     unread: x.unread != null ? Number(x.unread) : 0,
+    // roomKey: x.roomKey ?? null,
+    // canRename: Boolean(x.canRename)
   };
 }
 
