@@ -18,14 +18,15 @@ import { useAuth } from "../../../hooks/useAuth";
 import { type UserDto, type UserUpdateDto } from "../MyPageDto";
 import { fetchLoginUser, fetchUpdateUser } from "../MyPageApi";
 import { useModal } from "@/contexts/ModalContext";
+import ProfileImageUpload from "@/pages/mypage/profile/ProfileImageUpload";
 
 const MyProfile = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { showLogin, showError } = useModal();
 
-  const [isEditing, setIsEditing] = useState(false);
-
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
   const [user, setUser] = useState<UserDto>();
   const [tempUser, setTempUser] = useState<UserDto>();
 
@@ -52,7 +53,7 @@ const MyProfile = () => {
         ...data.result,
         createdAt: data.result.createdAt.split("T")[0].replace(/-/g, "."),
       };
-
+      setUserProfileImage(data.result.profileImageUrl);
       setUser(userProfile);
       console.log(data);
     } catch (error) {
@@ -104,9 +105,12 @@ const MyProfile = () => {
         <div className="bg-white backdrop-blur-lg rounded-2xl border border-black/10 p-8 mb-6 border shadow-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
-              <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <User className="w-12 h-12 text-white" />
-              </div>
+              {/* 프로필 이미지 */}
+              <ProfileImageUpload
+                profileImage={userProfileImage}
+                onImageChange={setUserProfileImage}
+              />
+              {/* 이름 */}
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
                   {user?.nickname || null}
@@ -114,6 +118,7 @@ const MyProfile = () => {
                 <p className="text-gray-600">{user?.email || null}</p>
               </div>
             </div>
+            {/* 로그아웃 */}
             <button
               onClick={handleLogout}
               className="flex items-center space-x-2 text-gray-600 hover:text-red-400 transition-colors cursor-pointer"

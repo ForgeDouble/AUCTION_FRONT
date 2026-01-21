@@ -145,3 +145,49 @@ export const fetchUpdateUser = async (
 
   return response.json();
 };
+
+export const fetchUploadORReplaceImage = async (
+  token: string | null,
+  file: File | null,
+): Promise<ApiResponse<{ url: string }>> => {
+  // 반환 타입 수정
+  // file이 null인 경우 처리
+  if (!file) {
+    throw new Error("File is required");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`http://localhost:8080/user/image`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // Content-Type은 자동으로 설정되므로 명시하지 않음
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload image: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+export const fetchDeleteImage = async (
+  token: string | null,
+): Promise<ApiResponse<null>> => {
+  const response = await fetch(`http://localhost:8080/user/image/delete`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete image: ${response.status}`);
+  }
+
+  return response.json();
+};
