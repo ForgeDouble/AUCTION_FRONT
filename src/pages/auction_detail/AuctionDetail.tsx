@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
@@ -243,6 +243,22 @@ const AuctionDetail = () => {
       console.error(error);
     }
   };
+
+  // 본인 판단 여부 확인
+  const myEmail = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("userEmail");
+      return String(raw ?? "").trim().toLowerCase();
+    } catch {
+      return "";
+    }
+  }, []);
+
+  const isMyProduct = useMemo(() => {
+    const sellerEmail = String(sellerInfo?.email ?? "").trim().toLowerCase();
+    if (!myEmail || !sellerEmail) return false;
+    return myEmail === sellerEmail;
+  }, [myEmail, sellerInfo?.email]);
 
   useEffect(() => {
     loadProduct();
@@ -711,7 +727,7 @@ const AuctionDetail = () => {
             {/* 판매자 정보 */}
             <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-white">판매자 정보</h3>
+                <h3 className="text-xl font-bold text-black">판매자 정보</h3>
                   <div
                     className="flex items-center text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
                     onClick={() => {
@@ -766,12 +782,21 @@ const AuctionDetail = () => {
               </div>
 
               <button
-                onClick={handleContactSeller}
-                className="w-full mt-4 bg-white/10 border border-white/20 text-white py-2 rounded-lg hover:bg-white/20 transition-all duration-300"
+                onClick={() => {
+                  if (isMyProduct) return;
+                  handleContactSeller();
+                }}
+                disabled={isMyProduct}
+                className={
+                  "w-full mt-4 py-2 rounded-lg transition-all duration-300 flex items-center justify-center " +
+                  (isMyProduct
+                    ? "bg-black-200 text-gray-400 cursor-not-allowed"
+                    : "bg-blue/10 border border-blue/20 text-white hover:bg-gray/20")
+                }
+                title={isMyProduct ? "본인 상품은 1:1 문의가 불가합니다." : "판매자 문의"}
               >
-
                 <MessageCircle className="h-4 w-4 inline mr-2" />
-                판매자 문의
+                {isMyProduct ? "본인 상품입니다" : "판매자 문의"}
               </button>
             </div>
           </div>
