@@ -1070,6 +1070,9 @@ function InviteModal(props: { roomId: string; onClose: () => void; onInvited: ()
 }
 
 function CreateGroupModal(props: { onClose: () => void; onCreated: (roomId: string) => void }) {
+  const { adminEmail } = useAdminStore();
+  const me = useMemo(() => String(adminEmail ?? "").trim().toLowerCase(), [adminEmail]);
+
   const [title, setTitle] = useState("운영진 그룹채팅");
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<AdminChatMemberRow[]>([]);
@@ -1077,14 +1080,23 @@ function CreateGroupModal(props: { onClose: () => void; onCreated: (roomId: stri
 
   useEffect(() => {
     void (async () => {
-      const [admins, inquiries] = await Promise.all([adminApi.listAdminMembers(), adminApi.listInquiryMembers()]);
+      const [admins, inquiries] = await Promise.all([
+        adminApi.listAdminMembers(),
+        adminApi.listInquiryMembers(),
+      ]);
+
       const merged = [...admins, ...inquiries].reduce((acc, cur) => {
         if (!acc.some((x) => x.email === cur.email)) acc.push(cur);
         return acc;
       }, [] as AdminChatMemberRow[]);
-      setCandidates(merged);
+
+      const filtered = merged.filter(
+        (m) => String(m.email ?? "").trim().toLowerCase() !== me
+      );
+
+      setCandidates(filtered);
     })();
-  }, []);
+  }, [me]);
 
   const toggle = (email: string) => setSelected((p) => ({ ...p, [email]: !p[email] }));
 
