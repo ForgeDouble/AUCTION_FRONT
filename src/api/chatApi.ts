@@ -198,3 +198,32 @@ export async function uploadChatImage(
 
     return dto.fileUrl;
 }
+type ChatRoomMemberDto = {
+    userId?: number;
+    email?: string;
+    nickname?: string;
+    authority?: string; // "USER" | "ADMIN" | "INQUIRY"
+    profileImageUrl?: string;
+};
+
+export async function getChatRoomMembers(
+    token: string | null | undefined,
+    roomId: string
+): Promise<ChatRoomMemberDto[]> {
+        const res = await fetch(buildURL("/chat/room/" + encodeURIComponent(roomId) + "/members"), {
+        method: "GET",
+        headers: authHeaders(token ?? undefined),
+        credentials: "include",
+    });
+
+    const json = await handle<any>(res);
+    const raw = unwrap<any[]>(json) || [];
+
+    return raw.map((m) => ({
+        userId: m.userId,
+        email: m.email,
+        nickname: m.nickname,
+        authority: m.authority,
+        profileImageUrl: m.profileImageUrl,
+        }));
+}

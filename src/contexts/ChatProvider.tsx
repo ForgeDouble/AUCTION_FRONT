@@ -4,7 +4,7 @@ import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import { useAuth } from "@/hooks/useAuth";
 import type { ChatMessageDto, ChatRoomDto, ChatMessageType } from "@/pages/chat/ChatTypes";
-import {myRooms, openInquiryRoom, openRoom, recentMessages, sendMessage, enterRoom, exitRoom, uploadChatImage,} from "@/api/chatApi";
+import {myRooms, openInquiryRoom, openRoom, recentMessages, sendMessage, enterRoom, exitRoom, uploadChatImage, getChatRoomMembers } from "@/api/chatApi";
 
 export interface ChatContextType {
   connected: boolean;
@@ -93,13 +93,49 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     () => rooms.find((r) => r.roomId === currentRoomId),
     [rooms, currentRoomId]
   );
+  function normRole(m: any) {
+    const raw = m?.authority ?? m?.role ?? m?.userAuthority ?? m?.memberRole ?? "";
+    return String(raw).trim().toUpperCase();
+  }
+  // const refreshRooms = async () => {
+  //   if (!token || !myEmail) return;
+  //   const list = await myRooms(token);
+  //   setRooms(list);
+  //   const initUnread: Record<string, number> = {};
+  //   list.forEach((r) => (initUnread[r.roomId] = r.unread || 0));
+  //   setUnread(initUnread);
+  // };
 
   const refreshRooms = async () => {
     if (!token || !myEmail) return;
     const list = await myRooms(token);
-    setRooms(list);
+
+    const enriched = await Promise.all(
+      list.map(async (r) => {
+      if (!r.adminChat) {
+      return { ...r, inquiry: false };
+    }
+
+      try {
+        const members = await getChatRoomMembers(token, r.roomId);
+
+        const memberCount = Array.isArray(members) ? members.length : 0;
+        const hasUser = Array.isArray(members)
+          && members.some((m) => String(m.authority ?? "").trim().toUpperCase() === "USER");
+
+        const inquiry = memberCount === 2 && hasUser;
+
+        return { ...r, inquiry };
+      } catch (e) {
+        console.error("[getChatRoomMembers fail]", r.roomId, e);
+        return { ...r, inquiry: false };
+      }
+    })
+
+    );
+    setRooms(enriched);
     const initUnread: Record<string, number> = {};
-    list.forEach((r) => (initUnread[r.roomId] = r.unread || 0));
+    enriched.forEach((r) => (initUnread[r.roomId] = r.unread || 0));
     setUnread(initUnread);
   };
 
