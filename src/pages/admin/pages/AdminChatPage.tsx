@@ -1007,21 +1007,48 @@ function MembersModal(props: { onClose: () => void; members: AdminChatMemberRow[
 }
 
 function InviteModal(props: { roomId: string; onClose: () => void; onInvited: () => void }) {
+  const { adminEmail } = useAdminStore();
+  const me = useMemo(() => String(adminEmail ?? "").trim().toLowerCase(), [adminEmail]);
+  
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<AdminChatMemberRow[]>([]);
   const [pick, setPick] = useState<string>("");
 
   useEffect(() => {
     void (async () => {
-      const [admins, inquiries] = await Promise.all([adminApi.listAdminMembers(), adminApi.listInquiryMembers()]);
-      const merged = [...admins, ...inquiries].reduce((acc, cur) => {
-        if (!acc.some((x) => x.email === cur.email)) acc.push(cur);
-        return acc;
-      }, [] as AdminChatMemberRow[]);
-      setCandidates(merged);
-      setPick(merged[0]?.email ?? "");
+      try {
+        const [admins, inquiries, members] = await Promise.all([
+          adminApi.listAdminMembers(),
+          adminApi.listInquiryMembers(),
+          adminApi.getChatRoomMembers(props.roomId),
+        ]);
+        const merged = [...admins, ...inquiries].reduce((acc, cur) => {
+          if (!acc.some((x) => String(x.email ?? "").trim().toLowerCase() === String(cur.email ?? "").trim().toLowerCase())) {
+            acc.push(cur);
+          }
+          return acc;
+        }, [] as AdminChatMemberRow[]);
+
+        const memberEmailSet = new Set(
+          (members ?? []).map((m) => String(m.email ?? "").trim().toLowerCase())
+        );
+        const filtered = merged.filter((m) => {
+          const email = String(m.email ?? "").trim().toLowerCase();
+          if (!email) return false;
+          if (email === me) return false;
+          if (memberEmailSet.has(email)) return false;
+          return true;
+        });
+
+        setCandidates(filtered);
+        setPick(filtered[0]?.email ?? "");
+      } catch (e) {
+        console.error(e);
+        setCandidates([]);
+        setPick("");
+      }
     })();
-  }, []);
+  }, [me, props.roomId]);
 
   const invite = async () => {
     if (!pick) return;
@@ -1045,21 +1072,28 @@ function InviteModal(props: { roomId: string; onClose: () => void; onInvited: ()
         value={pick}
         onChange={(e) => setPick(e.target.value)}
         className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm"
+        disabled={candidates.length === 0}
       >
         {candidates.map((c) => (
           <option key={c.email} value={c.email}>
             {(c.nickname ?? c.email) + " (" + (c.authority ?? "-") + ")"}
           </option>
         ))}
+        {candidates.length === 0 ? (
+          <option value="">초대 가능한 운영진이 없습니다.</option>
+        ) : null}
       </select>
 
       <div className="mt-4 flex justify-end gap-2">
-        <button onClick={props.onClose} className="px-3 py-2 rounded-xl border border-gray-200 text-sm hover:bg-gray-50">
+        <button
+          onClick={props.onClose}
+          className="px-3 py-2 rounded-xl border border-gray-200 text-sm hover:bg-gray-50"
+        >
           취소
         </button>
         <button
           onClick={() => void invite()}
-          disabled={loading}
+          disabled={loading || !pick}
           className="px-3 py-2 rounded-xl bg-violet-600 text-white text-sm hover:bg-violet-700 disabled:opacity-60"
         >
           초대
@@ -1068,6 +1102,7 @@ function InviteModal(props: { roomId: string; onClose: () => void; onInvited: ()
     </ModalShell>
   );
 }
+
 
 function CreateGroupModal(props: { onClose: () => void; onCreated: (roomId: string) => void }) {
   const { adminEmail } = useAdminStore();
