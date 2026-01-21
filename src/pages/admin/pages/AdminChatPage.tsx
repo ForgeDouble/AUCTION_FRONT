@@ -644,7 +644,7 @@ const inputBase =
                     title="제목 수정"
                     className={"p-0 bg-transparent border-0 shadow-none " + (canRename ? "" : "opacity-40")}
                   >
-                    <Pencil className="w-4 h-4 text-gray-700" />
+                    <Pencil className="w-3 h-3 text-gray-700" />
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
