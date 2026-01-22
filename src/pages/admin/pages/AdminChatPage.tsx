@@ -379,6 +379,11 @@ export default function AdminChatPage() {
 
   const leave = async () => {
     if (!activeRoomId) return;
+    if (!canLeaveRoom) {
+      alert("운영자 단체방은 나갈 수 없습니다.");
+      return;
+    }
+
     if (!confirm("이 채팅방에서 나가시겠습니까?")) return;
 
     await adminApi.leaveChatRoom(activeRoomId);
@@ -438,11 +443,21 @@ export default function AdminChatPage() {
     return true;
   }, [activeRoomId, activeRoom]);
 
+  const canLeaveRoom = useMemo(() => {
+  if (!activeRoomId || !activeRoom) return false;
+
+  const name = String(activeRoom.roomName ?? "").trim();
+  if (activeRoom.roomType === "ADMIN_GROUP") return false;
+  if (name === "운영자 단체방") return false;
+
+  return true;
+}, [activeRoomId, activeRoom]);
+
   const beginEditTitle = () => {
     if (!activeRoomId || !activeRoom) return;
 
     if (!canRename) {
-      alert("이 방은 제목 변경이 불가합니다. (운영진 그룹방만 가능)");
+      alert("이 방은 제목 변경이 불가합니다.");
       return;
     }
 
@@ -696,8 +711,9 @@ const inputBase =
 
               <button
                 onClick={() => void leave()}
-                disabled={!activeRoomId}
+                disabled={!activeRoomId || !canLeaveRoom}
                 className="px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-60"
+                title={!activeRoomId ? "" : (!canLeaveRoom ? "운영자 단체방은 나갈 수 없습니다." : "나가기")}
               >
                 <LogOut className="w-4 h-4" />
                 나가기
