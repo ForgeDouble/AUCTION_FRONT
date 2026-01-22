@@ -162,7 +162,20 @@ const AdminOverviewPage: React.FC = () => {
         <StatCard title="금일 신규가입" value={stats.todayNewUsers.toLocaleString()} icon={Users} hint="오늘 00:00 기준" />
         <StatCard title="금일 생성 경매" value={stats.todayCreatedAuctions.toLocaleString()} icon={Gavel} hint="오늘 생성" />
         <StatCard title="진행중 경매" value={stats.ongoingAuctions.toLocaleString()} icon={Clock} hint="현재 진행" />
-        <StatCard title="신고(오픈)" value={stats.reportsOpen.toLocaleString()} icon={AlertTriangle} hint="대기/처리중" />
+        <div className="relative rounded-2xl overflow-hidden">
+          <StatCard
+            title="신고(오픈)"
+            value={canViewReports ? stats.reportsOpen.toLocaleString() : "—"}
+            icon={AlertTriangle}
+            hint={canViewReports ? "대기/처리중" : "ADMIN 전용"}
+          />
+
+          {!canViewReports && (
+            <div className="absolute inset-0 bg-gray-50/70 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
+              <div className="text-sm font-semibold text-gray-500">권한이 없습니다.</div>
+            </div>
+          )}
+        </div>
 
         <StatCard title="전체 입찰" value={stats.totalBids.toLocaleString()} icon={TrendingUp} hint="누적" />
         <StatCard title="금일 종료" value={stats.todayEndedAuctions.toLocaleString()} icon={CheckCircle2} hint="타임아웃 포함" />
