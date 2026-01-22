@@ -93,10 +93,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     () => rooms.find((r) => r.roomId === currentRoomId),
     [rooms, currentRoomId]
   );
-  function normRole(m: any) {
-    const raw = m?.authority ?? m?.role ?? m?.userAuthority ?? m?.memberRole ?? "";
-    return String(raw).trim().toUpperCase();
-  }
+  // function normRole(m: any) {
+  //   const raw = m?.authority ?? m?.role ?? m?.userAuthority ?? m?.memberRole ?? "";
+  //   return String(raw).trim().toUpperCase();
+  // }
   // const refreshRooms = async () => {
   //   if (!token || !myEmail) return;
   //   const list = await myRooms(token);

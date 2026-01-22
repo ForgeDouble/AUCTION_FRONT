@@ -69,12 +69,36 @@ function formatRemain(sec: number): string {
   return `로그아웃까지 ${m}:${String(s).padStart(2, "0")}`;
 }
 
-const SideItem: React.FC<{ to: string; icon: React.ElementType; label: string; badge?: number }> = ({
+const SideItem: React.FC<{ to: string; icon: React.ElementType; label: string; badge?: number; disabled?: boolean; disabledHint?: string; }> = ({
   to,
   icon: Icon,
   label,
   badge,
+  disabled,
+  disabledHint
 }) => {
+  if (disabled) {
+    return (
+      <div
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm
+                   text-gray-400 bg-gray-50 cursor-not-allowed"
+        title={disabledHint ?? "권한이 없습니다."}
+        aria-disabled="true"
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          <Icon className="w-4 h-4 shrink-0" />
+          <span className="font-medium truncate">{label}</span>
+        </span>
+
+        {typeof badge === "number" && badge > 0 && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 shrink-0">
+            {badge}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <NavLink
       to={to}
@@ -119,6 +143,9 @@ const AdminLayout: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [extending, setExtending] = useState(false);
   const [remainSec, setRemainSec] = useState<number>(() => safeJwtRemainingSeconds());
+
+  const roleUpper = String(adminRole ?? "").toUpperCase();
+  const isAdminOnly = roleUpper.includes("ADMIN");
 
   useEffect(() => {
     const tick = () => setRemainSec(safeJwtRemainingSeconds());
@@ -279,14 +306,24 @@ const AdminLayout: React.FC = () => {
           <div className="mt-3 space-y-1">
             <SideItem to="/admin" icon={LayoutDashboard} label="개요" />
             <SideItem to="/admin/auctions" icon={Gavel} label="경매 모니터링" />
-            <SideItem to="/admin/reports" icon={Siren} label="신고 관리" badge={reportsOpenCount} />
+            <SideItem
+              to="/admin/reports"
+              icon={Siren}
+              label="신고 관리"
+              badge={reportsOpenCount}
+              disabled={!isAdminOnly}
+              disabledHint="ADMIN만 접근 가능합니다."
+            />
             <SideItem to="/admin/calendar" icon={CalendarDays} label="운영 캘린더" />
             <SideItem to="/admin/notices" icon={Megaphone} label="인수인계/공지" badge={noticesCount} />
-
-            {/* 채팅 메뉴(추가) */}
             <SideItem to="/admin/chats" icon={MessagesSquare} label="운영 채팅" badge={chatUnreadTotal} />
-
-            <SideItem to="/admin/users" icon={Users} label="유저/권한 관리" />
+            <SideItem
+              to="/admin/users"
+              icon={Users}
+              label="유저/권한 관리"
+              disabled={!isAdminOnly}
+              disabledHint="ADMIN만 접근 가능합니다."
+            />
 
             <NavLink
               to="/"
