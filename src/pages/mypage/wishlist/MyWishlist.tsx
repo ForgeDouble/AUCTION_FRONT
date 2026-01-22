@@ -5,6 +5,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PageInfo, ProductListDto } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
 import { useModal } from "@/contexts/ModalContext";
+import { useAuth } from "@/hooks/useAuth";
+import { UnauthorizedError } from "@/type/Errors";
 
 // Placeholder image component
 const PlaceholderImg = () => (
@@ -15,10 +17,11 @@ const PlaceholderImg = () => (
 
 const MyWishlist = () => {
   const { showLogin, showError } = useModal();
+  const { checkAuth } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [wishlist, setWishlist] = useState<ProductListDto[]>([]);
   const [currentPage, setCurrentPage] = useState(
-    parseInt(searchParams.get("page") || "0")
+    parseInt(searchParams.get("page") || "0"),
   );
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     totalElements: 0,
@@ -90,12 +93,12 @@ const MyWishlist = () => {
 
   const loadProductsByWishlist = async (
     page: number = 0,
-    size: number = 10
+    size: number = 10,
   ) => {
     try {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
-      if (token == null) {
+      if (!token) {
         showLogin();
         console.error("Missing AccessToken");
         return;
@@ -112,7 +115,12 @@ const MyWishlist = () => {
       console.log(data);
     } catch (error) {
       console.error(error);
-      showError();
+      if (error instanceof UnauthorizedError) {
+        showLogin();
+      } else {
+        showError();
+      }
+      checkAuth();
     } finally {
       setLoading(false);
     }
@@ -133,15 +141,15 @@ const MyWishlist = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black pt-24 pb-12">
+    <div className="min-h-screen bg-gray-50 pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-4">
-            <div className="bg-black/40 backdrop-blur-lg rounded-2xl border border-white/10 p-8">
+            <div className="bg-white backdrop-blur-lg rounded-2xl border border-black/10 p-8 shadow-xl">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">찜한 경매</h2>
+                <h2 className="text-2xl font-bold text-gray-900">찜한 경매</h2>
                 {pageInfo.totalElements > 0 && (
-                  <span className="text-gray-400 text-sm">
+                  <span className="text-gray-600 text-sm">
                     총 {pageInfo.totalElements}개
                   </span>
                 )}
@@ -167,9 +175,9 @@ const MyWishlist = () => {
                               navigate(`/auction_detail/${product.productId}`);
                             }
                           }}
-                          className={`bg-white/5 rounded-xl p-4 border border-white/10 transition-all ${
+                          className={`bg-white/5 rounded-xl p-4 border border-black/10 transition-all ${
                             isClickable
-                              ? "hover:border-purple-500 cursor-pointer hover:transform hover:scale-105"
+                              ? "hover:border-[rgb(118,90,255)] cursor-pointer hover:transform hover:scale-105"
                               : "opacity-60 cursor-not-allowed"
                           }`}
                         >
@@ -223,7 +231,7 @@ const MyWishlist = () => {
 
                           <div className="space-y-2">
                             <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-400">
+                              <span className="text-gray-600">
                                 {product.status === "SELLED"
                                   ? "낙찰가"
                                   : "현재가"}
@@ -233,8 +241,8 @@ const MyWishlist = () => {
                                   product.status === "SELLED"
                                     ? "text-purple-400"
                                     : product.status === "NOTSELLED"
-                                    ? "text-gray-400"
-                                    : "text-green-400"
+                                      ? "text-gray-400"
+                                      : "text-green-400"
                                 }`}
                               >
                                 {product.latestBidAmount === 0
@@ -244,8 +252,8 @@ const MyWishlist = () => {
                             </div>
 
                             <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-400">입찰 수</span>
-                              <span className="text-white font-semibold">
+                              <span className="text-gray-600">입찰 수</span>
+                              <span className="text-gray-900 font-semibold">
                                 {product.bidCount - 1}건
                               </span>
                             </div>
