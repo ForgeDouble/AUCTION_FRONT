@@ -27,9 +27,10 @@ function money(v: number): string {
 }
 
 const AdminOverviewPage: React.FC = () => {
-  const { stats, overviewTopAuctions, reportGroups, categoryDistribution, todayActiveHours, auctionTrendRows, monthlyTradeRows } = useAdminStore();
+  const { stats, overviewTopAuctions, reportGroups, categoryDistribution, todayActiveHours, auctionTrendRows, monthlyTradeRows, adminRole } = useAdminStore();
   const navigate = useNavigate();
   const topAuctions = useMemo(() => (overviewTopAuctions ?? []).slice(0, 5), [overviewTopAuctions]);
+  const canViewReports = adminRole === "ADMIN";
 
   const topReportGroups = useMemo(() => {
     return reportGroups
@@ -295,20 +296,24 @@ const AdminOverviewPage: React.FC = () => {
         </div>
         
 
-        <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm relative">
           <SectionTitle
             title="최근 신고(상위)"
             right={
-              <button
-                type="button"
-                className={rightLinkCls}
-                onClick={() => navigate("/admin/reports")}
-              >
-                신고 탭으로 이동
-              </button>
+              canViewReports ? (
+                <button
+                  type="button"
+                  className={rightLinkCls}
+                  onClick={() => navigate("/admin/reports")}
+                >
+                  신고 탭으로 이동
+                </button>
+              ) : (
+                <span className="text-[11px] text-gray-400">ADMIN 전용</span>
+              )
             }
           />
-          <div className="space-y-2">
+          <div className={canViewReports ? "space-y-2" : "space-y-2 opacity-40 pointer-events-none select-none"}>
             {topReportGroups.map((g) => {
               const cat = categoryBadge(g.category);
               const risk = pendingRiskBadge(g.pendingCount);
@@ -326,13 +331,17 @@ const AdminOverviewPage: React.FC = () => {
                   </div>
 
                   <div className="mt-1 text-[11px] text-gray-500">
-                    P {g.pendingCount} / A {g.acceptedCount} / R {g.rejectedCount} ·  {formatKST(g.lastReportedAt || "")}
+                    P {g.pendingCount} / A {g.acceptedCount} / R {g.rejectedCount} · {formatKST(g.lastReportedAt || "")}
                   </div>
                 </div>
               );
             })}
-
           </div>
+          {!canViewReports && (
+            <div className="absolute inset-0 rounded-2xl bg-gray-50/70 backdrop-blur-[1px] flex items-center justify-center">
+              <div className="text-sm font-semibold text-gray-500">권한이 없습니다.</div>
+            </div>
+          )}
         </div>
       </div>
     </div>
