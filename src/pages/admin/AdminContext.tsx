@@ -23,6 +23,9 @@ import type {
   AdminChatRoomRow
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+
 // import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
 
 function nowIso(): string {
@@ -303,6 +306,38 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [chatRooms, setChatRooms] = useState<AdminChatRoomRow[]>([]);
 
+  useEffect(() => {
+    const base = import.meta.env.VITE_API_BASE as string | undefined;
+    const token = localStorage.getItem("accessToken");
+    if (!base || !token) return;
+
+    const wsUrl = `${base}/ws-admin`;
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(wsUrl),
+      connectHeaders: { Authorization: `Bearer ${token}` },
+      reconnectDelay: 2000,
+      debug: () => {},
+      onConnect: () => {
+        client.subscribe("/topic/admin/overview", (frame) => {
+          try {
+            const dto = JSON.parse(frame.body);
+            setStats(dto);
+            setLastUpdatedAt(new Date().toISOString());
+          } catch (e) {
+            console.error("admin overview parse failed", e);
+          }
+        });
+      },
+    });
+
+    client.activate();
+
+    return () => {
+      try { client.deactivate(); } catch {}
+    };
+  }, []);
+  
   const computeCountsFromItems = useCallback((items: AdminUserRow[]): AdminUserCounts => {
     return items.reduce(
       (acc, u) => {
