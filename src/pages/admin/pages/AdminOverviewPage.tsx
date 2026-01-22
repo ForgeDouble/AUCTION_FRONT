@@ -31,6 +31,7 @@ const AdminOverviewPage: React.FC = () => {
   const navigate = useNavigate();
   const topAuctions = useMemo(() => (overviewTopAuctions ?? []).slice(0, 5), [overviewTopAuctions]);
   const canViewReports = adminRole === "ADMIN";
+  const canViewTrade = adminRole === "ADMIN";
 
   const topReportGroups = useMemo(() => {
     return reportGroups
@@ -132,6 +133,15 @@ const AdminOverviewPage: React.FC = () => {
 
   // 월별 거래 금액(샘플) + 평균 표시
   const monthlyTradeSeries: MultiLineSeries[] = useMemo(() => {
+    if (!canViewTrade) {
+      return [
+        {
+          name: "월 거래 금액",
+          colorClass: "text-emerald-600",
+          points: [],
+        },
+      ];
+    }
     const rows = Array.isArray(monthlyTradeRows) ? monthlyTradeRows : [];
 
     const labelOf = (ym: string) => {
@@ -150,7 +160,7 @@ const AdminOverviewPage: React.FC = () => {
         })),
       },
     ];
-  }, [monthlyTradeRows]);
+  }, [monthlyTradeRows, canViewTrade]);
 
   const rightLinkCls = "text-[11px] text-gray-500 hover:text-gray-900 hover:underline cursor-pointer select-none";
 
@@ -172,7 +182,7 @@ const AdminOverviewPage: React.FC = () => {
 
           {!canViewReports && (
             <div className="absolute inset-0 bg-gray-50/70 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
-              <div className="text-sm font-semibold text-gray-500">권한이 없습니다.</div>
+              <div className="text-sm font-semibold text-gray-500">권한이 없습니다</div>
             </div>
           )}
         </div>
@@ -184,45 +194,63 @@ const AdminOverviewPage: React.FC = () => {
       </div>
 
       {/* 거래 금액 모니터링  */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="거래 금액 모니터링" right = 
-          {
-            null// <span className="text-[11px] text-gray-500">샘플(백엔드 연결 예정)</span>
-          } 
-          />
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="text-[11px] text-gray-500">금일 총 거래 금액(GMV)</div>
-                <Wallet className="w-4 h-4 text-gray-500" />
+            <div className="relative rounded-2xl overflow-hidden">
+        <div className={canViewTrade ? "" : "opacity-60 grayscale"}>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            {/* 왼쪽: 거래 금액 모니터링 카드 */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+              <SectionTitle title="거래 금액 모니터링" right={null} />
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] text-gray-500">금일 총 거래 금액(GMV)</div>
+                    <Wallet className="w-4 h-4 text-gray-500" />
+                  </div>
+                  <div className="mt-1 text-xl font-black text-gray-900">
+                    {canViewTrade ? `₩${money(stats.todayTradeAmount)}` : "—"}
+                  </div>
+                  <div className="mt-1 text-[11px] text-gray-500">
+                    {canViewTrade ? "결제 완료 기준(취소 제외)" : "ADMIN 전용"}
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] text-gray-500">월별 평균 거래 금액</div>
+                    <TrendingUp className="w-4 h-4 text-gray-500" />
+                  </div>
+                  <div className="mt-1 text-xl font-black text-gray-900">
+                    {canViewTrade ? `₩${money(stats.monthlyAvgTradeAmount)}` : "—"}
+                  </div>
+                  <div className="mt-1 text-[11px] text-gray-500">
+                    {canViewTrade ? "최근 6개월 평균" : "ADMIN 전용"}
+                  </div>
+                </div>
               </div>
-              <div className="mt-1 text-xl font-black text-gray-900">₩{money(stats.todayTradeAmount)}</div>
-              <div className="mt-1 text-[11px] text-gray-500">결제 완료 기준(취소 제외)</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="text-[11px] text-gray-500">월별 평균 거래 금액</div>
-                <TrendingUp className="w-4 h-4 text-gray-500" />
-              </div>
-              <div className="mt-1 text-xl font-black text-gray-900">₩{money(stats.monthlyAvgTradeAmount)}</div>
-              <div className="mt-1 text-[11px] text-gray-500">최근 6개월 평균</div>
+            {/* 오른쪽: 월별 거래 금액 추이 */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm xl:col-span-2">
+              <SectionTitle
+                title="월별 거래 금액 추이"
+                right={<span className="text-[11px] text-gray-500">최근 6개월</span>}
+              />
+              <SimpleMultiLineChart
+                series={monthlyTradeSeries}
+                height={190}
+                yLabel="KRW"
+                valueLabelMode="all"
+                valueFormatter={fmtMillionKRW1}
+              />
             </div>
           </div>
         </div>
 
-        {/* 월별 거래 금액 추이 */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm xl:col-span-2">
-          <SectionTitle title="월별 거래 금액 추이" right={<span className="text-[11px] text-gray-500">최근 6개월</span>} />
-          <SimpleMultiLineChart
-            series={monthlyTradeSeries}
-            height={190}
-            yLabel="KRW"
-            valueLabelMode="all"
-            valueFormatter={fmtMillionKRW1}
-          />
-        </div>
+        {!canViewTrade && (
+          <div className="absolute inset-0 bg-gray-50/70 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
+            <div className="text-sm font-semibold text-gray-500">권한이 없습니다</div>
+          </div>
+        )}
       </div>
 
       {/* 그래프 섹션 7일 내 경매 생성/죵료 + 카테고리 분포 */}
@@ -352,7 +380,7 @@ const AdminOverviewPage: React.FC = () => {
           </div>
           {!canViewReports && (
             <div className="absolute inset-0 rounded-2xl bg-gray-50/70 backdrop-blur-[1px] flex items-center justify-center">
-              <div className="text-sm font-semibold text-gray-500">권한이 없습니다.</div>
+              <div className="text-sm font-semibold text-gray-500">권한이 없습니다</div>
             </div>
           )}
         </div>
