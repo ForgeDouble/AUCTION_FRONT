@@ -1,13 +1,29 @@
-//  src/pages/admin/pages/AdminOverviewPage.tsx
+// src/pages/admin/pages/AdminOverviewPage.tsx
 import React, { useMemo } from "react";
-import { Activity, AlertTriangle, CheckCircle2, Clock, FileText, Gavel, TrendingUp, Users, Wallet } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  FileText,
+  Gavel,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import { StatCard, SectionTitle } from "../components/AdminUi";
 import { auctionBadge, categoryBadge, pendingRiskBadge } from "../components/badges";
-import { SimpleDonutChart, SimpleMultiLineChart, type DonutSegment, type MultiLineSeries } from "../components/AdminCharts";
+import {
+  SimpleDonutChart,
+  SimpleMultiLineChart,
+  type DonutSegment,
+  type MultiLineSeries,
+} from "../components/AdminCharts";
 import { useNavigate } from "react-router-dom";
 
 function formatKST(iso: string): string {
+  if (!iso) return "-";
   const d = new Date(iso);
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -27,14 +43,29 @@ function money(v: number): string {
 }
 
 const AdminOverviewPage: React.FC = () => {
-  const { stats, overviewTopAuctions, reportGroups, categoryDistribution, todayActiveHours, auctionTrendRows, monthlyTradeRows, adminRole } = useAdminStore();
+  const {
+    stats,
+    lastUpdatedAt,
+    rtConnected,
+    overviewTopAuctions,
+    reportGroups,
+    categoryDistribution,
+    todayActiveHours,
+    auctionTrendRows,
+    monthlyTradeRows,
+    adminRole,
+  } = useAdminStore();
+
   const navigate = useNavigate();
+
+  const roleUpper = String(adminRole ?? "").toUpperCase();
+  const canViewReports = roleUpper.includes("ADMIN");
+  const canViewTrade = roleUpper.includes("ADMIN");
+
   const topAuctions = useMemo(() => (overviewTopAuctions ?? []).slice(0, 5), [overviewTopAuctions]);
-  const canViewReports = adminRole === "ADMIN";
-  const canViewTrade = adminRole === "ADMIN";
 
   const topReportGroups = useMemo(() => {
-    return reportGroups
+    return (reportGroups ?? [])
       .slice()
       .sort((a, b) => {
         const at = a.lastReportedAt ? new Date(a.lastReportedAt).getTime() : 0;
@@ -44,10 +75,9 @@ const AdminOverviewPage: React.FC = () => {
       .slice(0, 5);
   }, [reportGroups]);
 
-  // 최근 7일 생성/종료 샘플(더미)
+  // 최근 7일 생성/종료
   const auctionTrendSeries: MultiLineSeries[] = useMemo(() => {
     const toLabel = (dateStr: string) => {
-      // yyyy-MM-dd
       const d = new Date(dateStr + "T00:00:00");
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
@@ -71,7 +101,7 @@ const AdminOverviewPage: React.FC = () => {
     ];
   }, [auctionTrendRows]);
 
-  // 카테고리 분포 샘플(도넛 차트)
+  // 카테고리 분포(도넛)
   const categorySegments: DonutSegment[] = useMemo(() => {
     const base = [
       { label: "전자제품", colorClass: "text-violet-600" },
@@ -84,10 +114,11 @@ const AdminOverviewPage: React.FC = () => {
     ];
 
     const map = new Map<string, number>();
-    for (const row of categoryDistribution) {
+    for (const row of categoryDistribution ?? []) {
       if (!row?.category) continue;
       map.set(row.category, Number(row.count ?? 0));
     }
+
     return base.map((b) => ({
       label: b.label,
       value: map.get(b.label) ?? 0,
@@ -95,7 +126,7 @@ const AdminOverviewPage: React.FC = () => {
     }));
   }, [categoryDistribution]);
 
-  // 금일 사용자 주 사용 시간대 (선 차트)
+  // 금일 사용자 주 사용 시간대 (선형)
   const todayActiveHourLine: MultiLineSeries[] = useMemo(() => {
     const labels = ["00", "03", "06", "09", "12", "15", "18", "21"];
     const starts = [0, 3, 6, 9, 12, 15, 18, 21];
@@ -110,16 +141,11 @@ const AdminOverviewPage: React.FC = () => {
 
     const bucketValue = (start: number) => {
       let sum = 0;
-      for (let h = start; h < start + 3; h++) {
-        sum += map.get(h) ?? 0;
-      }
+      for (let h = start; h < start + 3; h++) sum += map.get(h) ?? 0;
       return sum;
     };
 
-    const points = starts.map((s, i) => ({
-      label: labels[i],
-      value: bucketValue(s),
-    }));
+    const points = starts.map((s, i) => ({ label: labels[i], value: bucketValue(s) }));
 
     return [
       {
@@ -130,22 +156,14 @@ const AdminOverviewPage: React.FC = () => {
     ];
   }, [todayActiveHours]);
 
-
-  // 월별 거래 금액(샘플) + 평균 표시
+  // 월별 거래 금액
   const monthlyTradeSeries: MultiLineSeries[] = useMemo(() => {
     if (!canViewTrade) {
-      return [
-        {
-          name: "월 거래 금액",
-          colorClass: "text-emerald-600",
-          points: [],
-        },
-      ];
+      return [{ name: "월 거래 금액", colorClass: "text-emerald-600", points: [] }];
     }
     const rows = Array.isArray(monthlyTradeRows) ? monthlyTradeRows : [];
 
     const labelOf = (ym: string) => {
-      // yyyy-MM -> "M월"
       const mm = Number(String(ym).split("-")[1] ?? 0);
       return mm ? `${mm}월` : ym;
     };
@@ -154,50 +172,109 @@ const AdminOverviewPage: React.FC = () => {
       {
         name: "월 거래 금액",
         colorClass: "text-emerald-600",
-        points: rows.map((r) => ({
-          label: labelOf(r.ym),
-          value: Number(r.amount ?? 0),
-        })),
+        points: rows.map((r) => ({ label: labelOf(r.ym), value: Number(r.amount ?? 0) })),
       },
     ];
   }, [monthlyTradeRows, canViewTrade]);
 
-  const rightLinkCls = "text-[11px] text-gray-500 hover:text-gray-900 hover:underline cursor-pointer select-none";
-
+  const rightLinkCls =
+    "text-[11px] text-gray-500 hover:text-gray-900 hover:underline cursor-pointer select-none";
 
   return (
     <div className="space-y-4">
-      {/* KPI */}
+      {/* 헤더: ON/OFF + Last */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-bold text-gray-900">실시간 모니터링</div>
+
+        <div className="flex items-center gap-2">
+          <span
+            className={
+              "text-[11px] px-2 py-0.5 rounded-full border " +
+              (rtConnected
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-gray-100 text-gray-600 border-gray-200")
+            }
+          >
+            {rtConnected ? "ON" : "OFF"}
+          </span>
+          <span className="text-[11px] text-gray-500">Last: {formatKST(lastUpdatedAt)}</span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard title="금일 신규가입" value={stats.todayNewUsers.toLocaleString()} icon={Users} hint="오늘 00:00 기준" />
-        <StatCard title="금일 생성 경매" value={stats.todayCreatedAuctions.toLocaleString()} icon={Gavel} hint="오늘 생성" />
-        <StatCard title="진행중 경매" value={stats.ongoingAuctions.toLocaleString()} icon={Clock} hint="현재 진행" />
-        <div className="relative rounded-2xl overflow-hidden">
+        <StatCard
+          title="실시간 접속자"
+          value={Number(stats.realtimeUsers ?? 0).toLocaleString()}
+          icon={Activity}
+          hint="최근 5분 활동 기준"
+        />
+        {/* <StatCard
+          title="금일 신규가입"
+          value={Number(stats.todayNewUsers ?? 0).toLocaleString()}
+          icon={Users}
+          hint="오늘 00:00 기준"
+        /> */}
+        <StatCard
+          title="진행중 경매"
+          value={Number(stats.ongoingAuctions ?? 0).toLocaleString()}
+          icon={Clock}
+          hint="현재 진행"
+        />
+        <StatCard
+          title="금일 활동 유저"
+          value={Number(stats.todayActiveUsers ?? 0).toLocaleString()}
+          icon={Users}
+          hint="오늘 00:00~"
+        />
+        <StatCard
+          title="금일 생성 경매"
+          value={Number(stats.todayCreatedAuctions ?? 0).toLocaleString()}
+          icon={Gavel}
+          hint="오늘 생성"
+        />
+
+        <div className={"relative " + (!canViewReports ? "opacity-70 grayscale" : "")}>
           <StatCard
             title="신고(오픈)"
-            value={canViewReports ? stats.reportsOpen.toLocaleString() : "—"}
+            value={canViewReports ? Number(stats.reportsOpen ?? 0).toLocaleString() : "—"}
             icon={AlertTriangle}
             hint={canViewReports ? "대기/처리중" : "ADMIN 전용"}
           />
 
           {!canViewReports && (
-            <div className="absolute inset-0 bg-gray-50/70 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
+            <div className="absolute inset-0 rounded-2xl bg-gray-50/70 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
               <div className="text-sm font-semibold text-gray-500">권한이 없습니다</div>
             </div>
           )}
         </div>
 
-        <StatCard title="전체 입찰" value={stats.totalBids.toLocaleString()} icon={TrendingUp} hint="누적" />
-        <StatCard title="금일 종료" value={stats.todayEndedAuctions.toLocaleString()} icon={CheckCircle2} hint="타임아웃 포함" />
-        <StatCard title="금일 판매" value={stats.todaySoldAuctions.toLocaleString()} icon={FileText} hint="낙찰/결제 완료" />
-        <StatCard title="실시간 접속" value={stats.realtimeUsers.toLocaleString()} icon={Activity} hint="웹/앱 합산" />
+        <StatCard
+          title="전체 입찰"
+          value={Number(stats.totalBids ?? 0).toLocaleString()}
+          icon={TrendingUp}
+          hint="누적"
+        />
+
+        <StatCard
+          title="금일 종료"
+          value={Number(stats.todayEndedAuctions ?? 0).toLocaleString()}
+          icon={CheckCircle2}
+          hint="타임아웃 포함"
+        />
+
+        <StatCard
+          title="금일 판매"
+          value={Number(stats.todaySoldAuctions ?? 0).toLocaleString()}
+          icon={FileText}
+          hint="낙찰/결제 완료"
+        />
+
       </div>
 
-      {/* 거래 금액 모니터링  */}
-            <div className="relative rounded-2xl overflow-hidden">
+      {/* 거래 금액 모니터링 */}
+      <div className="relative rounded-2xl overflow-hidden">
         <div className={canViewTrade ? "" : "opacity-60 grayscale"}>
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            {/* 왼쪽: 거래 금액 모니터링 카드 */}
             <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
               <SectionTitle title="거래 금액 모니터링" right={null} />
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -207,7 +284,7 @@ const AdminOverviewPage: React.FC = () => {
                     <Wallet className="w-4 h-4 text-gray-500" />
                   </div>
                   <div className="mt-1 text-xl font-black text-gray-900">
-                    {canViewTrade ? `₩${money(stats.todayTradeAmount)}` : "—"}
+                    {canViewTrade ? `₩${money(Number(stats.todayTradeAmount ?? 0))}` : "—"}
                   </div>
                   <div className="mt-1 text-[11px] text-gray-500">
                     {canViewTrade ? "결제 완료 기준(취소 제외)" : "ADMIN 전용"}
@@ -220,7 +297,7 @@ const AdminOverviewPage: React.FC = () => {
                     <TrendingUp className="w-4 h-4 text-gray-500" />
                   </div>
                   <div className="mt-1 text-xl font-black text-gray-900">
-                    {canViewTrade ? `₩${money(stats.monthlyAvgTradeAmount)}` : "—"}
+                    {canViewTrade ? `₩${money(Number(stats.monthlyAvgTradeAmount ?? 0))}` : "—"}
                   </div>
                   <div className="mt-1 text-[11px] text-gray-500">
                     {canViewTrade ? "최근 6개월 평균" : "ADMIN 전용"}
@@ -229,7 +306,6 @@ const AdminOverviewPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 오른쪽: 월별 거래 금액 추이 */}
             <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm xl:col-span-2">
               <SectionTitle
                 title="월별 거래 금액 추이"
@@ -253,28 +329,28 @@ const AdminOverviewPage: React.FC = () => {
         )}
       </div>
 
-      {/* 그래프 섹션 7일 내 경매 생성/죵료 + 카테고리 분포 */}
+      {/* 7일 추이 + 카테고리 분포 */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <SectionTitle title="최근 7일 경매 생성 / 종료 추이" right={<span className="text-[11px] text-gray-500"></span>} />
-          <br></br>
+          <br />
           <SimpleMultiLineChart series={auctionTrendSeries} height={190} yLabel="count" />
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <SectionTitle title="카테고리 분포" right={<span className="text-[11px] text-gray-500">  </span>} />
-          <br></br>
+          <SectionTitle title="카테고리 분포" right={<span className="text-[11px] text-gray-500"></span>} />
+          <br />
           <SimpleDonutChart segments={categorySegments} size={180} thickness={16} />
         </div>
       </div>
 
-      {/*금일 사용 시간대(선형)*/}
+      {/* 금일 사용 시간대 */}
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
         <SectionTitle title="금일 사용자 사용 시간대" right={<span className="text-[11px] text-gray-500"></span>} />
         <SimpleMultiLineChart series={todayActiveHourLine} height={190} yLabel="" />
       </div>
 
-      {/* 진행중인 경매 상위*/}
+      {/* 진행중 경매/신고 상위 */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <SectionTitle
@@ -289,7 +365,7 @@ const AdminOverviewPage: React.FC = () => {
               </button>
             }
           />
-          
+
           <div className="space-y-2">
             {topAuctions.map((a) => {
               const b = auctionBadge(a.status);
@@ -297,34 +373,26 @@ const AdminOverviewPage: React.FC = () => {
               return (
                 <div
                   key={a.id}
-                  className="
-                    p-3 rounded-xl bg-gray-50 border border-gray-100
-                    flex items-center gap-3
-                  "
+                  className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center gap-3"
                 >
-                  {/* LEFT: 제목/서브 (가변, 하지만 truncate 되도록) */}
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-gray-900 truncate whitespace-nowrap">
                       {a.title}
                     </div>
-
                     <div className="text-[11px] text-gray-500 truncate whitespace-nowrap">
                       {a.id} · {a.category} · {a.sellerMasked}
                     </div>
                   </div>
 
-                  {/* MIDDLE: 가격/메타 (고정폭 + 줄바꿈 금지) */}
                   <div className="w-[220px] text-right flex-none">
                     <div className="text-sm font-bold text-gray-900 truncate whitespace-nowrap">
                       ₩{money(a.currentBid)}
                     </div>
-
                     <div className="text-[11px] text-gray-500 truncate whitespace-nowrap">
                       입찰 {a.bidCount} · {formatKST(a.endsAt)}
                     </div>
                   </div>
 
-                  {/* RIGHT: 뱃지 (고정) */}
                   <div className="flex-none">
                     <span className={"text-[11px] px-2 py-1 rounded-full border whitespace-nowrap " + b.cls}>
                       {b.label}
@@ -335,7 +403,6 @@ const AdminOverviewPage: React.FC = () => {
             })}
           </div>
         </div>
-        
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm relative">
           <SectionTitle
@@ -354,15 +421,17 @@ const AdminOverviewPage: React.FC = () => {
               )
             }
           />
+
           <div className={canViewReports ? "space-y-2" : "space-y-2 opacity-40 pointer-events-none select-none"}>
             {topReportGroups.map((g) => {
               const cat = categoryBadge(g.category);
               const risk = pendingRiskBadge(g.pendingCount);
+
               return (
                 <div key={`${g.targetUserId}-${g.category}`} className="p-3 rounded-xl bg-gray-50 border border-gray-100">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-semibold text-gray-900">
-                      {(g.targetNickname && g.targetNickname.trim()) ? g.targetNickname : (g.targetName || "대상 유저")}
+                      {g.targetNickname?.trim() ? g.targetNickname : (g.targetName || "대상 유저")}
                       <span className="text-[11px] text-gray-400 ml-2">#{g.targetUserId}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -378,6 +447,7 @@ const AdminOverviewPage: React.FC = () => {
               );
             })}
           </div>
+
           {!canViewReports && (
             <div className="absolute inset-0 rounded-2xl bg-gray-50/70 backdrop-blur-[1px] flex items-center justify-center">
               <div className="text-sm font-semibold text-gray-500">권한이 없습니다</div>

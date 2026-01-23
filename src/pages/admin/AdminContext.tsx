@@ -113,7 +113,7 @@ export interface AdminStore {
   adminEmail: string;
   adminNick: string;
   adminRole: string;
-
+  rtConnected: boolean;
   query: string;
   setQuery: (v: string) => void;
 
@@ -305,38 +305,69 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [usersCounts, setUsersCounts] = useState<AdminUserCounts>({ ADMIN: 0, INQUIRY: 0, USER: 0 });
 
   const [chatRooms, setChatRooms] = useState<AdminChatRoomRow[]>([]);
+  type AdminRealtimePayload = {
+    realtimeUsers?: number;
+    todayActiveUsers?: number;
+    ongoingAuctions?: number;
+    ts?: number;
+  };
+  const [rtConnected, setRtConnected] = useState(false);
+  const rtClientRef = useRef<Client | null>(null);
+  const [rtTokenVersion, setRtTokenVersion] = useState(0);
 
-  useEffect(() => {
-    const base = import.meta.env.VITE_API_BASE as string | undefined;
-    const token = localStorage.getItem("accessToken");
-    if (!base || !token) return;
+useEffect(() => {
+  const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
+  const token = localStorage.getItem("accessToken");
+  if (!base || !token) {
+    setRtConnected(false);
+    return;
+  }
 
-    const wsUrl = `${base}/ws-admin`;
+  if (rtClientRef.current) {
+    try { rtClientRef.current.deactivate(); } catch {}
+    rtClientRef.current = null;
+  }
 
-    const client = new Client({
-      webSocketFactory: () => new SockJS(wsUrl),
-      connectHeaders: { Authorization: `Bearer ${token}` },
-      reconnectDelay: 2000,
-      debug: () => {},
-      onConnect: () => {
-        client.subscribe("/topic/admin/overview", (frame) => {
-          try {
-            const dto = JSON.parse(frame.body);
-            setStats(dto);
-            setLastUpdatedAt(new Date().toISOString());
-          } catch (e) {
-            console.error("admin overview parse failed", e);
-          }
-        });
-      },
-    });
+  const urlBase = base.replace(/\/$/, "");
+  const client = new Client({
+    webSocketFactory: () => new SockJS(`${urlBase}/ws-admin`) as any,
+    connectHeaders: { Authorization: `Bearer ${token}` },
+    reconnectDelay: 3000,
+    debug: () => {},
+    onConnect: () => {
+      setRtConnected(true);
 
-    client.activate();
+      client.subscribe("/topic/admin/realtime", (frame) => {
+        try {
+          const data = JSON.parse(frame.body || "{}") as {
+            realtimeUsers?: number;
+            ts?: number;
+          };
+          setStats((prev) => ({
+            ...prev,
+            realtimeUsers: Number(data.realtimeUsers ?? prev.realtimeUsers ?? 0),
+          }));
 
-    return () => {
-      try { client.deactivate(); } catch {}
-    };
-  }, []);
+          setLastUpdatedAt(nowIso());
+        } catch (e) {
+          console.error("admin realtime parse error", e);
+        }
+      });
+    },
+    onWebSocketClose: () => setRtConnected(false),
+    onStompError: () => setRtConnected(false),
+  });
+
+  rtClientRef.current = client;
+  client.activate();
+
+  return () => {
+    try { client.deactivate(); } catch {}
+    rtClientRef.current = null;
+    setRtConnected(false);
+  };
+}, [rtTokenVersion]);
+
   
   const computeCountsFromItems = useCallback((items: AdminUserRow[]): AdminUserCounts => {
     return items.reduce(
@@ -537,40 +568,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const refreshUsersPage = useCallback(
     async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
-      try {
-        const page = Math.max(0, Number(params?.page ?? usersPageIndex));
-        const size = Math.max(1, Math.min(Number(params?.size ?? usersPageSize), 100));
-        const role = params?.role ?? "ALL";
-        const q = params?.q ?? "";
-
-        const res = await adminApi.getUsersPage({ page, size, role, q });
-
-        setUsers(res.items ?? []);
-        setUsersPageIndex(res.page ?? page);
-        setUsersPageSize(res.size ?? size);
-        setUsersTotalElements(res.totalElements ?? 0);
-        setUsersTotalPages(Math.max(1, res.totalPages ?? 1));
-
-        if (res.counts) {
-          setUsersCounts({
-            ADMIN: Number(res.counts.ADMIN ?? 0),
-            INQUIRY: Number(res.counts.INQUIRY ?? 0),
-            USER: Number(res.counts.USER ?? 0),
-          });
-          return;
-        }
-        if (res.totalElements > 0 && res.totalElements <= (res.items?.length ?? 0)) {
-          setUsersCounts(computeCountsFromItems(res.items));
-          return;
-        }
-      } catch (e) {
-        console.error(e);
-        setUsers([]);
-        setUsersTotalElements(0);
-        setUsersTotalPages(1);
-      }
+      await fetchUsersPage(params);
     },
-    [usersPageIndex, usersPageSize, computeCountsFromItems]
+    [fetchUsersPage]
   );
   
   const createAdminUser = useCallback(
@@ -648,6 +648,57 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     void refreshAll();
   }, []);
+
+  // useEffect(() => {
+  //   const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
+  //   const token = localStorage.getItem("accessToken");
+
+  //   if (!token) return;
+
+  //   if (rtClientRef.current) {
+  //     try { rtClientRef.current.deactivate(); } catch {}
+  //     rtClientRef.current = null;
+  //   }
+
+  //   const urlBase = base.replace(/\/$/, "");
+  //   const sock = new SockJS(`${urlBase}/ws-admin`);
+
+  //   const client = new Client({
+  //     webSocketFactory: () => sock as any,
+  //     connectHeaders: {
+  //       Authorization: `Bearer ${token}`,
+  //     },
+  //     reconnectDelay: 2000,
+  //     debug: () => {},
+  //     onConnect: () => {
+  //       client.subscribe("/topic/admin/realtime", (frame) => {
+  //         try {
+  //           const data = JSON.parse(frame.body || "{}") as AdminRealtimePayload;
+
+  //           setStats((prev) => ({
+  //             ...prev,
+  //             realtimeUsers: Number(data.realtimeUsers ?? prev.realtimeUsers ?? 0),
+  //             todayActiveUsers: Number(data.todayActiveUsers ?? prev.todayActiveUsers ?? 0),
+  //             ongoingAuctions: Number(data.ongoingAuctions ?? prev.ongoingAuctions ?? 0),
+  //           }));
+
+  //           setLastUpdatedAt(nowIso());
+  //         } catch (e) {
+  //           console.error("admin realtime parse error", e);
+  //         }
+  //       });
+  //     },
+  //   });
+
+  //   rtClientRef.current = client;
+  //   client.activate();
+
+  //   return () => {
+  //     try { client.deactivate(); } catch {}
+  //     rtClientRef.current = null;
+  //   };
+  // }, [rtTokenVersion]);
+
 
   const suspendAuction = (auctionId: string): void => {
     (async () => {
@@ -789,10 +840,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error("extendAdminSession: token missing");
     }
     localStorage.setItem("accessToken", token);
+    setRtTokenVersion((v) => v + 1);
   }, []);
   
-
-
   // 뱃지 관련 카운팅 함수
   const pinnedNoticesCount = useMemo(() => notices.filter((n) => n.pinned).length, [notices]);
   const noticesCount = useMemo(() => noticeTotalElements, [noticeTotalElements]);
@@ -805,6 +855,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     adminEmail: profile.email,
     adminNick: profile.nick,
     adminRole: profile.role,
+    rtConnected,
 
     query,
     setQuery,
