@@ -60,6 +60,7 @@ export const fetchBidsByUser = async (
   token: string | null,
   page: number = 0,
   size: number = 10,
+  status?: string | null,
 ): Promise<
   ApiResponse<{
     content: BidListDto[];
@@ -69,8 +70,16 @@ export const fetchBidsByUser = async (
     size: number;
   }>
 > => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+  });
+
+  if (status) {
+    params.append("status", status);
+  }
   const response = await fetch(
-    `http://localhost:8080/bid/allByUser?page=${page}&size=${size}`,
+    `http://localhost:8080/bid/allByUser?${params}`,
     {
       method: "GET",
       headers: {

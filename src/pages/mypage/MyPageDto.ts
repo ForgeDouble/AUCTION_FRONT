@@ -44,13 +44,19 @@ export interface ProductListDto {
   auctionEndTime?: string;
 }
 
+export type IsWinned = "Y" | "N";
+
 export interface BidListDto {
   bidId: number;
   productId: number;
   productName: string;
   bidAmount: number;
   bidCreatedAt: string;
-  isWinned: string;
+  imgId: number;
+  imgUrl: string;
+  imgPosition: number;
+  isWinned: IsWinned;
+  status: Status;
   productCreatedAt: string;
 }
 
