@@ -55,7 +55,7 @@ const RenderPagination = ({
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 0 || loading}
-        className="p-2 rounded-lg bg-white/5 border border-black/20 text-gray-900 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        className="p-2 rounded-lg bg-white/5 border border-black/20 text-gray-900 hover:bg-white/10 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed transition-all"
       >
         <ChevronLeft className="h-5 w-5" />
       </button>
@@ -80,9 +80,9 @@ const RenderPagination = ({
           key={page}
           onClick={() => onPageChange(page)}
           disabled={loading}
-          className={`px-4 py-2 rounded-lg border transition-all disabled:opacity-50 ${
+          className={`px-4 py-2 rounded-lg border transition-all cursor-pointer disabled:opacity-50 ${
             page === currentPage
-              ? "bg-purple-500 border-purple-500 text-white"
+              ? "bg-[rgb(118,90,255)] border-[rgb(118,90,255)] text-white"
               : "bg-white/5 border-black/20 text-gray-900 hover:bg-white/10"
           }`}
         >
