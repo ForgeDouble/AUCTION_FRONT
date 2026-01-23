@@ -137,7 +137,11 @@ const MyWishlist = () => {
   };
 
   useEffect(() => {
-    loadProductsByWishlist(0, 10);
+    const pageParam = searchParams.get("page");
+    const initialPage = pageParam ? parseInt(pageParam) : 0;
+
+    setCurrentPage(initialPage);
+    loadProductsByWishlist(initialPage, 10);
   }, []);
 
   return (
@@ -259,8 +263,8 @@ const MyWishlist = () => {
                             </div>
 
                             {product.status === "READY" && (
-                              <div className="mt-3 pt-3 border-t border-white/10">
-                                <p className="text-xs text-gray-400 text-center">
+                              <div className="mt-3 pt-3 border-t border-black/20">
+                                <p className="text-xs text-gray-900 text-center">
                                   경매 시작 대기 중
                                 </p>
                               </div>
@@ -276,10 +280,14 @@ const MyWishlist = () => {
 
                             {product.status === "SELLED" && (
                               <div className="mt-3 pt-3 border-t border-white/10">
-                                <p className="text-xs text-purple-400 text-center font-semibold">
+                                <p className="text-xs text-[rgb(118,90,255)] text-center font-semibold">
                                   낙찰 완료
                                 </p>
                               </div>
+                            )}
+
+                            {product.status === "PROCESSING" && (
+                              <div className="mt-3 pt-3 border-t border-black/20 pb-4"></div>
                             )}
                           </div>
                         </div>
