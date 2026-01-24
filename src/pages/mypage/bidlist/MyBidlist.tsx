@@ -47,9 +47,9 @@ const MyBidlist = () => {
         if (isWinned === "Y") {
           return {
             badge: "낙찰",
-            bgColor: "bg-purple-500/20",
-            textColor: "text-purple-400",
-            borderColor: "border-purple-500/30",
+            bgColor: "bg-[rgb(204,195,252)]",
+            textColor: "text-[rgb(118,90,255)]",
+            borderColor: "border-[rgb(160,142,252)]",
             icon: <CheckCircle className="h-5 w-5" />,
             message: "축하합니다! 낙찰되었습니다",
           };
@@ -359,14 +359,14 @@ const MyBidlist = () => {
 
                             {bid.status === "SELLED" && bid.isWinned == "Y" && (
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-purple-400 font-semibold">
+                                <span className="text-sm text-[rgb(118,90,255)] font-semibold">
                                   낙찰을 축하드립니다!
                                 </span>
                                 <button
                                   onClick={() =>
                                     handleNavigateToPayment(bid.productId)
                                   }
-                                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+                                  className="px-4 py-2 bg-[rgb(118,90,255)] hover:bg-[rgb(88,60,233)] text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer"
                                 >
                                   결제하기
                                 </button>
