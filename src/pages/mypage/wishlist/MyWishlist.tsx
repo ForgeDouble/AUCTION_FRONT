@@ -271,7 +271,7 @@ const MyWishlist = () => {
                             )}
 
                             {product.status === "NOTSELLED" && (
-                              <div className="mt-3 pt-3 border-t border-white/10">
+                              <div className="mt-3 pt-3 border-t border-black/20">
                                 <p className="text-xs text-gray-400 text-center">
                                   입찰자가 없어 유찰되었습니다
                                 </p>
@@ -279,7 +279,7 @@ const MyWishlist = () => {
                             )}
 
                             {product.status === "SELLED" && (
-                              <div className="mt-3 pt-3 border-t border-white/10">
+                              <div className="mt-3 pt-3 border-t border-black/20">
                                 <p className="text-xs text-[rgb(118,90,255)] text-center font-semibold">
                                   낙찰 완료
                                 </p>
