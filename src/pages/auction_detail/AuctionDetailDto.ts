@@ -1,6 +1,6 @@
 export interface BidLogDto {
   userId: number;
-  userName: string;
+  userNickName: string;
   productId: number;
   bidAmount: number;
   createdAt: string;
