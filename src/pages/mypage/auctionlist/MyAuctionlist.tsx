@@ -7,6 +7,7 @@ import {
   RefreshCw,
   LayoutGrid,
   List as ListIcon,
+  ChevronRight,
 } from "lucide-react";
 import { fetchProductsByUser } from "../MyPageApi";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -32,6 +33,28 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "HIGHEST_BID", label: "현재가 높은순" },
   { value: "MOST_BIDS", label: "입찰 많은순" },
 ];
+
+function statusAccent(status: string) {
+  switch (status) {
+    case "READY":
+      return "bg-blue-400";
+    case "PROCESSING":
+      return "bg-emerald-400";
+    case "NOTSELLED":
+      return "bg-zinc-300";
+    case "SELLED":
+      return "bg-violet-400";
+    default:
+      return "bg-zinc-300";
+  }
+}
+
+function priceLabelByStatus(status: string) {
+  if (status === "READY") return "시작가";
+  if (status === "SELLED") return "낙찰가";
+  if (status === "NOTSELLED") return "기준가";
+  return "현재가";
+}
 
 const SIZE_OPTIONS = [10, 20, 40];
 
@@ -370,13 +393,14 @@ const MyAuctionlist = () => {
     >
       <br />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <br></br>
         {/* Header */}
         <div className="rounded-[26px] bg-white/70 backdrop-blur-xl ring-1 ring-black/5 shadow-sm">
           <div className="p-7 md:p-9">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900">
-                  내가 등록한 경매
+                  경매 상품
                 </h2>
                 <br />
                 <p className="mt-2 text-sm text-zinc-500">
@@ -403,7 +427,6 @@ const MyAuctionlist = () => {
               </div>
             </div>
 
-            {/* Toolbar (옵션 작게 + 오른쪽에 Grid/List + 초기화 아이콘) */}
             <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               {/* Search */}
               <div className="w-full lg:flex-1">
@@ -430,9 +453,7 @@ const MyAuctionlist = () => {
                 </div>
               </div>
 
-              {/* Options + View + Reset (요청한 배치) */}
               <div className="flex items-center justify-end gap-2 flex-wrap">
-                {/* Status (전체) - 작게 */}
                 <select
                   value={appliedStatus}
                   onChange={(e) => {
@@ -451,8 +472,6 @@ const MyAuctionlist = () => {
                     </option>
                   ))}
                 </select>
-
-                {/* Sort (최신순) - 작게 */}
                 <select
                   value={appliedSort}
                   onChange={(e) => {
@@ -473,7 +492,6 @@ const MyAuctionlist = () => {
                   ))}
                 </select>
 
-                {/* Size (10개) - 작게 */}
                 <select
                   value={appliedSize}
                   onChange={(e) => {
@@ -490,10 +508,8 @@ const MyAuctionlist = () => {
                   ))}
                 </select>
 
-                {/* Grid/List (바로 오른편) */}
                 <ViewToggle mode={appliedView} onChange={onChangeView} />
 
-                {/* Reset icon (그 오른편) */}
                 <button
                   type="button"
                   onClick={resetFilters}
@@ -513,7 +529,6 @@ const MyAuctionlist = () => {
           </div>
         </div>
 
-        {/* Content */}
         <div className="mt-5">
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -667,10 +682,24 @@ const MyAuctionlist = () => {
 
               {/* LIST */}
               {appliedView === "list" && (
-                <div className="space-y-3">
-                  {visibleProducts.map((product: any) => {
+                <div className="rounded-3xl bg-white/70 backdrop-blur ring-1 ring-black/5 shadow-sm overflow-hidden">
+                  {visibleProducts.map((product: any, idx: number) => {
                     const badge = getStatusBadge(product.status);
                     const isClickable = product.status !== "READY";
+                    const bids = Math.max(0, (product.bidCount ?? 0) - 1);
+
+                    const priceLabel = priceLabelByStatus(product.status);
+                    const priceText =
+                      (product.latestBidAmount ?? 0) === 0 ? "입찰 없음" : formatPrice(product.latestBidAmount ?? 0);
+
+                    const priceClass =
+                      product.status === "SELLED"
+                        ? "text-violet-700"
+                        : product.status === "NOTSELLED"
+                        ? "text-zinc-400"
+                        : product.status === "READY"
+                        ? "text-blue-700"
+                        : "text-emerald-700";
 
                     return (
                       <div
@@ -680,114 +709,89 @@ const MyAuctionlist = () => {
                           if (isClickable) navigate(`/auction_detail/${product.productId}`);
                         }}
                         className={cn(
-                          "group rounded-3xl bg-white/70 backdrop-blur ring-1 ring-black/5 shadow-sm transition",
-                          "hover:shadow-md",
-                          isClickable ? "cursor-pointer" : "opacity-90 cursor-not-allowed"
+                          "relative flex items-center gap-4 px-5 py-4 transition",
+                          idx !== visibleProducts.length - 1 && "border-b border-black/5",
+                          isClickable ? "cursor-pointer hover:bg-white/60" : "cursor-not-allowed opacity-75"
                         )}
                       >
-                        <div className="p-4 flex gap-4">
-                          {/* Thumb */}
-                          <div className="relative w-44 h-28 shrink-0 overflow-hidden rounded-2xl ring-1 ring-black/5">
-                            {product.previewImageUrl ? (
-                              <img
-                                src={product.previewImageUrl}
-                                alt={product.productName}
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                              />
-                            ) : (
-                              <div className="w-full h-full">
-                                <PlaceholderImg />
-                              </div>
-                            )}
+                        {/* 왼쪽 상태 accent bar */}
+                        <div className={cn("absolute left-0 top-0 bottom-0 w-1", statusAccent(product.status))} />
 
-                            <div className="absolute top-2 left-2">
-                              <TimePill
-                                status={product.status}
-                                auctionStartTime={product.auctionStartTime}
-                                auctionEndTime={product.auctionEndTime}
-                              />
+                        {/* 썸네일 */}
+                        <div className="w-28 h-20 shrink-0 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white">
+                          {product.previewImageUrl ? (
+                            <img
+                              src={product.previewImageUrl}
+                              alt={product.productName}
+                              className="w-full h-full object-contain bg-zinc-50 p-2"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-zinc-50 grid place-items-center">
+                              <span className="text-[11px] font-bold text-zinc-300">No Image</span>
                             </div>
+                          )}
+                        </div>
 
-                            <div
+                        {/* 가운데 정보 */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
                               className={cn(
-                                "absolute top-2 right-2 px-2.5 py-1 rounded-full text-[11px] font-extrabold ring-1 shadow-sm",
+                                "inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold ring-1 ring-black/5",
                                 badge.chip
                               )}
                             >
                               {badge.text}
-                            </div>
+                            </span>
 
-                            {(product.status === "READY" ||
-                              product.status === "NOTSELLED" ||
-                              product.status === "SELLED") && (
-                              <div className="absolute inset-0 bg-black/20 grid place-items-center">
-                                {product.status === "READY" ? (
-                                  <Clock className="w-6 h-6 text-white" />
-                                ) : (
-                                  <Eye className="w-6 h-6 text-white" />
-                                )}
-                              </div>
+                            <h3 className="min-w-0 text-zinc-900 font-extrabold text-base truncate">
+                              {product.productName}
+                            </h3>
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                            <span className="text-zinc-400">#{product.productId}</span>
+                            <span className="text-zinc-300">•</span>
+                            <span>입찰 {bids}건</span>
+
+                            {(product.status === "READY" || product.status === "PROCESSING") && (
+                              <>
+                                <span className="text-zinc-300">•</span>
+                                <TimePill
+                                  status={product.status}
+                                  auctionStartTime={product.auctionStartTime}
+                                  auctionEndTime={product.auctionEndTime}
+                                />
+                              </>
                             )}
                           </div>
+                        </div>
 
-                          {/* Info */}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <h3 className="text-zinc-900 font-extrabold line-clamp-1">
-                                  {product.productName}
-                                </h3>
-                                <div className="mt-1 text-xs text-zinc-400">#{product.productId}</div>
-                              </div>
-
-                              <div className={cn("text-xs font-extrabold", isClickable ? "text-[#765AFF]" : "text-zinc-400")}>
-                                {isClickable ? "상세보기" : "대기중"}
-                              </div>
-                            </div>
-
-                            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                              <div className="rounded-2xl bg-white/60 ring-1 ring-black/5 px-3 py-2">
-                                <p className="text-[11px] font-bold text-zinc-500">
-                                  {product.status === "SELLED" ? "낙찰가" : "현재가"}
-                                </p>
-                                <p
-                                  className={cn(
-                                    "mt-0.5 text-sm font-extrabold",
-                                    product.status === "SELLED"
-                                      ? "text-violet-700"
-                                      : product.status === "NOTSELLED"
-                                      ? "text-zinc-400"
-                                      : "text-emerald-700"
-                                  )}
-                                >
-                                  {(product.latestBidAmount ?? 0) === 0
-                                    ? "입찰 없음"
-                                    : formatPrice(product.latestBidAmount ?? 0)}
-                                </p>
-                              </div>
-
-                              <div className="rounded-2xl bg-white/60 ring-1 ring-black/5 px-3 py-2">
-                                <p className="text-[11px] font-bold text-zinc-500">입찰 수</p>
-                                <p className="mt-0.5 text-sm font-extrabold text-zinc-900">
-                                  {Math.max(0, (product.bidCount ?? 0) - 1)}건
-                                </p>
-                              </div>
-
-                              <div className="hidden sm:block rounded-2xl bg-white/60 ring-1 ring-black/5 px-3 py-2">
-                                <p className="text-[11px] font-bold text-zinc-500">상태</p>
-                                <p className="mt-0.5 text-sm font-extrabold text-zinc-900">
-                                  {badge.text}
-                                </p>
-                              </div>
-
-                              <div className="hidden sm:block rounded-2xl bg-white/60 ring-1 ring-black/5 px-3 py-2">
-                                <p className="text-[11px] font-bold text-zinc-500">액션</p>
-                                <p className="mt-0.5 text-sm font-extrabold text-zinc-900">
-                                  {isClickable ? "조회 가능" : "대기"}
-                                </p>
-                              </div>
-                            </div>
+                        {/* 오른쪽 가격 + 액션 */}
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <div className="text-[11px] font-bold text-zinc-500">{priceLabel}</div>
+                            <div className={cn("text-lg font-extrabold tabular-nums", priceClass)}>{priceText}</div>
                           </div>
+
+                          <button
+                            type="button"
+                            disabled={!isClickable}
+                            className={cn(
+                              "w-10 h-10 rounded-full ring-1 ring-black/5 grid place-items-center transition",
+                              isClickable
+                                ? "bg-white/70 text-zinc-800 hover:bg-zinc-900 hover:text-white"
+                                : "bg-zinc-100/60 text-zinc-400 cursor-not-allowed"
+                            )}
+                            title={isClickable ? "상세보기" : "대기중"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isClickable) navigate(`/auction_detail/${product.productId}`);
+                            }}
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
                         </div>
                       </div>
                     );
