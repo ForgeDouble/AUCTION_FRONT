@@ -185,7 +185,7 @@ const MyProfile = () => {
     loadLoginUser();
   }, [loadLoginUser]);
 
-  const 시작_편집 = useCallback(() => {
+  const startEdit = useCallback(() => {
     if (!user) return;
     setTempUser({ ...user });
     setIsEditing(true);
@@ -462,8 +462,8 @@ const MyProfile = () => {
 
                 {!isEditing ? (
                   <button
-                    onClick={시작_편집}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-[#765AFF]/5 hover:border-[#765AFF]/40 hover:text-[#765AFF] transition-all shadow-sm"
+                    onClick={startEdit}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-transparent text-gray-500 hover:bg-[#765AFF]/5 hover:text-[#765AFF] transition-all"
                     title="수정"
                   >
                     <Edit2 className="w-5 h-5" />
