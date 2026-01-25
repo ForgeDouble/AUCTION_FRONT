@@ -53,6 +53,13 @@ const ProfileField = ({
   isEditing,
   helperText,
 }: ProfileFieldProps) => {
+  const readOnly = !isEditable;
+
+  const wrapperScale = isEditing && isEditable ? "scale-[1.01]" : "";
+  const viewBoxClass = readOnly
+    ? "bg-gray-50 border border-gray-200 text-gray-500"
+    : "bg-white border border-gray-100 text-gray-900 shadow-sm group-hover:border-[#765AFF]/30";
+
   return (
     <div className="group flex flex-col">
       <div className="ml-1 min-h-[34px]">
@@ -65,11 +72,7 @@ const ProfileField = ({
         </div>
       </div>
 
-      <div
-        className={`relative transition-all duration-300 ${
-          isEditing ? "scale-[1.01]" : ""
-        }`}
-      >
+      <div className={`relative transition-all duration-300 ${wrapperScale}`}>
         {isEditing && isEditable ? (
           type === "radio" ? (
             <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-200 h-12 items-center">
@@ -98,15 +101,13 @@ const ProfileField = ({
             />
           )
         ) : (
-          <div className="w-full h-12 px-5 bg-white border border-gray-100 rounded-2xl text-gray-900 font-medium shadow-sm group-hover:border-[#765AFF]/30 transition-colors flex items-center justify-between">
-            <span>
+          <div className={`w-full h-12 px-5 rounded-2xl flex items-center justify-between transition-colors ${viewBoxClass}`}>
+            <span className={readOnly ? "font-medium" : "font-medium"}>
               {type === "radio"
                 ? options.find((o: any) => o.value === value)?.label || value
-                : value || (
-                    <span className="text-gray-300 font-normal">미입력</span>
-                  )}
+                : value || <span className="text-gray-300 font-normal">미입력</span>}
             </span>
-            {!isEditing && (
+            {!isEditing && !readOnly && (
               <div className="w-1.5 h-1.5 rounded-full bg-gray-200 group-hover:bg-[#765AFF] transition-colors" />
             )}
           </div>
@@ -149,10 +150,7 @@ const MyProfile = () => {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 프로필 이미지 메뉴(변경/삭제) 토글
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
-
-  // 닉네임 경고 모달은 “닉네임 변경 저장 시” 1회만 띄우기
   const nicknameWarnedRef = useRef(false);
 
   useEffect(() => {
@@ -237,7 +235,6 @@ const MyProfile = () => {
     }
 
     if (nicknameChanged) {
-      // 닉네임 변경이 있을 때만 모달 안내(1회)
       if (!nicknameWarnedRef.current) {
         nicknameWarnedRef.current = true;
         showWarning("닉네임은 규칙/중복/7일 제한이 적용됩니다");
@@ -258,7 +255,7 @@ const MyProfile = () => {
     nicknameWarnedRef.current = false;
   }, [loadLoginUser, showLogin, showError, showWarning, tempUser, user]);
 
-  const 이미지_선택창_열기 = useCallback(() => {
+  const openSelector = useCallback(() => {
     if (!isEditing) return;
     setPhotoMenuOpen(false);
     fileInputRef.current?.click();
@@ -329,9 +326,10 @@ const MyProfile = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* 핵심: items-stretch + 양 컬럼 h-full + 왼쪽 flex-1 */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
           {/* 왼쪽 */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4 flex flex-col gap-6 h-full">
             {/* 프로필 카드 */}
             <div className="bg-white rounded-[2rem] p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] border border-gray-100/50 flex flex-col items-center text-center relative overflow-hidden">
               <div className="absolute top-0 w-full h-32 bg-gradient-to-b from-gray-50 to-white z-0" />
@@ -350,7 +348,6 @@ const MyProfile = () => {
                     )}
                   </div>
 
-                  {/* 사진 액션: 한 곳(우하단)만 */}
                   {isEditing && (
                     <div className="absolute -bottom-1 right-1">
                       <button
@@ -366,7 +363,7 @@ const MyProfile = () => {
                         <div className="absolute bottom-12 right-0 w-36 bg-white border border-gray-100 rounded-2xl shadow-xl p-1">
                           <button
                             type="button"
-                            onClick={이미지_선택창_열기}
+                            onClick={openSelector}
                             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 text-sm text-gray-700"
                           >
                             <Camera className="w-4 h-4 text-[#765AFF]" />
@@ -429,8 +426,7 @@ const MyProfile = () => {
               </div>
             </div>
 
-            {/* 내 활동 내역 */}
-            <div className="bg-white rounded-3xl p-6 pb-7 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-3xl p-6 pb-7 shadow-sm border border-gray-100 flex-1 flex flex-col">
               <div className="flex items-center justify-between text-gray-800 font-bold mb-5 px-1">
                 <span>내 활동 내역</span>
               </div>
@@ -455,11 +451,11 @@ const MyProfile = () => {
                   colorClass="bg-purple-50 text-purple-500"
                 />
               </div>
+              <div className="flex-1" />
             </div>
           </div>
 
-          {/* 오른쪽 */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 h-full">
             <div className="bg-white rounded-[2rem] p-8 lg:p-10 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] border border-gray-100/50 h-full relative">
               <div className="flex items-center justify-between mb-10">
                 <h3 className="text-xl font-bold text-gray-900">기본 정보</h3>
@@ -528,7 +524,6 @@ const MyProfile = () => {
                     icon={Mail}
                     isEditable={false}
                     isEditing={isEditing}
-                    helperText="이메일은 변경할 수 없습니다"
                   />
                 </div>
 
@@ -539,10 +534,7 @@ const MyProfile = () => {
                   isEditable={true}
                   isEditing={isEditing}
                   onChange={(e: any) => {
-                    const onlyDigits = String(e.target.value ?? "").replace(
-                      /[^0-9]/g,
-                      ""
-                    );
+                    const onlyDigits = String(e.target.value ?? "").replace(/[^0-9]/g, "");
                     setTempUser((prev) => ({
                       ...(prev ?? (user as UserDto)),
                       phone: onlyDigits,
@@ -570,8 +562,8 @@ const MyProfile = () => {
                         ...(prev ?? (user as UserDto)),
                         address: e.target.value,
                       }))
-                  }
-                />
+                    }
+                  />
                 </div>
 
                 <div className="md:col-span-2">
@@ -584,7 +576,7 @@ const MyProfile = () => {
                     type="radio"
                     options={[
                       { value: "M", label: "남성" },
-                      { value: "W", label: "여성" },
+                      { value: "W", label: "여성" }, 
                       { value: "F", label: "여성" },
                     ]}
                   />
@@ -593,6 +585,7 @@ const MyProfile = () => {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
