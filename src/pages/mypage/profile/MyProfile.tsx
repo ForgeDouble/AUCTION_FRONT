@@ -18,6 +18,7 @@ import {
   Gavel,
   Trash2,
 } from "lucide-react";
+
 import { useAuth } from "../../../hooks/useAuth";
 import type { UserDto } from "../MyPageDto";
 import {
@@ -28,6 +29,7 @@ import {
   deleteMyProfileImage,
 } from "../MyPageApi";
 import { useModal } from "@/contexts/ModalContext";
+
 interface ProfileFieldProps {
   label: string;
   value: any;
@@ -52,7 +54,7 @@ const ProfileField = ({
   helperText,
 }: ProfileFieldProps) => {
   return (
-    <div className="flex flex-col">
+    <div className="group flex flex-col">
       <div className="ml-1 min-h-[34px]">
         <div className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
           <Icon className="w-3.5 h-3.5" />
@@ -63,7 +65,11 @@ const ProfileField = ({
         </div>
       </div>
 
-      <div className={`relative transition-all duration-300 ${isEditing ? "scale-[1.01]" : ""}`}>
+      <div
+        className={`relative transition-all duration-300 ${
+          isEditing ? "scale-[1.01]" : ""
+        }`}
+      >
         {isEditing && isEditable ? (
           type === "radio" ? (
             <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-200 h-12 items-center">
@@ -96,7 +102,9 @@ const ProfileField = ({
             <span>
               {type === "radio"
                 ? options.find((o: any) => o.value === value)?.label || value
-                : value || <span className="text-gray-300 font-normal">미입력</span>}
+                : value || (
+                    <span className="text-gray-300 font-normal">미입력</span>
+                  )}
             </span>
             {!isEditing && (
               <div className="w-1.5 h-1.5 rounded-full bg-gray-200 group-hover:bg-[#765AFF] transition-colors" />
@@ -133,13 +141,23 @@ const MenuItem = ({
 const MyProfile = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const { showLogin, showError } = useModal();
+  const { showLogin, showError, showWarning } = useModal();
 
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState<UserDto | null>(null);
   const [tempUser, setTempUser] = useState<UserDto | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 프로필 이미지 메뉴(변경/삭제) 토글
+  const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
+
+  // 닉네임 경고 모달은 “닉네임 변경 저장 시” 1회만 띄우기
+  const nicknameWarnedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isEditing) setPhotoMenuOpen(false);
+  }, [isEditing]);
 
   const loadLoginUser = useCallback(async () => {
     try {
@@ -148,9 +166,10 @@ const MyProfile = () => {
         showLogin();
         return;
       }
-      const data = await fetchLoginUser(t);
 
+      const data = await fetchLoginUser(t);
       const raw = (data as any).result;
+
       const userProfile: UserDto = {
         ...raw,
         createdAt: raw.createdAt.split("T")[0].replace(/-/g, "."),
@@ -158,9 +177,9 @@ const MyProfile = () => {
 
       setUser(userProfile);
       setTempUser((prev) => (isEditing ? prev : userProfile));
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showError();
+      showError(e?.message ?? "서버 오류가 발생했습니다.");
     }
   }, [isEditing, showLogin, showError]);
 
@@ -172,11 +191,14 @@ const MyProfile = () => {
     if (!user) return;
     setTempUser({ ...user });
     setIsEditing(true);
+    nicknameWarnedRef.current = false;
   }, [user]);
 
   const handleCancel = useCallback(() => {
     setTempUser(user ? { ...user } : null);
     setIsEditing(false);
+    nicknameWarnedRef.current = false;
+    setPhotoMenuOpen(false);
   }, [user]);
 
   const handleLogout = useCallback(() => {
@@ -208,29 +230,37 @@ const MyProfile = () => {
           phone: phoneChanged ? tempUser.phone : undefined,
         });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showError();
+      showError(e?.message ?? "기본정보 수정 중 오류가 발생했습니다.");
       return;
     }
 
     if (nicknameChanged) {
+      // 닉네임 변경이 있을 때만 모달 안내(1회)
+      if (!nicknameWarnedRef.current) {
+        nicknameWarnedRef.current = true;
+        showWarning("닉네임은 규칙/중복/7일 제한이 적용됩니다");
+      }
+
       try {
         await updateMyNickname(t, (tempUser.nickname ?? "").trim());
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
         await loadLoginUser();
-        showError();
+        showError(e?.message ?? "닉네임 수정 중 오류가 발생했습니다.");
         return;
       }
     }
 
     await loadLoginUser();
     setIsEditing(false);
-  }, [loadLoginUser, showLogin, showError, tempUser, user]);
+    nicknameWarnedRef.current = false;
+  }, [loadLoginUser, showLogin, showError, showWarning, tempUser, user]);
 
   const 이미지_선택창_열기 = useCallback(() => {
     if (!isEditing) return;
+    setPhotoMenuOpen(false);
     fileInputRef.current?.click();
   }, [isEditing]);
 
@@ -248,9 +278,9 @@ const MyProfile = () => {
 
         await uploadMyProfileImage(t, file);
         await loadLoginUser();
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        showError();
+        showError(err?.message ?? "프로필 이미지 업로드 실패");
       } finally {
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
@@ -265,24 +295,29 @@ const MyProfile = () => {
         showLogin();
         return;
       }
+      setPhotoMenuOpen(false);
       await deleteMyProfileImage(t);
       await loadLoginUser();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showError();
+      showError(e?.message ?? "프로필 이미지 삭제 실패");
     }
   }, [loadLoginUser, showLogin, showError]);
 
   const viewUser = isEditing ? tempUser : user;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC] py-24 font-sans">
+    <div className="min-h-screen bg-[#F8F9FC] pt-20 pb-28 font-sans">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* 상단 */}
         <div className="flex justify-between items-end mb-8 px-2">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">내 프로필</h1>
-            <p className="text-gray-500 mt-2 text-sm font-medium">계정 설정 및 활동 내역</p>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+              내 프로필
+            </h1>
+            <p className="text-gray-500 mt-2 text-sm font-medium">
+              계정 설정 및 활동 내역
+            </p>
           </div>
 
           <button
@@ -305,50 +340,82 @@ const MyProfile = () => {
                 <div className="w-32 h-32 rounded-full bg-white p-1.5 shadow-xl shadow-gray-200/50 relative">
                   <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-100">
                     {user?.profileImageUrl ? (
-                      <img src={user.profileImageUrl} alt="프로필" className="w-full h-full object-cover" />
+                      <img
+                        src={user.profileImageUrl}
+                        alt="프로필"
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <User className="w-12 h-12 text-gray-300" />
                     )}
                   </div>
 
+                  {/* 사진 액션: 한 곳(우하단)만 */}
                   {isEditing && (
-                    <>
+                    <div className="absolute -bottom-1 right-1">
                       <button
                         type="button"
-                        onClick={이미지_선택창_열기}
-                        className="absolute bottom-1 right-1 bg-[#765AFF] text-white p-2.5 rounded-full shadow-lg hover:bg-[#6348e6] transition-transform hover:scale-105 active:scale-95"
-                        title="이미지 변경"
+                        onClick={() => setPhotoMenuOpen((v) => !v)}
+                        className="bg-[#765AFF] text-white p-2.5 rounded-full shadow-lg hover:bg-[#6348e6] transition-transform hover:scale-105 active:scale-95"
+                        title="프로필 사진"
                       >
                         <Camera className="w-4 h-4" />
                       </button>
 
-                      {user?.profileImageUrl && (
-                        <button
-                          type="button"
-                          onClick={onDeleteImage}
-                          className="absolute bottom-1 left-1 bg-white text-gray-600 p-2.5 rounded-full shadow-lg hover:bg-gray-50 transition-transform hover:scale-105 active:scale-95 border border-gray-100"
-                          title="이미지 삭제"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      {photoMenuOpen && (
+                        <div className="absolute bottom-12 right-0 w-36 bg-white border border-gray-100 rounded-2xl shadow-xl p-1">
+                          <button
+                            type="button"
+                            onClick={이미지_선택창_열기}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 text-sm text-gray-700"
+                          >
+                            <Camera className="w-4 h-4 text-[#765AFF]" />
+                            <span className="font-medium">사진 변경</span>
+                          </button>
+
+                          {user?.profileImageUrl && (
+                            <button
+                              type="button"
+                              onClick={onDeleteImage}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span className="font-medium">사진 삭제</span>
+                            </button>
+                          )}
+                        </div>
                       )}
 
-                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onPickImage} />
-                    </>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={onPickImage}
+                      />
+                    </div>
                   )}
                 </div>
               </div>
 
               <div className="relative z-10 mt-6 mb-2">
-                <h2 className="text-2xl font-bold text-gray-900">{user?.nickname || "닉네임 없음"}</h2>
-                <p className="text-gray-400 text-sm mt-1">{user?.email || ""}</p>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {user?.nickname || "닉네임 없음"}
+                </h2>
+                <p className="text-gray-400 text-sm mt-1">
+                  {user?.email || ""}
+                </p>
               </div>
 
               <div className="relative z-10 mt-6 w-full pt-6 border-t border-gray-100">
                 <div className="flex justify-between items-center px-4">
                   <div className="text-center">
-                    <p className="text-xs text-gray-400 font-semibold">가입일</p>
-                    <p className="text-gray-800 font-bold mt-1 text-sm">{user?.createdAt || ""}</p>
+                    <p className="text-xs text-gray-400 font-semibold">
+                      가입일
+                    </p>
+                    <p className="text-gray-800 font-bold mt-1 text-sm">
+                      {user?.createdAt || ""}
+                    </p>
                   </div>
                   <div className="h-8 w-[1px] bg-gray-200"></div>
                   <div className="text-center">
@@ -362,15 +429,31 @@ const MyProfile = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between text-gray-800 font-bold mb-13 px-1">
+            {/* 내 활동 내역 */}
+            <div className="bg-white rounded-3xl p-6 pb-7 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between text-gray-800 font-bold mb-5 px-1">
                 <span>내 활동 내역</span>
               </div>
 
               <div className="space-y-1">
-                <MenuItem icon={Calendar} label="내 경매 내역" onClick={() => navigate("/my_auction_list")} colorClass="bg-blue-50 text-blue-500" />
-                <MenuItem icon={Heart} label="내 찜 목록" onClick={() => navigate("/my_wish_list")} colorClass="bg-red-50 text-red-500" />
-                <MenuItem icon={Gavel} label="내 입찰 목록" onClick={() => navigate("/my_bid_list")} colorClass="bg-purple-50 text-purple-500" />
+                <MenuItem
+                  icon={Calendar}
+                  label="내 경매 내역"
+                  onClick={() => navigate("/my_auction_list")}
+                  colorClass="bg-blue-50 text-blue-500"
+                />
+                <MenuItem
+                  icon={Heart}
+                  label="내 찜 목록"
+                  onClick={() => navigate("/my_wish_list")}
+                  colorClass="bg-red-50 text-red-500"
+                />
+                <MenuItem
+                  icon={Gavel}
+                  label="내 입찰 목록"
+                  onClick={() => navigate("/my_bid_list")}
+                  colorClass="bg-purple-50 text-purple-500"
+                />
               </div>
             </div>
           </div>
@@ -378,7 +461,6 @@ const MyProfile = () => {
           {/* 오른쪽 */}
           <div className="lg:col-span-8">
             <div className="bg-white rounded-[2rem] p-8 lg:p-10 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] border border-gray-100/50 h-full relative">
-              {/* 헤더 */}
               <div className="flex items-center justify-between mb-10">
                 <h3 className="text-xl font-bold text-gray-900">기본 정보</h3>
 
@@ -410,7 +492,6 @@ const MyProfile = () => {
                 )}
               </div>
 
-              {/* 폼 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
                 <ProfileField
                   label="이름"
@@ -419,7 +500,10 @@ const MyProfile = () => {
                   isEditable={true}
                   isEditing={isEditing}
                   onChange={(e: any) =>
-                    setTempUser((prev) => ({ ...(prev ?? (user as UserDto)), name: e.target.value }))
+                    setTempUser((prev) => ({
+                      ...(prev ?? (user as UserDto)),
+                      name: e.target.value,
+                    }))
                   }
                 />
 
@@ -430,7 +514,10 @@ const MyProfile = () => {
                   isEditable={true}
                   isEditing={isEditing}
                   onChange={(e: any) =>
-                    setTempUser((prev) => ({ ...(prev ?? (user as UserDto)), nickname: e.target.value }))
+                    setTempUser((prev) => ({
+                      ...(prev ?? (user as UserDto)),
+                      nickname: e.target.value,
+                    }))
                   }
                 />
 
@@ -441,6 +528,7 @@ const MyProfile = () => {
                     icon={Mail}
                     isEditable={false}
                     isEditing={isEditing}
+                    helperText="이메일은 변경할 수 없습니다"
                   />
                 </div>
 
@@ -451,10 +539,17 @@ const MyProfile = () => {
                   isEditable={true}
                   isEditing={isEditing}
                   onChange={(e: any) => {
-                    const onlyDigits = String(e.target.value ?? "").replace(/[^0-9]/g, "");
-                    setTempUser((prev) => ({ ...(prev ?? (user as UserDto)), phone: onlyDigits }));
+                    const onlyDigits = String(e.target.value ?? "").replace(
+                      /[^0-9]/g,
+                      ""
+                    );
+                    setTempUser((prev) => ({
+                      ...(prev ?? (user as UserDto)),
+                      phone: onlyDigits,
+                    }));
                   }}
                 />
+
                 <ProfileField
                   label="생년월일"
                   value={user?.birthday}
@@ -471,11 +566,14 @@ const MyProfile = () => {
                     isEditable={true}
                     isEditing={isEditing}
                     onChange={(e: any) =>
-                      setTempUser((prev) => ({ ...(prev ?? (user as UserDto)), address: e.target.value }))
-                    }
-                  />
+                      setTempUser((prev) => ({
+                        ...(prev ?? (user as UserDto)),
+                        address: e.target.value,
+                      }))
+                  }
+                />
                 </div>
-                
+
                 <div className="md:col-span-2">
                   <ProfileField
                     label="성별"
@@ -486,21 +584,12 @@ const MyProfile = () => {
                     type="radio"
                     options={[
                       { value: "M", label: "남성" },
+                      { value: "W", label: "여성" },
                       { value: "F", label: "여성" },
                     ]}
                   />
                 </div>
               </div>
-
-              {isEditing && (
-                <div className="mt-10 p-4 rounded-2xl bg-gray-50 border border-gray-100 text-sm text-gray-500">
-                  <p className="font-semibold text-gray-700 mb-1">안내</p>
-                  <ul className="list-disc ml-5 space-y-1">
-                    <li>이름/주소/전화번호: 저장 시 서버에 반영됩니다</li>
-                    <li>닉네임: 규칙/중복/7일 제한이 적용됩니다</li>
-                  </ul>
-                </div>
-              )}
             </div>
           </div>
         </div>
