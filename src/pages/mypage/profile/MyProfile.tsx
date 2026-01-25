@@ -309,6 +309,7 @@ const MyProfile = () => {
         {/* 상단 */}
         <div className="flex justify-between items-end mb-8 px-2">
           <div>
+            <br></br>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
               내 프로필
             </h1>

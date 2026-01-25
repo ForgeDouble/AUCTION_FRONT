@@ -42,34 +42,59 @@ export const fetchLoginUser = async (
 };
 
 /** 내 판매글/경매글 목록 */
-export const fetchProductsByUser = async (
-  token: string | null,
-  page: number = 0,
-  size: number = 10
-): Promise<
-  ApiResponse<{
-    content: ProductListDto[];
-    totalElements: number;
-    totalPages: number;
-    currentPage: number;
-    size: number;
-  }>
-> => {
-  const response = await fetch(
-    `${BASE}/product/allByUser?page=${page}&size=${size}`,
-    {
-      method: "GET",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }
-  );
+export type MyProductsQuery = {
+  page?: number;
+  size?: number;
+  search?: string;            // q 같은 이름으로 쓰고싶으면 프론트에서만 바꿔도 됨
+  statuses?: string[];        // ["READY","PROCESSING"...]
+  sortBy?: string;            // "NEWEST" | "ENDING_SOON" | "MOST_BIDS" | "HIGHEST_BID"
+};
 
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
-    await throwApiError(response, "상품 조회 실패");
+export async function fetchProductsByUser(
+  token: string,
+  query: MyProductsQuery = {}
+) {
+  const params = new URLSearchParams();
+
+  params.set("page", String(query.page ?? 0));
+  params.set("size", String(query.size ?? 10));
+
+  if (query.search && query.search.trim().length > 0) {
+    params.set("search", query.search.trim());
   }
 
-  return response.json();
-};
+  if (query.sortBy) {
+    params.set("sortBy", query.sortBy);
+  }
+
+  if (query.statuses && query.statuses.length > 0) {
+    query.statuses.forEach((s) => params.append("statuses", s));
+  }
+
+  // ✅ BASE 반드시 붙이기
+  const url = `${BASE}/product/myPageProductUser?${params.toString()}`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
+    },
+  });
+
+  // ✅ 여기서도 JSON 아닌 응답(HTML 등) 안전하게 잡기
+  const text = await res.text().catch(() => "");
+
+  if (!res.ok) {
+    throw new Error(`상품 목록 조회 실패 (${res.status}) ${text?.slice(0, 200) ?? ""}`);
+  }
+
+  // ✅ return 보장
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    throw new Error(`상품 목록 조회 실패: JSON 파싱 실패 (${res.status}) ${text?.slice(0, 200) ?? ""}`);
+  }
+}
 
 /** 내 입찰 목록 */
 export const fetchBidsByUser = async (
@@ -177,9 +202,7 @@ export const updateMyNickname = async (
   return response.json();
 };
 
-/** 프로필 이미지 업로드 - multipart
- *  절대 Content-Type을 직접 넣지 말 것
- */
+/* 프로필 이미지 업로드 */
 export const uploadMyProfileImage = async (
   token: string | null,
   file: File
@@ -201,7 +224,7 @@ export const uploadMyProfileImage = async (
   return response.json();
 };
 
-/** 프로필 이미지 삭제 */
+/* 프로필 이미지 삭제 */
 export const deleteMyProfileImage = async (
   token: string | null
 ): Promise<ApiResponse<null>> => {
