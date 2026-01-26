@@ -1,6 +1,7 @@
 // src/pages/admin/AdminLayout.tsx
 import React, { useEffect, useState } from "react";
 import { NavLink, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import AdminSettingsModal from "./components/AdminSettingsModal";
 import {
   Activity,
   CalendarDays,
@@ -138,6 +139,16 @@ const AdminLayout: React.FC = () => {
     reportsOpenCount,
     extendAdminSession,
     chatUnreadTotal,
+    profileImageUrl,
+    setProfileImageUrl,
+    notifEnabled,
+    setNotifEnabled,
+    birthdayOpen,
+    setBirthdayOpen,
+    birthday,
+    setBirthday,
+    setAdminNick,
+    refreshEvents,
   } = useAdminStore();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -146,7 +157,8 @@ const AdminLayout: React.FC = () => {
 
   const roleUpper = String(adminRole ?? "").toUpperCase();
   const isAdminOnly = roleUpper.includes("ADMIN");
-
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  
   useEffect(() => {
     const tick = () => setRemainSec(safeJwtRemainingSeconds());
     tick();
@@ -270,8 +282,8 @@ const AdminLayout: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-              <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                <UserCircle2 className="w-6 h-6 text-gray-600" />
+              <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden"> 
+                {profileImageUrl ? ( <img src={profileImageUrl} alt="profile" className="w-full h-full object-cover" /> ) : ( <UserCircle2 className="w-6 h-6 text-gray-600" /> )} 
               </div>
               <div className="hidden md:block leading-tight">
                 <div className="text-xs font-semibold text-gray-900">{adminNick}</div>
@@ -336,7 +348,7 @@ const AdminLayout: React.FC = () => {
           </div>
 
           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
-            <button className="flex-1 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm flex items-center justify-center gap-2">
+            <button onClick={() => setSettingsOpen(true)} className="flex-1 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm flex items-center justify-center gap-2">
               <Settings className="w-4 h-4" />
               설정
             </button>
@@ -360,9 +372,25 @@ const AdminLayout: React.FC = () => {
             </div>
           </div>
         </div>
-
+        
         <Outlet />
       </div>
+      <AdminSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        adminEmail={adminEmail}
+        adminNick={adminNick}
+        setAdminNick={setAdminNick}
+        profileImageUrl={profileImageUrl}
+        setProfileImageUrl={setProfileImageUrl}
+        notifEnabled={notifEnabled}
+        setNotifEnabled={setNotifEnabled}
+        birthdayOpen={birthdayOpen}
+        setBirthdayOpen={setBirthdayOpen}
+        birthday={birthday}
+        setBirthday={setBirthday}
+        refreshEvents={refreshEvents}
+      />
     </div>
   );
 };

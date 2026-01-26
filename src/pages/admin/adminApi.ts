@@ -716,6 +716,44 @@ export const adminApi = {
     method: "PATCH",
     body: JSON.stringify({ title: String(title ?? "").trim() }),
   }).then((r) => unwrap<void>(r)),
+
+  updateMyNickname: (nickname: string) =>
+    request<CommonResDto<void>>("/user/nickname", {
+    method: "PATCH",
+    body: JSON.stringify({ nickname: String(nickname ?? "").trim() }),
+  }).then((r) => unwrap<void>(r)),
+
+  uploadAdminProfileImage: async (file: File): Promise<string> => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) throw new Error("token missing");
+
+    const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
+    const urlBase = base.replace(/\/$/, "");
+
+    const fd = new FormData();
+    fd.append("file", file);
+
+    // 여기 경로는 네 백엔드에 맞게 바꿔줘야 할 가능성이 큼
+    // 예: /user/profile/image, /user/profile/upload, /user/me/profile-image 등
+    const res = await fetch(`${urlBase}/user/profile/image`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+
+    const json = await res.json().catch(() => ({} as any));
+    if (!res.ok) {
+      throw new Error(json?.statusMessage ?? json?.status_message ?? json?.message ?? "upload failed");
+    }
+
+    const payload = (json?.result ?? json?.data ?? json?.payload ?? json) as any;
+    const url = String(payload?.profileImageUrl ?? payload?.url ?? payload?.fileUrl ?? "");
+    if (!url) throw new Error("profile image url missing in response");
+    return url;
+  },
+  
 };
+
+
 
 
