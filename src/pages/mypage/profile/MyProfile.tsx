@@ -442,7 +442,7 @@ const MyProfile = () => {
                 <MenuItem
                   icon={Heart}
                   label="내 찜 목록"
-                  onClick={() => navigate("/my_wish_list")}
+                  onClick={() => navigate("/mypage/wishlist")}
                   colorClass="bg-red-50 text-red-500"
                 />
                 <MenuItem
