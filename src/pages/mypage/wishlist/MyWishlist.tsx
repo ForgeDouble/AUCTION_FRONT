@@ -7,8 +7,9 @@ import {
   LayoutGrid,
   List as ListIcon,
   ChevronRight,
+  Heart
 } from "lucide-react";
-import { fetchProductsByWishlist } from "../MyPageApi";
+import { fetchProductsByWishlist, deleteWishlist } from "../MyPageApi";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PageInfo, ProductListDto } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
@@ -168,11 +169,12 @@ function TimePill({
 
 function TinyChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center px-2.5 h-8 rounded-full bg-white/70 backdrop-blur ring-1 ring-black/5 text-xs font-bold text-zinc-700">
+    <span className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-full bg-white/70 backdrop-blur ring-1 ring-black/5 text-xs font-bold text-zinc-700">
       {children}
     </span>
   );
 }
+
 
 function ViewToggle({
   mode,
@@ -238,6 +240,41 @@ const MyWishlist = () => {
 
   const [qInput, setQInput] = useState(appliedSearch);
   useEffect(() => setQInput(appliedSearch), [appliedSearch]);
+
+  const [removing, setRemoving] = useState<Record<number, boolean>>({});
+
+  const handleUnwish = async (wishlistId?: number) => {
+    if (!wishlistId) {
+    showError("wishlistId가 없습니다. 찜 목록 조회 응답에 wishlistId를 포함시켜주세요.");
+    return;
+    }
+
+    setRemoving((p) => ({ ...p, [wishlistId]: true }));
+
+    try {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+    showLogin();
+    return;
+    }
+
+    await deleteWishlist(token, wishlistId);
+
+    setWishlist((prev: any[]) => prev.filter((x) => x.wishlistId !== wishlistId));
+    setPageInfo((prev) => ({
+    ...prev,
+    totalElements: Math.max(0, (prev.totalElements || 0) - 1),
+    }));
+    } catch (e: any) {
+    showError(e?.message ?? "찜 해제 중 오류가 발생했습니다.");
+    } finally {
+      setRemoving((p) => {
+        const next = { ...p };
+        delete next[wishlistId];
+        return next;
+      });
+    }
+  };
 
   const loadProductsByWishlist = useCallback(
     async (page: number, size: number) => {
@@ -363,7 +400,12 @@ const MyWishlist = () => {
                       {STATUS_OPTIONS.find((x) => x.value === appliedStatus)?.label ?? appliedStatus}
                     </TinyChip>
                   )}
-                  {appliedSearch && <TinyChip>검색: {appliedSearch}</TinyChip>}
+                  {appliedSearch && (
+                    <TinyChip>
+                      <Search className="w-4 h-4 text-zinc-500" />
+                      <span className="truncate max-w-[160px]">{appliedSearch}</span>
+                    </TinyChip>
+                  )}
                   {appliedSize !== 10 && <TinyChip>{appliedSize}개씩</TinyChip>}
                 </div>
               </div>
@@ -494,7 +536,7 @@ const MyWishlist = () => {
             <>
               {/* GRID */}
               {appliedView === "grid" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {visibleProducts.map((product: any) => {
                     const badge = getStatusBadge(product.status);
                     const isClickable = product.status !== "READY";
@@ -532,19 +574,46 @@ const MyWishlist = () => {
                               />
                             </div>
 
-                            <div
-                              className={cn(
-                                "absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-extrabold ring-1 shadow-sm",
-                                badge.chip
-                              )}
-                            >
-                              {badge.text}
-                            </div>
+                            {(() => {
+                              const wid = product.wishlistId as number | undefined;
+                              const isRemoving = wid ? !!removing[wid] : false;
+
+                              return (
+                                <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+                                  <div className={cn("px-3 py-1 rounded-full text-xs font-extrabold ring-1 shadow-sm", badge.chip)}>
+                                    {badge.text}
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    data-unwish="1"
+                                    title="찜 해제"
+                                    disabled={!wid || isRemoving}
+                                    onPointerDown={(e) => { e.stopPropagation(); }}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleUnwish(wid);
+                                    }}
+                                    className={cn(
+                                      "w-10 h-10 rounded-full grid place-items-center ring-1 ring-black/5 backdrop-blur transition",
+                                      "bg-white/80 hover:bg-white active:scale-95",
+                                      (!wid || isRemoving) && "opacity-50 cursor-not-allowed"
+                                    )}
+                                  >
+                                    <Heart
+                                      className={cn("w-5 h-5", (!wid || isRemoving) ? "text-zinc-300" : "text-rose-600")}
+                                      fill="currentColor"
+                                    />
+                                  </button>
+                                </div>
+                              );
+                            })()}
 
                             {(product.status === "READY" ||
                               product.status === "NOTSELLED" ||
                               product.status === "SELLED") && (
-                              <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
+                              <div className="absolute inset-0 z-10 pointer-events-none bg-black/25 flex items-center justify-center">
                                 <div className="text-center">
                                   {product.status === "READY" ? (
                                     <>
@@ -635,7 +704,8 @@ const MyWishlist = () => {
                       <div
                         key={product.productId}
                         onClick={(e) => {
-                          e.stopPropagation();
+                          const t = e.target as HTMLElement;
+                          if (t.closest('[data-unwish="1"]')) return; // 하트면 무시
                           if (isClickable) navigate(`/auction_detail/${product.productId}`);
                         }}
                         className={cn(
@@ -695,32 +765,58 @@ const MyWishlist = () => {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <div className="text-[11px] font-bold text-zinc-500">{priceLabel}</div>
-                            <div className={cn("text-lg font-extrabold tabular-nums", priceClass)}>
-                              {priceText}
-                            </div>
-                          </div>
+{(() => {
+  const wid = product.wishlistId as number | undefined;
+  const isRemoving = wid ? !!removing[wid] : false;
 
-                          <button
-                            type="button"
-                            disabled={!isClickable}
-                            className={cn(
-                              "w-10 h-10 rounded-full ring-1 ring-black/5 grid place-items-center transition",
-                              isClickable
-                                ? "bg-white/70 text-zinc-800 hover:bg-zinc-900 hover:text-white"
-                                : "bg-zinc-100/60 text-zinc-400 cursor-not-allowed"
-                            )}
-                            title={isClickable ? "상세보기" : "대기중"}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isClickable) navigate(`/auction_detail/${product.productId}`);
-                            }}
-                          >
-                            <ChevronRight className="w-5 h-5" />
-                          </button>
-                        </div>
+  return (
+    <div className="flex items-center gap-3">
+      <div className="text-right">
+        <div className="text-[11px] font-bold text-zinc-500">{priceLabel}</div>
+        <div className={cn("text-lg font-extrabold tabular-nums", priceClass)}>{priceText}</div>
+      </div>
+
+      <button
+        type="button"
+        title="찜 해제"
+        disabled={!wid || isRemoving}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleUnwish(wid);
+        }}
+        className={cn(
+          "w-10 h-10 rounded-full ring-1 ring-black/5 grid place-items-center transition",
+          "bg-white/70 text-zinc-800 hover:bg-white active:scale-95",
+          (!wid || isRemoving) && "bg-zinc-100/60 text-zinc-400 cursor-not-allowed"
+        )}
+      >
+        <Heart
+          className={cn("w-5 h-5", (!wid || isRemoving) ? "text-zinc-300" : "text-rose-600")}
+          fill="currentColor"
+        />
+      </button>
+
+      <button
+        type="button"
+        disabled={!isClickable}
+        className={cn(
+          "w-10 h-10 rounded-full ring-1 ring-black/5 grid place-items-center transition",
+          isClickable
+            ? "bg-white/70 text-zinc-800 hover:bg-zinc-900 hover:text-white"
+            : "bg-zinc-100/60 text-zinc-400 cursor-not-allowed"
+        )}
+        title={isClickable ? "상세보기" : "대기중"}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isClickable) navigate(`/auction_detail/${product.productId}`);
+        }}
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+    </div>
+  );
+})()}
+
                       </div>
                     );
                   })}

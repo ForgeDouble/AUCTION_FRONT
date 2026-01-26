@@ -153,6 +153,22 @@ export const fetchProductsByWishlist = async (
   return response.json();
 };
 
+export async function deleteWishlist(token: string, wishlistId: number) {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE}/wishlist/delete/${wishlistId}`, {
+    method: "DELETE",
+    headers: {
+    Authorization: `Bearer ${token}`,
+    },
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = data?.message ?? "찜 해제 실패";
+    throw new Error(msg);
+  }
+  return data;
+}
+
+
 
 export const updateMyProfileBasic = async (
   token: string | null,
