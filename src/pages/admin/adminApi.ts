@@ -558,7 +558,7 @@ export const adminApi = {
       body: JSON.stringify(payload),
     }).then((r) => unwrap<void>(r)),
 
-
+    
 
   getUsersPage: async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
     const sp = new URLSearchParams();
@@ -718,8 +718,8 @@ export const adminApi = {
   }).then((r) => unwrap<void>(r)),
 
   updateMyNickname: (nickname: string) =>
-    request<CommonResDto<void>>("/user/nickname", {
-    method: "PATCH",
+  request<CommonResDto<void>>("/user/nickname", {
+    method: "PUT",
     body: JSON.stringify({ nickname: String(nickname ?? "").trim() }),
   }).then((r) => unwrap<void>(r)),
 
@@ -733,9 +733,7 @@ export const adminApi = {
     const fd = new FormData();
     fd.append("file", file);
 
-    // 여기 경로는 네 백엔드에 맞게 바꿔줘야 할 가능성이 큼
-    // 예: /user/profile/image, /user/profile/upload, /user/me/profile-image 등
-    const res = await fetch(`${urlBase}/user/profile/image`, {
+    const res = await fetch(`${urlBase}/user/image`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: fd,
@@ -746,12 +744,17 @@ export const adminApi = {
       throw new Error(json?.statusMessage ?? json?.status_message ?? json?.message ?? "upload failed");
     }
 
-    const payload = (json?.result ?? json?.data ?? json?.payload ?? json) as any;
-    const url = String(payload?.profileImageUrl ?? payload?.url ?? payload?.fileUrl ?? "");
+    const payload = (json?.result ?? json?.data ?? json) as any;
+    const url = String(payload?.url ?? "");
     if (!url) throw new Error("profile image url missing in response");
     return url;
   },
-  
+
+  deleteMyProfileImage: () =>
+    request<CommonResDto<void>>("/user/image/delete", { method: "DELETE" }).then((r) => unwrap<void>(r)),
+
+  getMyDetail: () =>
+    request<CommonResDto<any>>("/user/detail").then((r) => unwrap<any>(r)),
 };
 
 
