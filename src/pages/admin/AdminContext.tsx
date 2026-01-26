@@ -36,7 +36,7 @@ function nowIso(): string {
 //   return Math.max(min, Math.min(max, n));
 // }
 
-// 권한 확인을 위한 헬퍼
+// 권한 확인
 function parseAuthorityFromTokenPayload(payload: Record<string, unknown>): "ADMIN" | "INQUIRY" | "USER" {
   const pick =
     (payload as any)?.authority ??
@@ -268,9 +268,6 @@ export interface AdminStore {
 
   birthdayOpen: boolean;
   setBirthdayOpen: (v: boolean) => void;
-
-  birthday: string | null;
-  setBirthday: (v: string | null) => void;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -346,7 +343,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     profileImageUrl?: string | null;
     notifEnabled?: boolean;
     birthdayOpen?: boolean;
-    birthday?: string | null;
   };
 
   const prefsKey = useMemo(() => `admin_prefs_${profile.email}`, [profile.email]);
@@ -354,7 +350,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [profileImageUrl, setProfileImageUrlState] = useState<string | null>(null);
   const [notifEnabled, setNotifEnabledState] = useState<boolean>(true);
   const [birthdayOpen, setBirthdayOpenState] = useState<boolean>(false);
-  const [birthday, setBirthdayState] = useState<string | null>(null);
 
   useEffect(() => {
     const prefs = safeParse<AdminPrefs>(localStorage.getItem(prefsKey));
@@ -363,20 +358,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setProfileImageUrlState(prefs.profileImageUrl ?? null);
     setNotifEnabledState(typeof prefs.notifEnabled === "boolean" ? prefs.notifEnabled : true);
     setBirthdayOpenState(typeof prefs.birthdayOpen === "boolean" ? prefs.birthdayOpen : false);
-    setBirthdayState(prefs.birthday ?? null);
-
-
-    }, [prefsKey]);
+  }, [prefsKey]);
 
   useEffect(() => {
     const next: AdminPrefs = {
-    profileImageUrl,
-    notifEnabled,
-    birthdayOpen,
-    birthday,
+      profileImageUrl,
+      notifEnabled,
+      birthdayOpen,
     };
     localStorage.setItem(prefsKey, JSON.stringify(next));
-  }, [prefsKey, profileImageUrl, notifEnabled, birthdayOpen, birthday]);
+  }, [prefsKey, profileImageUrl, notifEnabled, birthdayOpen]);
 
   const setProfileImageUrl = useCallback((url: string | null) => {
     setProfileImageUrlState(url ? String(url) : null);
@@ -384,9 +375,38 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setNotifEnabled = useCallback((v: boolean) => setNotifEnabledState(Boolean(v)), []);
   const setBirthdayOpen = useCallback((v: boolean) => setBirthdayOpenState(Boolean(v)), []);
-  const setBirthday = useCallback((v: string | null) => setBirthdayState(v ? String(v) : null), []);
 
+  // 닉네임 / 프로필 관련
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const me = await adminApi.getMyDetail();
 
+        const nick =
+          (me as any)?.nick ??
+          (me as any)?.nickname ??
+          (me as any)?.name ??
+          null;
+
+        if (alive && typeof nick === "string" && nick.trim()) {
+          setAdminNick(nick.trim());
+        }
+        if (alive && me && typeof me === "object" && "profileImageUrl" in (me as any)) {
+          const url = (me as any).profileImageUrl;
+          setProfileImageUrlState(url ? String(url) : null);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [prefsKey, setAdminNick]);
+
+  // ws 관련
   useEffect(() => {
     const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
     const token = localStorage.getItem("accessToken");
@@ -1041,9 +1061,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     birthdayOpen,
     setBirthdayOpen,
-
-    birthday,
-    setBirthday,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

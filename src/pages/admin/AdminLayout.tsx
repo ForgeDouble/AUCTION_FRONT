@@ -70,19 +70,18 @@ function formatRemain(sec: number): string {
   return `로그아웃까지 ${m}:${String(s).padStart(2, "0")}`;
 }
 
-const SideItem: React.FC<{ to: string; icon: React.ElementType; label: string; badge?: number; disabled?: boolean; disabledHint?: string; }> = ({
-  to,
-  icon: Icon,
-  label,
-  badge,
-  disabled,
-  disabledHint
-}) => {
+const SideItem: React.FC<{
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  badge?: number;
+  disabled?: boolean;
+  disabledHint?: string;
+}> = ({ to, icon: Icon, label, badge, disabled, disabledHint }) => {
   if (disabled) {
     return (
       <div
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm
-                   text-gray-400 bg-gray-50 cursor-not-allowed"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
         title={disabledHint ?? "권한이 없습니다."}
         aria-disabled="true"
       >
@@ -92,9 +91,7 @@ const SideItem: React.FC<{ to: string; icon: React.ElementType; label: string; b
         </span>
 
         {typeof badge === "number" && badge > 0 && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 shrink-0">
-            {badge}
-          </span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 shrink-0">{badge}</span>
         )}
       </div>
     );
@@ -114,9 +111,7 @@ const SideItem: React.FC<{ to: string; icon: React.ElementType; label: string; b
       </span>
 
       {typeof badge === "number" && badge > 0 && (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-pink-600 text-white shrink-0">
-          {badge}
-        </span>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-pink-600 text-white shrink-0">{badge}</span>
       )}
     </NavLink>
   );
@@ -145,8 +140,6 @@ const AdminLayout: React.FC = () => {
     setNotifEnabled,
     birthdayOpen,
     setBirthdayOpen,
-    birthday,
-    setBirthday,
     setAdminNick,
     refreshEvents,
   } = useAdminStore();
@@ -158,7 +151,7 @@ const AdminLayout: React.FC = () => {
   const roleUpper = String(adminRole ?? "").toUpperCase();
   const isAdminOnly = roleUpper.includes("ADMIN");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  
+
   useEffect(() => {
     const tick = () => setRemainSec(safeJwtRemainingSeconds());
     tick();
@@ -240,7 +233,6 @@ const AdminLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* 상단 채팅 아이콘 */}
             <button
               onClick={goChats}
               className="relative px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 hover:bg-gray-50"
@@ -282,8 +274,12 @@ const AdminLayout: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-              <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden"> 
-                {profileImageUrl ? ( <img src={profileImageUrl} alt="profile" className="w-full h-full object-cover" /> ) : ( <UserCircle2 className="w-6 h-6 text-gray-600" /> )} 
+              <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt="profile" className="w-full h-full object-cover" />
+                ) : (
+                  <UserCircle2 className="w-6 h-6 text-gray-600" />
+                )}
               </div>
               <div className="hidden md:block leading-tight">
                 <div className="text-xs font-semibold text-gray-900">{adminNick}</div>
@@ -329,13 +325,7 @@ const AdminLayout: React.FC = () => {
             <SideItem to="/admin/calendar" icon={CalendarDays} label="운영 캘린더" />
             <SideItem to="/admin/notices" icon={Megaphone} label="인수인계/공지" badge={noticesCount} />
             <SideItem to="/admin/chats" icon={MessagesSquare} label="운영 채팅" badge={chatUnreadTotal} />
-            <SideItem
-              to="/admin/users"
-              icon={Users}
-              label="유저/권한 관리"
-              disabled={!isAdminOnly}
-              disabledHint="ADMIN만 접근 가능합니다."
-            />
+            <SideItem to="/admin/users" icon={Users} label="유저/권한 관리" disabled={!isAdminOnly} disabledHint="ADMIN만 접근 가능합니다." />
 
             <NavLink
               to="/"
@@ -348,7 +338,10 @@ const AdminLayout: React.FC = () => {
           </div>
 
           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
-            <button onClick={() => setSettingsOpen(true)} className="flex-1 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm flex items-center justify-center gap-2">
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="flex-1 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm flex items-center justify-center gap-2"
+            >
               <Settings className="w-4 h-4" />
               설정
             </button>
@@ -372,9 +365,10 @@ const AdminLayout: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <Outlet />
       </div>
+
       <AdminSettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -387,8 +381,6 @@ const AdminLayout: React.FC = () => {
         setNotifEnabled={setNotifEnabled}
         birthdayOpen={birthdayOpen}
         setBirthdayOpen={setBirthdayOpen}
-        birthday={birthday}
-        setBirthday={setBirthday}
         refreshEvents={refreshEvents}
       />
     </div>

@@ -1,5 +1,6 @@
+// src/pages/admin/components/AdminSettingsModal.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { X, ImagePlus, Save, Bell, Cake, User2 } from "lucide-react";
+import { X, ImagePlus, Save, Bell, Cake, User2, Trash2 } from "lucide-react";
 import { adminApi } from "../adminApi";
 
 type Props = {
@@ -67,11 +68,6 @@ function formatBirthdayDisplay(birthdayStr: string | null): string {
   return `${md.yyyy}-${md.mm}-${md.dd}`;
 }
 
-function isValidNickname(next: string): boolean {
-  if (next.length < 2 || next.length > 8) return false;
-  return /^[A-Za-z0-9가-힣_]+$/.test(next);
-}
-
 const Toggle: React.FC<{
   value: boolean;
   onChange: (v: boolean) => void;
@@ -133,10 +129,6 @@ const AdminSettingsModal: React.FC<Props> = ({
   const [loadingMy, setLoadingMy] = useState(false);
 
   const birthdayEventKey = useMemo(() => `admin_birthday_event_${adminEmail}`, [adminEmail]);
-  const birthdayMemoTag = useMemo(() => `BIRTHDAY:${adminEmail}`, [adminEmail]);
-
-  const birthdayDisplay = formatBirthdayDisplay(myBirthday);
-  const canUseBirthday = Boolean(extractMonthDayFlexible(myBirthday ?? ""));
 
   useEffect(() => {
     if (!open) return;
@@ -161,20 +153,16 @@ const AdminSettingsModal: React.FC<Props> = ({
       .getMyDetail()
       .then((me: any) => {
         setMyBirthday(me?.birthday ?? null);
-
-        const url = me?.profileImageUrl ?? null;
-        if (!profileImageUrl && url) setProfileImageUrl(String(url));
-
-        const nn = me?.nickname ?? null;
-        if (!adminNick && nn) setAdminNick(String(nn));
       })
       .catch((e: any) => {
         console.error(e);
         setMyBirthday(null);
       })
       .finally(() => setLoadingMy(false));
+  }, [open]);
 
-  }, [open, setProfileImageUrl, setAdminNick]);
+  const birthdayDisplay = useMemo(() => formatBirthdayDisplay(myBirthday), [myBirthday]);
+  const canUseBirthday = useMemo(() => Boolean(extractMonthDayFlexible(myBirthday ?? "")), [myBirthday]);
 
   if (!open) return null;
 
@@ -195,6 +183,9 @@ const AdminSettingsModal: React.FC<Props> = ({
   };
 
   const onDeleteImage = async () => {
+    if (busyDeleteImage) return;
+    if (!confirm("프로필 이미지를 삭제할까요?")) return;
+
     setBusyDeleteImage(true);
     try {
       await adminApi.deleteMyProfileImage();
@@ -202,7 +193,7 @@ const AdminSettingsModal: React.FC<Props> = ({
       alert("프로필 이미지가 삭제되었습니다.");
     } catch (e) {
       console.error(e);
-      alert("프로필 이미지 삭제에 실패했습니다.");
+      alert("프로필 이미지 삭제에 실패했습니다. 서버 응답을 확인하세요.");
     } finally {
       setBusyDeleteImage(false);
     }
@@ -211,11 +202,11 @@ const AdminSettingsModal: React.FC<Props> = ({
   const onSaveNickname = async () => {
     const next = String(nickDraft || "").trim();
     if (!next) return alert("닉네임을 입력하세요.");
-    if (!isValidNickname(next)) return alert("닉네임은 2~8자, 영문/숫자/한글/_ 만 가능합니다.");
+    if (next.length < 2 || next.length > 20) return alert("닉네임은 2~20자로 설정하세요.");
 
     setBusyNick(true);
     try {
-      await adminApi.updateMyNickname(next);
+      await adminApi.updateMyNickname(next); // 너 adminApi 기준: PUT /user/nickname
       setAdminNick(next);
       alert("닉네임이 변경되었습니다.");
     } catch (e) {
@@ -235,89 +226,56 @@ const AdminSettingsModal: React.FC<Props> = ({
 
     const memo = jsonSafeParse<BirthdayEventMemo>(localStorage.getItem(birthdayEventKey));
 
-    let serverBirthdayEvents: any[] = [];
-    try {
-      const all = await adminApi.getEvents();
-      serverBirthdayEvents = (all ?? []).filter((ev: any) => String(ev?.memo ?? "").includes(birthdayMemoTag));
-    } catch (e) {
-      console.error(e);
-      serverBirthdayEvents = [];
-    }
-
-    const safeId = (id: any) => String(id ?? "").trim();
+    // OFF면 기존 이벤트 삭제
     if (!openFlag) {
-      const ids = new Set<string>();
-      if (memo?.id) ids.add(safeId(memo.id));
-      for (const ev of serverBirthdayEvents) {
-        const id = safeId(ev?.id);
-        if (id) ids.add(id);
-      }
-
-      if (ids.size > 0) {
-        await Promise.allSettled(Array.from(ids).map((id) => adminApi.deleteEvent(id)));
+      if (memo?.id) {
+        try {
+          await adminApi.deleteEvent(memo.id);
+        } catch (e) {
+          console.error(e);
+        }
         localStorage.removeItem(birthdayEventKey);
         await refreshEvents();
-      } else {
-        localStorage.removeItem(birthdayEventKey);
       }
       return;
     }
+
+    // ON인데 생일 데이터 없으면 종료
     if (!md) return;
 
-    const wantedDate = `${year}-${md.mm}-${md.dd}`;
-
-    const sameDate = serverBirthdayEvents.filter((ev: any) => String(ev?.date ?? "") === wantedDate);
-    const otherDates = serverBirthdayEvents.filter((ev: any) => String(ev?.date ?? "") !== wantedDate);
-
-    if (otherDates.length > 0) {
-      await Promise.allSettled(otherDates.map((ev: any) => adminApi.deleteEvent(safeId(ev?.id))));
-    }
-
-    if (sameDate.length > 1) {
-      const keep = sameDate[0];
-      const drop = sameDate.slice(1);
-      await Promise.allSettled(drop.map((ev: any) => adminApi.deleteEvent(safeId(ev?.id))));
-
-      const keptId = safeId(keep?.id);
-      localStorage.setItem(
-        birthdayEventKey,
-        JSON.stringify({ id: keptId, year, mm: md.mm, dd: md.dd } satisfies BirthdayEventMemo)
-      );
-      await refreshEvents();
+    // 동일 년/월/일이면 그대로 둠
+    if (memo && memo.year === year && memo.mm === md.mm && memo.dd === md.dd) {
       return;
     }
 
-    if (sameDate.length === 1) {
-      const keptId = safeId(sameDate[0]?.id);
-      localStorage.setItem(
-        birthdayEventKey,
-        JSON.stringify({ id: keptId, year, mm: md.mm, dd: md.dd } satisfies BirthdayEventMemo)
-      );
-      return;
-    }
-
+    // 기존 이벤트 있으면 삭제 후 재생성
     if (memo?.id) {
       try {
-        await adminApi.deleteEvent(safeId(memo.id));
+        await adminApi.deleteEvent(memo.id);
       } catch (e) {
         console.error(e);
       }
       localStorage.removeItem(birthdayEventKey);
     }
 
-    // 신규 생성
+    const eventDate = `${year}-${md.mm}-${md.dd}`;
+
     const created = await adminApi.addEvent({
-      date: wantedDate,
+      date: eventDate,
       time: "00:00",
       title: `${adminNick} 생일`,
       tag: "ETC",
-      memo: birthdayMemoTag,
+      memo: `BIRTHDAY:${adminEmail}`,
     } as any);
 
-    const createdId = safeId((created as any)?.id);
     localStorage.setItem(
       birthdayEventKey,
-      JSON.stringify({ id: createdId, year, mm: md.mm, dd: md.dd } satisfies BirthdayEventMemo)
+      JSON.stringify({
+        id: String((created as any).id),
+        year,
+        mm: md.mm,
+        dd: md.dd,
+      } satisfies BirthdayEventMemo)
     );
 
     await refreshEvents();
@@ -334,13 +292,7 @@ const AdminSettingsModal: React.FC<Props> = ({
         } catch {}
       }
 
-      if (birthdayOpen && !canUseBirthday) {
-        alert("생일 정보가 없어서 캘린더 등록을 할 수 없습니다.");
-        return;
-      }
-
       await ensureBirthdayCalendar();
-
       alert("환경설정이 저장되었습니다.");
       onClose();
     } catch (e) {
@@ -413,11 +365,12 @@ const AdminSettingsModal: React.FC<Props> = ({
                         onClick={() => void onDeleteImage()}
                         disabled={busyDeleteImage}
                         className={
-                          "h-9 px-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold " +
+                          "h-9 px-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold flex items-center gap-2 " +
                           (busyDeleteImage ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
                         }
                       >
-                        {busyDeleteImage ? "삭제중" : "이미지 제거"}
+                        <Trash2 className={"w-4 h-4 " + (busyDeleteImage ? "animate-pulse" : "")} />
+                        {busyDeleteImage ? "삭제중" : "이미지 삭제"}
                       </button>
                     )}
 
@@ -442,7 +395,7 @@ const AdminSettingsModal: React.FC<Props> = ({
                       value={nickDraft}
                       onChange={(e) => setNickDraft(e.target.value)}
                       className="h-10 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-violet-400"
-                      placeholder="새 닉네임 (2~8자, 영문/숫자/한글/_)"
+                      placeholder="새 닉네임"
                     />
                     <button
                       type="button"
@@ -457,8 +410,9 @@ const AdminSettingsModal: React.FC<Props> = ({
                       저장
                     </button>
                   </div>
+
                   <div className="mt-2 text-[11px] text-gray-500">
-                    닉네임 변경 후, 토큰에 닉네임 클레임을 넣는 구조면 서버에서 새 토큰을 내려주는 방식이 가장 깔끔합니다.
+                    닉네임 변경 후 토큰에 닉네임 클레임을 넣는 구조면, 서버에서 새 토큰을 내려주는 방식이 가장 깔끔합니다.
                   </div>
                 </div>
               </div>
@@ -473,7 +427,7 @@ const AdminSettingsModal: React.FC<Props> = ({
                     생일 공개 및 캘린더 등록
                   </div>
                   <div className="text-[11px] text-gray-500">
-                    공개 ON이면 운영 캘린더에 현재 연도 기준으로 자동 등록됩니다. (memo=BIRTHDAY:이메일)
+                    공개 ON이면 운영 캘린더에 현재 연도 기준으로 자동 등록됩니다.
                   </div>
                 </div>
 
@@ -501,7 +455,7 @@ const AdminSettingsModal: React.FC<Props> = ({
                   </div>
 
                   <div className="mt-2 text-[11px] text-gray-500">
-                    생일은 계정 정보에서 자동으로 불러옵니다. 캘린더 등록은 월/일만 사용하며, 생성 연도는 “현재 연도”로 등록됩니다.
+                    생일은 계정 정보에서 자동으로 불러옵니다. 캘린더 등록은 월/일만 사용하며, 생성 연도는 현재 연도로 등록됩니다.
                   </div>
                 </div>
 
@@ -512,7 +466,7 @@ const AdminSettingsModal: React.FC<Props> = ({
                     <br />
                     - 공개 OFF: 기존 등록된 생일 이벤트 자동 해제
                     <br />
-                    - 중복 방지: 서버 이벤트(memo=BIRTHDAY:email) 기준으로 1개만 유지
+                    - 생일 데이터 변경: 계정 정보가 바뀌면 다음 저장 시 재등록
                   </div>
                 </div>
               </div>
