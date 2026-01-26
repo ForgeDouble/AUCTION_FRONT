@@ -124,26 +124,12 @@ export const fetchBidsByUser = async (
 };
 
 /** 내 찜 목록 */
-export const fetchProductsByWishlist = async (
-  token: string | null,
-  page: number = 0,
-  size: number = 10
-): Promise<
-  ApiResponse<{
-    content: ProductListDto[];
-    totalElements: number;
-    totalPages: number;
-    currentPage: number;
-    size: number;
-  }>
-> => {
-  const response = await fetch(
-    `${BASE}/product/allByWishlist?page=${page}&size=${size}`,
-    {
-      method: "GET",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }
-  );
+// MyPageApi.ts
+export const fetchProductsByWishlist = async (token: string | null, page = 0, size = 10) => {
+  const response = await fetch(`${BASE}/wishlist/products?page=${page}&size=${size}`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
@@ -152,6 +138,7 @@ export const fetchProductsByWishlist = async (
 
   return response.json();
 };
+
 
 export async function deleteWishlist(token: string, wishlistId: number) {
   const res = await fetch(`${import.meta.env.VITE_API_BASE}/wishlist/delete/${wishlistId}`, {
