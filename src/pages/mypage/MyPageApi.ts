@@ -71,7 +71,6 @@ export async function fetchProductsByUser(
     query.statuses.forEach((s) => params.append("statuses", s));
   }
 
-  // ✅ BASE 반드시 붙이기
   const url = `${BASE}/product/myPageProductUser?${params.toString()}`;
 
   const res = await fetch(url, {
@@ -81,14 +80,12 @@ export async function fetchProductsByUser(
     },
   });
 
-  // ✅ 여기서도 JSON 아닌 응답(HTML 등) 안전하게 잡기
   const text = await res.text().catch(() => "");
 
   if (!res.ok) {
     throw new Error(`상품 목록 조회 실패 (${res.status}) ${text?.slice(0, 200) ?? ""}`);
   }
 
-  // ✅ return 보장
   try {
     return text ? JSON.parse(text) : null;
   } catch {
