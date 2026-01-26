@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
@@ -38,9 +38,11 @@ import {
 import dayjs from "dayjs";
 import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
 import { useNumberParam } from "@/hooks/useNumberParam";
+import { useModal } from "@/contexts/ModalContext";
 
 const AuctionDetail = () => {
   const productId = useNumberParam("productId");
+  const { showWarning, showError, showLogin } = useModal();
   const [product, setProduct] = useState<ProductDto>();
   const [sellerInfo, setSellerInfo] = useState<SellerDto>();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -55,6 +57,9 @@ const AuctionDetail = () => {
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 실시간 입찰 내역 저장
   const [stompClient, setStompClient] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [bidLoading, setBidLoading] = useState(false);
+  // const [bidTimeout, setBidTimeout] = useState<NodeJS.Timeout | null>(null);
+  const bidTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 신고 모달 연결
   const [reportOpen, setReportOpen] = useState(false);
@@ -250,6 +255,42 @@ const AuctionDetail = () => {
     loadIsWishlisted(productId);
   }, [productId]);
 
+  // 입찰 응답 처리
+  const handleBidResponse = (data: any) => {
+    console.log("입찰 응답 수신:", data);
+
+    // 타임아웃 제거
+    if (bidTimeoutRef.current) {
+      clearTimeout(bidTimeoutRef.current);
+      bidTimeoutRef.current = null;
+    }
+
+    // 로딩 해제
+    setBidLoading(false);
+
+    if (data.success) {
+      // 성공 처리
+      showWarning(data.message || "입찰이 완료되었습니다!");
+      setBidAmount(0); // 입력 초기화
+    } else {
+      // 실패 처리
+      showWarning(data.message || "입찰에 실패했습니다.");
+    }
+  };
+
+  // 전역 에러 처리
+  const handleGlobalError = (error: any) => {
+    console.error("WebSocket 전역 에러:", error);
+
+    if (bidTimeoutRef.current) {
+      clearTimeout(bidTimeoutRef.current);
+      bidTimeoutRef.current = null;
+    }
+
+    setBidLoading(false);
+    alert(error.message || "오류가 발생했습니다.");
+  };
+
   useEffect(() => {
     if (!product) return;
 
@@ -271,50 +312,51 @@ const AuctionDetail = () => {
 
   // WebSocket 구독
   useEffect(() => {
-    // 상품 정보가 없거나 경매가 종료된 경우 WebSocket 연결 안 함
-    if (
-      !product ||
-      product.status === "SELLED" ||
-      product.status === "NOTSELLED" ||
-      product.status === "READY"
-    ) {
-      console.log("경매가 진행 중이 아니므로 WebSocket 연결하지 않음");
-      return;
-    }
+    if (!product || product.status !== "PROCESSING") return;
 
-    const socket = new SockJS("http://localhost:8080/ws-public"); // 공개 엔드포인트
+    const token = localStorage.getItem("accessToken");
+
+    // 토큰이 있으면 인증된 연결, 없으면 공개 연결
+    const endpoint = token ? "/ws" : "/ws-public";
+    const socket = new SockJS(`http://localhost:8080${endpoint}`);
     const stomp = Stomp.over(socket);
-    stomp.heartbeat.outgoing = 10000;
-    stomp.heartbeat.incoming = 10000;
-    stomp.debug = () => {};
+
+    stomp.debug = (str) => console.log("🔧 STOMP:", str);
 
     stomp.connect(
-      {}, // 인증 헤더 없음
+      token ? { Authorization: `Bearer ${token}` } : {}, // 토큰 있을 때만 헤더 추가
       () => {
-        console.log("경매 WebSocket 연결 성공");
+        console.log("✅ 연결 성공 - 엔드포인트:", endpoint);
         setStompClient(stomp);
 
-        // 구독
+        // 1. 경매 현황 구독 (누구나 가능)
         stomp.subscribe(`/topic/auction/${productId}`, (message) => {
+          console.log("📢 경매 현황:", message.body);
           const payload = JSON.parse(message.body);
-          const refinedPayload: BidLogDto = {
-            ...payload,
-            createdAt: dayjs(payload.createdAt).format("YYYY-MM-DD HH:mm:ss"),
-          };
-          console.log("📩 받은 메시지:", refinedPayload);
-          setBidLogs((prev) => [refinedPayload, ...prev]);
+          setBidLogs((prev) => [payload, ...prev]);
         });
+
+        // 2. 개인 응답 구독 (토큰 있을 때만)
+        if (token) {
+          stomp.subscribe("/user/queue/bid_response", (response) => {
+            console.log("📨 개인 응답:", response.body);
+            handleBidResponse(JSON.parse(response.body));
+          });
+
+          stomp.subscribe("/user/queue/errors", (error) => {
+            console.log("❌ 에러:", error.body);
+            handleGlobalError(JSON.parse(error.body));
+          });
+        }
       },
       (error) => {
-        console.error("경매 WebSocket 연결 실패:", error);
+        console.error("❌ 연결 실패:", error);
       },
     );
 
     return () => {
       if (stomp && stomp.connected) {
-        stomp.disconnect(() => {
-          console.log("경매 WebSocket 연결 해제");
-        });
+        stomp.disconnect();
       }
     };
   }, [product, productId]);
@@ -322,27 +364,55 @@ const AuctionDetail = () => {
   // 입찰 메시지 보내기
   const sendBid = () => {
     if (product?.status !== "PROCESSING") {
-      alert("진행 중인 경매가 아닙니다.");
+      showError("진행중인 경매가 아닙니다.");
       return;
     }
 
-    if (stompClient && bidAmount) {
-      const token = localStorage.getItem("accessToken");
-      if (token == null) {
-        throw Error("No Token");
-        return;
-      }
+    if (!stompClient) {
+      showError("서버와 연결되지 않았습니다. 페이지를 새로고침해주세요.");
+      return;
+    }
 
-      const bid = {
-        productId: productId,
-        bidAmount: bidAmount,
-        isWinned: "N",
-      };
+    if (!bidAmount || bidAmount <= 0) {
+      showWarning("입찰 금액을 입력해주세요.");
+      return;
+    }
+
+    const token = localStorage.getItem("accessToken");
+    if (token == null) {
+      showLogin();
+      console.error("Missing Token");
+      return;
+    }
+
+    // 로딩 시작
+    setBidLoading(true);
+
+    // 타임아웃 설정 (3초)
+    bidTimeoutRef.current = setTimeout(() => {
+      setBidLoading(false);
+      showError("입찰 처리 시간 초과. 다시 시도해주세요.");
+    }, 3000);
+
+    const bid = {
+      productId: productId,
+      bidAmount: bidAmount,
+      isWinned: "N",
+    };
+
+    try {
       stompClient.send(
         "/app/bid",
         { Authorization: `Bearer ${token}` },
         JSON.stringify(bid),
       ); // 서버쪽 @MessageMapping("/bid")
+      console.log("입찰 요청 전송:", bid);
+    } catch (error) {
+      clearTimeout(bidTimeoutRef.current);
+      setBidLoading(false);
+      showError("입찰 요청 전송 실패");
+      console.error("입찰 전송 오류:", error);
+    } finally {
       setBidAmount("");
     }
   };
@@ -637,23 +707,27 @@ const AuctionDetail = () => {
 
                 <div className="flex space-x-2">
                   <button
-                    className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 ${
-                      product?.status === "PROCESSING"
+                    className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 relative ${
+                      product?.status === "PROCESSING" && !bidLoading
                         ? "bg-[rgb(118,90,255)] text-white hover:from-purple-700 hover:to-pink-700"
                         : "bg-gray-600 text-gray-400 cursor-not-allowed"
                     }`}
                     onClick={() => sendBid()}
-                    disabled={product?.status !== "PROCESSING"}
+                    disabled={product?.status !== "PROCESSING" || bidLoading}
                   >
-                    {product?.status === "PROCESSING"
-                      ? "입찰하기"
-                      : "경매 종료"}
+                    {bidLoading ? (
+                      <>
+                        <span className="opacity-0">입찰하기</span>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        </div>
+                      </>
+                    ) : product?.status === "PROCESSING" ? (
+                      "입찰하기"
+                    ) : (
+                      "경매 종료"
+                    )}
                   </button>
-                  {/* {product?.status === "PROCESSING" && (
-                    <button className="bg-yellow-600 text-white px-4 py-3 rounded-xl hover:bg-yellow-700 transition-all duration-300 font-bold">
-                      즉시구매
-                    </button>
-                  )} */}
                 </div>
               </div>
 
@@ -689,7 +763,7 @@ const AuctionDetail = () => {
                   >
                     <div>
                       <div className="text-gray-900 font-semibold">
-                        {bid.userName}
+                        {bid.userNickName}
                       </div>
                       <div className="text-gray-600 text-sm">
                         {bid.createdAt}
