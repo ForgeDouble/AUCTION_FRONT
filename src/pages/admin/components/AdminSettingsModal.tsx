@@ -1,6 +1,6 @@
 // src/pages/admin/components/AdminSettingsModal.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { X, ImagePlus, Save, Bell, Cake, User2, Trash2, Camera } from "lucide-react";
+import { X, ImagePlus, Save, Bell, Cake, User2, Trash2, Camera, Settings } from "lucide-react";
 import { adminApi } from "../adminApi";
 
 type Props = {
@@ -20,7 +20,7 @@ type Props = {
   birthdayOpen: boolean;
   setBirthdayOpen: (v: boolean) => void;
 
-  refreshEvents: () => Promise<void>; // 기존 호환용 (모달에서는 사용 안 함)
+  refreshEvents: () => Promise<void>;
 };
 type BirthdayEventMemo = {
   id: string;
@@ -85,6 +85,7 @@ function startOfDay(d: Date) {
 function isLeapYear(y: number) {
   return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
 }
+
 function computeNextBirthdayDate(
   now: Date,
   mm: string,
@@ -214,7 +215,6 @@ const AdminSettingsModal: React.FC<Props> = ({
 
     const memo = jsonSafeParse<BirthdayEventMemo>(localStorage.getItem(birthdayEventKey));
 
-    // OFF면 기존 이벤트 삭제
     if (!openFlag) {
       if (memo?.id) {
         try {
@@ -228,7 +228,6 @@ const AdminSettingsModal: React.FC<Props> = ({
       return;
     }
 
-    // ON인데 생일 파싱 실패면: 혹시 과거에 만든 이벤트가 있으면 정리하고 종료
     if (!md) {
       if (memo?.id) {
         try { await adminApi.deleteEvent(memo.id); } catch (e) { console.error(e); }
@@ -244,11 +243,8 @@ const AdminSettingsModal: React.FC<Props> = ({
     const title = `${adminNick} 생일`;
     const memoText = `BIRTHDAY:${adminEmail}`;
 
-    // 백엔드가 tag enum을 엄격하게 받으면 "기타" 같은 값은 400 날 수 있어서
-    // 후보를 두고 성공하는 값으로 넣게 해두는 게 안전함
     const tagCandidates = ["ETC", "MAINTENANCE", "INCIDENT"];
 
-    // memo가 있고 동일 날짜/닉이면 그대로
     if (
       memo?.id &&
       memo.year === next.year &&
@@ -299,7 +295,6 @@ const AdminSettingsModal: React.FC<Props> = ({
       throw lastErr;
     };
 
-    // 있으면 update 시도(없으면 create)
     if (memo?.id) {
       try {
         await tryUpdate(memo.id);
@@ -410,7 +405,7 @@ const AdminSettingsModal: React.FC<Props> = ({
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center">
-                <User2 className="w-5 h-5 text-white" />
+                 <Settings className="w-5 h-5 text-white" />
               </div>
               <div>
                 <div className="text-sm font-black text-gray-900">환경설정</div>
@@ -451,17 +446,18 @@ const AdminSettingsModal: React.FC<Props> = ({
                       <User2 className="w-9 h-9 text-gray-400" />
                     )}
 
-                    <span className="absolute bottom-2 right-2 w-8 h-8 rounded-xl bg-violet-600 flex items-center justify-center shadow">
-                      <Camera className="w-4 h-4 text-white" />
+                    <span className="absolute bottom-2 right-2 w-8 h-8 rounded-xl bg-bg-transparent backdrop-blur border border-white/60 flex items-center justify-center shadow">
+                      <Camera className="w-4 h-4 text-violet-700" />
                     </span>
                   </button>
 
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 truncate">{adminNick}</div>
-                    <div className="text-[11px] text-gray-500 mt-1">
-                      이미지 클릭 또는 아래 버튼으로 업로드/변경할 수 있어요.
-                    </div>
-                  </div>
+                  {/* <div className="min-w-0">
+                    {/* <div className="text-sm font-semibold text-gray-900 truncate">{adminNick}</div> */}
+                  {/* </div>  */}
+                  
+                </div>
+                <div className="text-[11px] text-gray-500 mt-1">
+                    이미지 클릭 또는 아래 버튼으로 업로드/변경할 수 있어요.
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -470,7 +466,7 @@ const AdminSettingsModal: React.FC<Props> = ({
                     onClick={onPickImage}
                     disabled={busyUpload}
                     className={
-                      "h-10 px-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold flex items-center justify-center gap-2 " +
+                      "h-10 px-2.5 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap break-keep " +
                       (busyUpload ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
                     }
                   >
@@ -522,7 +518,7 @@ const AdminSettingsModal: React.FC<Props> = ({
                       onClick={() => void onSaveNickname()}
                       disabled={busyNick}
                       className={
-                        "h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold flex items-center gap-2 " +
+                        "h-10 px-4 min-w-[84px] rounded-xl bg-violet-600 text-white text-sm font-semibold flex items-center justify-center gap-2 whitespace-nowrap break-keep " +
                         (busyNick ? "opacity-60 cursor-not-allowed" : "hover:bg-violet-700")
                       }
                     >
@@ -531,9 +527,9 @@ const AdminSettingsModal: React.FC<Props> = ({
                     </button>
                   </div>
 
-                  <div className="mt-2 text-[11px] text-gray-500">
+                  {/* <div className="mt-2 text-[11px] text-gray-500">
                     닉네임은 즉시 저장됩니다. (토글 설정은 하단 저장 버튼에서 반영)
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* 생일 공개 */}
