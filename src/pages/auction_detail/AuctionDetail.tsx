@@ -21,6 +21,7 @@ import {
   Check,
   Siren,
   User,
+  DollarSign,
 } from "lucide-react";
 import {
   fetchBidsFromDB,
@@ -299,7 +300,7 @@ const AuctionDetail = () => {
       // 성공 처리
       // showWarning(data.message || "입찰이 완료되었습니다!");
       console.log(data.message);
-      setBidAmount(0); // 입력 초기화
+      setBidAmount(""); // 입력 초기화
     } else {
       // 실패 처리
       switch (data.errorCode) {
@@ -396,7 +397,7 @@ const AuctionDetail = () => {
     stomp.connect(
       token ? { Authorization: `Bearer ${token}` } : {}, // 토큰 있을 때만 헤더 추가
       () => {
-        console.log("✅ 연결 성공 - 엔드포인트:", endpoint);
+        console.log("연결 성공 - 엔드포인트:", endpoint);
         setStompClient(stomp);
 
         // 1. 경매 현황 구독 (누구나 가능)
@@ -664,7 +665,7 @@ const AuctionDetail = () => {
             </div>
 
             {/* 상품 설명 */}
-            <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6 mt-6">
+            <div className="min-h-66 bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6 mt-6">
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 상품 설명
               </h3>
@@ -705,167 +706,76 @@ const AuctionDetail = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-6">
                 {product?.productName}
               </h1>
-              {/* <p className="text-gray-400 mb-6">1965년 오리지널 다이얼</p> */}
 
               {/* 현재 입찰가 */}
-              <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-xl p-4 mb-6">
-                <div className="text-sm text-gray-600 mb-1">
-                  현재 최고 입찰가
+              <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-xl p-6 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm text-gray-600 font-medium">
+                    현재 최고 입찰가
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-green-400" />
                 </div>
                 <div className="text-4xl font-bold text-green-400 mb-2">
                   ₩{bidLogs[0]?.bidAmount}
                 </div>
-                <div className="flex items-center text-gray-600">
-                  <Users className="h-4 w-4 mr-1" />
-                  <span>23명 참여</span>
-                  <Eye className="h-4 w-4 ml-4 mr-1" />
-                  <span>156명 관심</span>
-                </div>
               </div>
 
               {/* 입찰 시작가 */}
-              <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-xl p-4 mb-6">
-                <div className="text-sm text-gray-600 mb-1">입찰 시작가</div>
-                <div className="text-4xl font-bold text-green-400 mb-2">
+              <div className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-xl p-6 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm text-gray-600 font-medium">
+                    입찰 시작가
+                  </div>
+                  <DollarSign className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="text-4xl font-bold text-blue-400 mb-2">
                   ₩{product?.price}
                 </div>
               </div>
 
               {/* 남은 시간 */}
-              <div className="bg-gradient-to-r from-red-600/20 to-orange-600/20 rounded-xl p-4 mb-6">
-                <div className="text-sm text-gray-600 mb-2">
-                  마감까지 남은 시간
+              <div className="bg-gradient-to-r from-red-600/20 to-orange-600/20 rounded-xl p-6 mb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-sm text-gray-600 font-medium">
+                    마감까지 남은 시간
+                  </div>
+                  <Clock className="h-5 w-5 text-red-400" />
                 </div>
-                <div className="flex justify-between text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-red-400">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center bg-white/10 rounded-lg p-3">
+                    <div className="text-3xl font-bold text-red-400">
                       {timeLeft.hours.toString().padStart(2, "0")}
                     </div>
-                    <div className="text-xs text-gray-600">시간</div>
+                    <div className="text-xs text-gray-600 mt-1">시간</div>
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-red-400">
+                  <div className="text-center bg-white/10 rounded-lg p-3">
+                    <div className="text-3xl font-bold text-red-400">
                       {timeLeft.minutes.toString().padStart(2, "0")}
                     </div>
-                    <div className="text-xs text-gray-600">분</div>
+                    <div className="text-xs text-gray-600 mt-1">분</div>
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-red-400">
+                  <div className="text-center bg-white/10 rounded-lg p-3">
+                    <div className="text-3xl font-bold text-red-400">
                       {timeLeft.seconds.toString().padStart(2, "0")}
                     </div>
-                    <div className="text-xs text-gray-600">초</div>
+                    <div className="text-xs text-gray-600 mt-1">초</div>
                   </div>
                 </div>
               </div>
 
-              {/* 입찰 입력 */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-gray-900 font-semibold block mb-2">
-                    입찰 금액
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={bidAmount}
-                      onChange={handleBidAmountChange}
-                      placeholder="₩2,500,000"
-                      className="w-full bg-white/10 border border-black/20 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-[rgb(118,90,255)]"
-                    />
-                  </div>
-                  <div className="text-sm text-gray-400 mt-1">
-                    최소 입찰가: ₩2,500,000 (현재가 + ₩50,000)
-                  </div>
-                </div>
-
-                <div className="flex space-x-2">
-                  <button
-                    className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 relative ${
-                      product?.status === "PROCESSING" && !bidLoading
-                        ? "bg-[rgb(118,90,255)] text-white hover:from-purple-700 hover:to-pink-700"
-                        : "bg-gray-600 text-gray-400 cursor-not-allowed"
-                    }`}
-                    onClick={() => sendBid()}
-                    disabled={product?.status !== "PROCESSING" || bidLoading}
-                  >
-                    {bidLoading ? (
-                      <>
-                        <span className="opacity-0">입찰하기</span>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        </div>
-                      </>
-                    ) : product?.status === "PROCESSING" ? (
-                      "입찰하기"
-                    ) : (
-                      "경매 종료"
-                    )}
-                  </button>
-                </div>
+              {/* 경매 상태 인디케이터 */}
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${product?.status === "PROCESSING" ? "bg-green-400 animate-pulse" : "bg-gray-400"}`}
+                ></div>
+                <span
+                  className={`text-sm font-medium ${product?.status === "PROCESSING" ? "text-green-400" : "text-gray-400"}`}
+                >
+                  {product?.status === "PROCESSING"
+                    ? "경매 진행중"
+                    : "경매 종료"}
+                </span>
               </div>
-
-              {/* 안전 보장 */}
-              <div className="mt-6 p-4 bg-blue-600/20 rounded-xl">
-                <div className="flex items-center mb-2">
-                  <Shield className="h-5 w-5 text-blue-400 mr-2" />
-                  <span className="text-gray-900 font-semibold">안전 보장</span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  전문가 감정 완료 • 에스크로 보호 • 7일 반품 보장
-                </div>
-              </div>
-            </div>
-
-            {/* 입찰 현황 */}
-            <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                입찰 현황
-              </h3>
-              <div className="space-y-3">
-                {bidLogs.map((bid, index) => (
-                  <div
-                    key={index}
-                    className={`flex justify-between items-center p-3 rounded-lg ${
-                      index === 0
-                        ? "bg-green-600/20 border border-green-500/30"
-                        : index === bidLogs.length - 1
-                          ? "bg-blue-600/20 border border-blue-500/30"
-                          : "bg-black/5 border border-black/20"
-                    }`}
-                  >
-                    <div>
-                      <div className="text-gray-900 font-semibold">
-                        {bid.userNickName}
-                      </div>
-                      <div className="text-gray-600 text-sm">
-                        {bid.createdAt}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div
-                        className={`font-bold ${
-                          index === 0 ? "text-green-400" : "text-gray-900"
-                        }`}
-                      >
-                        {bid.bidAmount}
-                      </div>
-                      {index === 0 && (
-                        <div className="text-green-600 text-xs flex items-center">
-                          <ArrowUp className="h-3 w-3 mr-1" />
-                          최고가
-                        </div>
-                      )}
-                      {index === bidLogs.length - 1 && (
-                        <div className="text-blue-600 text-xs">시작가</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button className="w-full mt-4 text-[rgb(118,90,255)] hover:text-blue-300 transition-colors">
-                더 보기
-              </button>
             </div>
 
             {/* 판매자 정보 */}
@@ -917,10 +827,6 @@ const AuctionDetail = () => {
                     {sellerInfo?.selledBidCount}건
                   </span>
                 </div>
-                {/* <div className="flex justify-between">
-                  <span className="text-gray-400">평균 평점:</span>
-                  <span className="text-white">4.9/5.0</span>
-                </div> */}
               </div>
 
               <button
@@ -934,75 +840,103 @@ const AuctionDetail = () => {
           </div>
         </div>
 
-        {/* 하단 탭 섹션 */}
-        <div className="mt-12">
-          <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl overflow-hidden">
-            {/* 탭 헤더 */}
-            <div className="flex border-b border-black/20">
-              <button className="flex-1 py-4 text-white bg-[rgb(118,90,255)] font-semibold">
-                상세 정보
-              </button>
-              <button className="flex-1 py-4 text-gray-600 hover:text-gray-900 hover:bg-white/5 transition-all">
-                배송/반품
-              </button>
-              <button className="flex-1 py-4 text-gray-600 hover:text-900 hover:bg-white/5 transition-all">
-                문의 (3)
-              </button>
-            </div>
-
-            {/* 탭 콘텐츠 */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <h4 className="text-gray-900 font-semibold mb-3">
-                    제품 사양
-                  </h4>
-                  <div className="space-y-2 text-gray-600">
-                    <div className="flex justify-between py-2 border-b border-black/20">
-                      <span>케이스 크기</span>
-                      <span>40mm</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-black/20">
-                      <span>케이스 소재</span>
-                      <span>스테인리스 스틸</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-black/20">
-                      <span>방수</span>
-                      <span>200m</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-black/20">
-                      <span>무브먼트</span>
-                      <span>자동</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-gray-900 font-semibold mb-3">
-                    감정 결과
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      <span>진품 인증 완료</span>
-                    </div>
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      <span>기능 동작 정상</span>
-                    </div>
-                    <div className="flex items-center text-yellow-600">
-                      <AlertTriangle className="h-5 w-5 mr-2" />
-                      <span>미세한 사용 흔적 있음</span>
-                    </div>
-
-                    <div className="mt-4 p-3 bg-blue-600/30 rounded-lg">
-                      <div className="text-sm text-blue-600">
-                        감정사: 김시계 (20년 경력) <br />
-                        감정일: 2025.09.10
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+          {/* 왼쪽: 입찰 현황 */}
+          <div className="lg:col-span-2">
+            <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6 h-[600px] flex flex-col">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                입찰 현황
+              </h3>
+              <div className="space-y-3 overflow-y-auto flex-1">
+                {bidLogs.map((bid, index) => (
+                  <div
+                    key={index}
+                    className={`flex justify-between items-center p-3 rounded-lg ${
+                      index === 0
+                        ? "bg-green-600/20 border border-green-500/30"
+                        : index === bidLogs.length - 1
+                          ? "bg-blue-600/20 border border-blue-500/30"
+                          : "bg-black/5 border border-black/20"
+                    }`}
+                  >
+                    <div>
+                      <div className="text-gray-900 font-semibold">
+                        {bid.userNickName}
+                      </div>
+                      <div className="text-gray-600 text-sm">
+                        {bid.createdAt}
                       </div>
                     </div>
+                    <div className="text-right">
+                      <div
+                        className={`font-bold ${
+                          index === 0 ? "text-green-400" : "text-gray-900"
+                        }`}
+                      >
+                        {bid.bidAmount}
+                      </div>
+                      {index === 0 && (
+                        <div className="text-green-600 text-xs flex items-center">
+                          <ArrowUp className="h-3 w-3 mr-1" />
+                          최고가
+                        </div>
+                      )}
+                      {index === bidLogs.length - 1 && (
+                        <div className="text-blue-600 text-xs">시작가</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 오른쪽: 입찰 금액 입력 */}
+          <div className="flex flex-col justify-end">
+            <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-6">입찰하기</h3>
+              <div className="space-y-6">
+                <div>
+                  <label className="text-gray-900 font-semibold block mb-3">
+                    입찰 금액
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={bidAmount}
+                      onChange={handleBidAmountChange}
+                      placeholder="₩2,500,000"
+                      className="w-full bg-white/10 border border-black/20 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-[rgb(118,90,255)]"
+                    />
+                  </div>
+                  <div className="text-sm text-gray-400 mt-2">
+                    최소 입찰가: ₩2,500,000 (현재가 + ₩50,000)
                   </div>
                 </div>
+
+                <button
+                  className={`w-full py-3 rounded-xl font-bold transition-all duration-300 relative ${
+                    product?.status === "PROCESSING" && !bidLoading
+                      ? "bg-[rgb(118,90,255)] text-white hover:bg-purple-700"
+                      : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  }`}
+                  onClick={() => sendBid()}
+                  disabled={product?.status !== "PROCESSING" || bidLoading}
+                >
+                  {bidLoading ? (
+                    <>
+                      <span className="opacity-0">입찰하기</span>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      </div>
+                    </>
+                  ) : product?.status === "PROCESSING" ? (
+                    "입찰하기"
+                  ) : (
+                    "경매 종료"
+                  )}
+                </button>
               </div>
             </div>
           </div>
