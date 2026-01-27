@@ -22,14 +22,49 @@ type Props = {
 
   refreshEvents: () => Promise<void>; // 기존 호환용 (모달에서는 사용 안 함)
 };
+type BirthdayEventMemo = {
+  id: string;
+  year: number;
+  mm: string;
+  dd: string;
+  nick?: string;
+};
 
-function extractMonthDayFlexible(birthdayStr: string): { mm: string; dd: string; yyyy?: string } | null {
+function jsonSafeParse<T>(raw: string | null): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function extractMonthDayFlexible(
+  birthdayStr: string
+): { mm: string; dd: string; yyyy?: string } | null {
   const s = String(birthdayStr || "").trim();
   if (!s) return null;
 
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) m = s.match(/^(\d{4})\.(\d{2})\.(\d{2})$/);
-  if (!m) m = s.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+  if (!m) m = s.match(/^(\d{4})\.(\d{2})\.(\d{2})(?:\s.*)?$/);
+  if (!m) m = s.match(/^(\d{4})\/(\d{2})\/(\d{2})(?:\s.*)?$/);
+
+  if (!m) {
+    const m2 =
+      s.match(/^(\d{2})-(\d{2})$/) ||
+      s.match(/^(\d{2})\.(\d{2})$/) ||
+      s.match(/^(\d{2})\/(\d{2})$/);
+    if (m2) {
+      const mm = m2[1];
+      const dd = m2[2];
+      const mmN = Number(mm);
+      const ddN = Number(dd);
+      if (mmN < 1 || mmN > 12) return null;
+      if (ddN < 1 || ddN > 31) return null;
+      return { mm, dd };
+    }
+  }
+
   if (!m) return null;
 
   const yyyy = m[1];
@@ -43,6 +78,30 @@ function extractMonthDayFlexible(birthdayStr: string): { mm: string; dd: string;
   if (ddN < 1 || ddN > 31) return null;
 
   return { yyyy, mm, dd };
+}
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function isLeapYear(y: number) {
+  return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+}
+function computeNextBirthdayDate(
+  now: Date,
+  mm: string,
+  dd: string
+): { year: number; mm: string; dd: string } {
+  const mmN = Number(mm);
+  const ddN = Number(dd);
+
+  const thisYear = now.getFullYear();
+  const candidateThisYear = new Date(thisYear, mmN - 1, ddN, 0, 0, 0, 0);
+  let targetYear = candidateThisYear <= now ? thisYear + 1 : thisYear;
+
+  if (mm === "02" && dd === "29" && !isLeapYear(targetYear)) {
+    return { year: targetYear, mm: "02", dd: "28" };
+  }
+
+  return { year: targetYear, mm, dd };
 }
 
 function formatBirthdayDisplay(birthdayStr: string | null): string {
@@ -98,6 +157,7 @@ const AdminSettingsModal: React.FC<Props> = ({
   setNotifEnabled,
   birthdayOpen,
   setBirthdayOpen,
+  refreshEvents,
 }) => {
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -141,9 +201,130 @@ const AdminSettingsModal: React.FC<Props> = ({
       })
       .finally(() => setLoadingMy(false));
   }, [open]);
-
   const birthdayDisplay = useMemo(() => formatBirthdayDisplay(myBirthday), [myBirthday]);
   const canUseBirthday = useMemo(() => Boolean(extractMonthDayFlexible(myBirthday ?? "")), [myBirthday]);
+
+  const birthdayEventKey = useMemo(() => `admin:birthdayEvent:${adminEmail}`, [adminEmail]);
+
+  const ensureBirthdayCalendar = async () => {
+    const now = new Date();
+
+    const openFlag = Boolean(birthdayOpen);
+    const md = extractMonthDayFlexible(myBirthday ?? "");
+
+    const memo = jsonSafeParse<BirthdayEventMemo>(localStorage.getItem(birthdayEventKey));
+
+    // OFF면 기존 이벤트 삭제
+    if (!openFlag) {
+      if (memo?.id) {
+        try {
+          await adminApi.deleteEvent(memo.id);
+        } catch (e) {
+          console.error(e);
+        }
+        localStorage.removeItem(birthdayEventKey);
+        try { await refreshEvents(); } catch {}
+      }
+      return;
+    }
+
+    // ON인데 생일 파싱 실패면: 혹시 과거에 만든 이벤트가 있으면 정리하고 종료
+    if (!md) {
+      if (memo?.id) {
+        try { await adminApi.deleteEvent(memo.id); } catch (e) { console.error(e); }
+        localStorage.removeItem(birthdayEventKey);
+        try { await refreshEvents(); } catch {}
+      }
+      return;
+    }
+
+    const next = computeNextBirthdayDate(now, md.mm, md.dd);
+    const eventDate = `${next.year}-${next.mm}-${next.dd}`;
+
+    const title = `${adminNick} 생일`;
+    const memoText = `BIRTHDAY:${adminEmail}`;
+
+    // 백엔드가 tag enum을 엄격하게 받으면 "기타" 같은 값은 400 날 수 있어서
+    // 후보를 두고 성공하는 값으로 넣게 해두는 게 안전함
+    const tagCandidates = ["ETC", "MAINTENANCE", "INCIDENT"];
+
+    // memo가 있고 동일 날짜/닉이면 그대로
+    if (
+      memo?.id &&
+      memo.year === next.year &&
+      memo.mm === next.mm &&
+      memo.dd === next.dd &&
+      memo.nick === adminNick
+    ) {
+      return;
+    }
+
+    const tryUpdate = async (id: string) => {
+      let lastErr: any = null;
+      for (const tag of tagCandidates) {
+        try {
+          await adminApi.updateEvent(id, {
+            date: eventDate,
+            time: "00:00",
+            title,
+            tag: tag as any,
+            memo: memoText,
+          } as any);
+          return tag;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      throw lastErr;
+    };
+
+    const tryCreate = async () => {
+      let lastErr: any = null;
+      for (const tag of tagCandidates) {
+        try {
+          const created = await adminApi.addEvent({
+            date: eventDate,
+            time: "00:00",
+            title,
+            tag: tag as any,
+            memo: memoText,
+          } as any);
+
+          const createdId = String((created as any)?.id ?? (created as any)?.eventId ?? created);
+          return { tag, id: createdId };
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      throw lastErr;
+    };
+
+    // 있으면 update 시도(없으면 create)
+    if (memo?.id) {
+      try {
+        await tryUpdate(memo.id);
+
+        localStorage.setItem(
+          birthdayEventKey,
+          JSON.stringify({ id: memo.id, year: next.year, mm: next.mm, dd: next.dd, nick: adminNick } satisfies BirthdayEventMemo)
+        );
+
+        try { await refreshEvents(); } catch {}
+        return;
+      } catch (e) {
+        console.error(e);
+        localStorage.removeItem(birthdayEventKey);
+      }
+    }
+
+    const createdRes = await tryCreate();
+    localStorage.setItem(
+      birthdayEventKey,
+      JSON.stringify({ id: createdRes.id, year: next.year, mm: next.mm, dd: next.dd, nick: adminNick } satisfies BirthdayEventMemo)
+    );
+
+    try { await refreshEvents(); } catch {}
+  };
 
   if (!open) return null;
 
@@ -208,6 +389,7 @@ const AdminSettingsModal: React.FC<Props> = ({
           }
         } catch {}
       }
+      await ensureBirthdayCalendar();
 
       alert("환경설정이 저장되었습니다.");
       onClose();
