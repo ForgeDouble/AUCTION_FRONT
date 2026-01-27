@@ -1,6 +1,6 @@
 // src/pages/admin/components/AdminSettingsModal.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { X, ImagePlus, Save, Bell, Cake, User2, Trash2 } from "lucide-react";
+import { X, ImagePlus, Save, Bell, Cake, User2, Trash2, Camera } from "lucide-react";
 import { adminApi } from "../adminApi";
 
 type Props = {
@@ -20,24 +20,8 @@ type Props = {
   birthdayOpen: boolean;
   setBirthdayOpen: (v: boolean) => void;
 
-  refreshEvents: () => Promise<void>;
+  refreshEvents: () => Promise<void>; // 기존 호환용 (모달에서는 사용 안 함)
 };
-
-type BirthdayEventMemo = {
-  id: string;
-  year: number;
-  mm: string;
-  dd: string;
-};
-
-function jsonSafeParse<T>(s: string | null): T | null {
-  if (!s) return null;
-  try {
-    return JSON.parse(s) as T;
-  } catch {
-    return null;
-  }
-}
 
 function extractMonthDayFlexible(birthdayStr: string): { mm: string; dd: string; yyyy?: string } | null {
   const s = String(birthdayStr || "").trim();
@@ -114,7 +98,6 @@ const AdminSettingsModal: React.FC<Props> = ({
   setNotifEnabled,
   birthdayOpen,
   setBirthdayOpen,
-  refreshEvents,
 }) => {
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -127,8 +110,6 @@ const AdminSettingsModal: React.FC<Props> = ({
 
   const [myBirthday, setMyBirthday] = useState<string | null>(null);
   const [loadingMy, setLoadingMy] = useState(false);
-
-  const birthdayEventKey = useMemo(() => `admin_birthday_event_${adminEmail}`, [adminEmail]);
 
   useEffect(() => {
     if (!open) return;
@@ -206,7 +187,7 @@ const AdminSettingsModal: React.FC<Props> = ({
 
     setBusyNick(true);
     try {
-      await adminApi.updateMyNickname(next); // 너 adminApi 기준: PUT /user/nickname
+      await adminApi.updateMyNickname(next);
       setAdminNick(next);
       alert("닉네임이 변경되었습니다.");
     } catch (e) {
@@ -215,70 +196,6 @@ const AdminSettingsModal: React.FC<Props> = ({
     } finally {
       setBusyNick(false);
     }
-  };
-
-  const ensureBirthdayCalendar = async () => {
-    const now = new Date();
-    const year = now.getFullYear();
-
-    const openFlag = Boolean(birthdayOpen);
-    const md = extractMonthDayFlexible(myBirthday ?? "");
-
-    const memo = jsonSafeParse<BirthdayEventMemo>(localStorage.getItem(birthdayEventKey));
-
-    // OFF면 기존 이벤트 삭제
-    if (!openFlag) {
-      if (memo?.id) {
-        try {
-          await adminApi.deleteEvent(memo.id);
-        } catch (e) {
-          console.error(e);
-        }
-        localStorage.removeItem(birthdayEventKey);
-        await refreshEvents();
-      }
-      return;
-    }
-
-    // ON인데 생일 데이터 없으면 종료
-    if (!md) return;
-
-    // 동일 년/월/일이면 그대로 둠
-    if (memo && memo.year === year && memo.mm === md.mm && memo.dd === md.dd) {
-      return;
-    }
-
-    // 기존 이벤트 있으면 삭제 후 재생성
-    if (memo?.id) {
-      try {
-        await adminApi.deleteEvent(memo.id);
-      } catch (e) {
-        console.error(e);
-      }
-      localStorage.removeItem(birthdayEventKey);
-    }
-
-    const eventDate = `${year}-${md.mm}-${md.dd}`;
-
-    const created = await adminApi.addEvent({
-      date: eventDate,
-      time: "00:00",
-      title: `${adminNick} 생일`,
-      tag: "ETC",
-      memo: `BIRTHDAY:${adminEmail}`,
-    } as any);
-
-    localStorage.setItem(
-      birthdayEventKey,
-      JSON.stringify({
-        id: String((created as any).id),
-        year,
-        mm: md.mm,
-        dd: md.dd,
-      } satisfies BirthdayEventMemo)
-    );
-
-    await refreshEvents();
   };
 
   const onSaveAll = async () => {
@@ -292,7 +209,6 @@ const AdminSettingsModal: React.FC<Props> = ({
         } catch {}
       }
 
-      await ensureBirthdayCalendar();
       alert("환경설정이 저장되었습니다.");
       onClose();
     } catch (e) {
@@ -308,7 +224,7 @@ const AdminSettingsModal: React.FC<Props> = ({
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
 
       <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-[720px] bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="w-full max-w-[760px] bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center">
@@ -330,66 +246,88 @@ const AdminSettingsModal: React.FC<Props> = ({
             </button>
           </div>
 
-          <div className="p-4 space-y-4">
-            {/* 프로필 */}
-            <div className="p-4 rounded-2xl border border-gray-100 bg-gray-50">
-              <div className="text-sm font-bold text-gray-900">프로필</div>
+          <div className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4">
+              {/* 좌측: 프로필 이미지 */}
+              <div className="p-4 rounded-2xl border border-gray-100 bg-gray-50">
+                <div className="text-sm font-bold text-gray-900">프로필 이미지</div>
 
-              <div className="mt-3 grid grid-cols-1 md:grid-cols-[140px_1fr] gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 rounded-2xl bg-white border border-gray-200 overflow-hidden flex items-center justify-center">
+                <div className="mt-3 flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={onPickImage}
+                    disabled={busyUpload}
+                    className={
+                      "relative w-24 h-24 rounded-2xl border border-gray-200 bg-white overflow-hidden flex items-center justify-center " +
+                      (busyUpload ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
+                    }
+                    title="클릭해서 이미지 업로드/변경"
+                  >
                     {profileImageUrl ? (
                       <img src={profileImageUrl} alt="profile" className="w-full h-full object-cover" />
                     ) : (
-                      <User2 className="w-7 h-7 text-gray-400" />
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={onPickImage}
-                      disabled={busyUpload}
-                      className={
-                        "h-9 px-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold flex items-center gap-2 " +
-                        (busyUpload ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
-                      }
-                    >
-                      <ImagePlus className={"w-4 h-4 " + (busyUpload ? "animate-pulse" : "")} />
-                      {busyUpload ? "업로드중" : "이미지 업로드"}
-                    </button>
-
-                    {profileImageUrl && (
-                      <button
-                        type="button"
-                        onClick={() => void onDeleteImage()}
-                        disabled={busyDeleteImage}
-                        className={
-                          "h-9 px-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold flex items-center gap-2 " +
-                          (busyDeleteImage ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
-                        }
-                      >
-                        <Trash2 className={"w-4 h-4 " + (busyDeleteImage ? "animate-pulse" : "")} />
-                        {busyDeleteImage ? "삭제중" : "이미지 삭제"}
-                      </button>
+                      <User2 className="w-9 h-9 text-gray-400" />
                     )}
 
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) void onUploadImage(f);
-                        e.currentTarget.value = "";
-                      }}
-                    />
+                    <span className="absolute bottom-2 right-2 w-8 h-8 rounded-xl bg-violet-600 flex items-center justify-center shadow">
+                      <Camera className="w-4 h-4 text-white" />
+                    </span>
+                  </button>
+
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 truncate">{adminNick}</div>
+                    <div className="text-[11px] text-gray-500 mt-1">
+                      이미지 클릭 또는 아래 버튼으로 업로드/변경할 수 있어요.
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-2xl p-3">
-                  <div className="text-[11px] text-gray-500">닉네임 변경</div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={onPickImage}
+                    disabled={busyUpload}
+                    className={
+                      "h-10 px-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold flex items-center justify-center gap-2 " +
+                      (busyUpload ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
+                    }
+                  >
+                    <ImagePlus className={"w-4 h-4 " + (busyUpload ? "animate-pulse" : "")} />
+                    {busyUpload ? "업로드중" : profileImageUrl ? "이미지 변경" : "이미지 업로드"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void onDeleteImage()}
+                    disabled={!profileImageUrl || busyDeleteImage}
+                    className={
+                      "h-10 px-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold flex items-center justify-center gap-2 " +
+                      (!profileImageUrl || busyDeleteImage ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
+                    }
+                  >
+                    <Trash2 className={"w-4 h-4 " + (busyDeleteImage ? "animate-pulse" : "")} />
+                    {busyDeleteImage ? "삭제중" : "삭제"}
+                  </button>
+                </div>
+
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onUploadImage(f);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </div>
+
+              {/* 우측: 닉네임 + 생일 공개 + 알림 */}
+              <div className="space-y-4">
+                {/* 닉네임 */}
+                <div className="p-4 rounded-2xl border border-gray-100 bg-white">
+                  <div className="text-sm font-bold text-gray-900">닉네임</div>
                   <div className="mt-2 flex items-center gap-2">
                     <input
                       value={nickDraft}
@@ -412,78 +350,58 @@ const AdminSettingsModal: React.FC<Props> = ({
                   </div>
 
                   <div className="mt-2 text-[11px] text-gray-500">
-                    닉네임 변경 후 토큰에 닉네임 클레임을 넣는 구조면, 서버에서 새 토큰을 내려주는 방식이 가장 깔끔합니다.
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 생일 공개 + 캘린더 */}
-            <div className="p-4 rounded-2xl border border-gray-100 bg-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <Cake className="w-4 h-4" />
-                    생일 공개 및 캘린더 등록
-                  </div>
-                  <div className="text-[11px] text-gray-500">
-                    공개 ON이면 운영 캘린더에 현재 연도 기준으로 자동 등록됩니다.
+                    닉네임은 즉시 저장됩니다. (토글 설정은 하단 저장 버튼에서 반영)
                   </div>
                 </div>
 
-                <Toggle
-                  value={birthdayOpen}
-                  onChange={(v) => {
-                    if (v && !canUseBirthday) {
-                      alert("생일 정보가 없어서 캘린더 등록을 할 수 없습니다.");
-                      return;
-                    }
-                    setBirthdayOpen(v);
-                  }}
-                  labelOn="공개"
-                  labelOff="비공개"
-                  disabled={loadingMy}
-                />
-              </div>
+                {/* 생일 공개 */}
+                <div className="p-4 rounded-2xl border border-gray-100 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        <Cake className="w-4 h-4" />
+                        생일 공개
+                      </div>
+                      <div className="text-[11px] text-gray-500">프로필에서 생일 정보 공개 여부만 설정합니다.</div>
+                    </div>
 
-              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="p-3 rounded-2xl border border-gray-100 bg-gray-50">
-                  <div className="text-[11px] text-gray-500">생일</div>
-
-                  <div className="mt-2 h-10 w-full rounded-xl border border-gray-200 px-3 text-sm flex items-center bg-white">
-                    {loadingMy ? "불러오는 중..." : birthdayDisplay}
+                    <Toggle
+                      value={birthdayOpen}
+                      onChange={(v) => {
+                        if (v && !canUseBirthday) {
+                          alert("생일 정보가 없어서 공개 설정을 할 수 없습니다.");
+                          return;
+                        }
+                        setBirthdayOpen(v);
+                      }}
+                      labelOn="공개"
+                      labelOff="비공개"
+                      disabled={loadingMy}
+                    />
                   </div>
 
-                  <div className="mt-2 text-[11px] text-gray-500">
-                    생일은 계정 정보에서 자동으로 불러옵니다. 캘린더 등록은 월/일만 사용하며, 생성 연도는 현재 연도로 등록됩니다.
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-2xl border border-gray-100 bg-gray-50">
-                  <div className="text-[11px] text-gray-500">등록 규칙</div>
-                  <div className="mt-2 text-sm text-gray-800 leading-relaxed">
-                    - 공개 ON: 내 생일을 운영 캘린더에 자동 등록
-                    <br />
-                    - 공개 OFF: 기존 등록된 생일 이벤트 자동 해제
-                    <br />
-                    - 생일 데이터 변경: 계정 정보가 바뀌면 다음 저장 시 재등록
+                  <div className="mt-3 p-3 rounded-2xl border border-gray-100 bg-gray-50">
+                    <div className="text-[11px] text-gray-500">생일</div>
+                    <div className="mt-2 h-10 w-full rounded-xl border border-gray-200 px-3 text-sm flex items-center bg-white">
+                      {loadingMy ? "불러오는 중..." : birthdayDisplay}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* 알림 */}
-            <div className="p-4 rounded-2xl border border-gray-100 bg-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <Bell className="w-4 h-4" />
-                    알림 설정
+                {/* 알림 */}
+                <div className="p-4 rounded-2xl border border-gray-100 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        <Bell className="w-4 h-4" />
+                        알림 설정
+                      </div>
+                      <div className="text-[11px] text-gray-500">운영 화면에서 알림 배너/브라우저 알림 등에 활용</div>
+                    </div>
+
+                    <Toggle value={notifEnabled} onChange={setNotifEnabled} labelOn="ON" labelOff="OFF" />
                   </div>
-                  <div className="text-[11px] text-gray-500">운영 화면에서 알림 배너/브라우저 알림 등에 활용 가능</div>
                 </div>
-
-                <Toggle value={notifEnabled} onChange={setNotifEnabled} labelOn="ON" labelOff="OFF" />
               </div>
             </div>
           </div>
