@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
@@ -14,7 +14,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Star,
   MessageCircle,
   AlertTriangle,
   CheckCircle,
@@ -34,6 +33,7 @@ import {
   type SellerDto,
   type BidLogDto,
   type ProductDto,
+  type BidResponse,
 } from "./AuctionDetailDto";
 import dayjs from "dayjs";
 import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
@@ -46,14 +46,14 @@ const AuctionDetail = () => {
   const [product, setProduct] = useState<ProductDto>();
   const [sellerInfo, setSellerInfo] = useState<SellerDto>();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [bidAmount, setBidAmount] = useState(0);
+  const [bidAmount, setBidAmount] = useState<string>("");
   const [wishlistId, setWishlistId] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState({
     hours: 0,
     minutes: 0,
     seconds: 0,
   });
-  const [isWatching, setIsWatching] = useState(false);
+  // const [isWatching, setIsWatching] = useState(false);
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 실시간 입찰 내역 저장
   const [stompClient, setStompClient] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -144,6 +144,9 @@ const AuctionDetail = () => {
   /* 상품 조회 */
   const loadProduct = async () => {
     try {
+      if (!productId) {
+        showError("서버 오류가 발생했습니다.다시 시도해주세요.");
+      }
       const data = await fetchProductById(productId);
       setProduct(data.result);
     } catch (error) {
@@ -249,14 +252,38 @@ const AuctionDetail = () => {
     }
   };
 
+  // 콤마 포맷팅 함수
+  const formatNumber = (value: string): string => {
+    const number = value.replace(/[^0-9]/g, "");
+    if (number === "") return "";
+    return parseInt(number, 10).toLocaleString("ko-KR");
+  };
+  // input 핸들러
+  const handleBidAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatNumber(e.target.value);
+    setBidAmount(formatted);
+  };
+
   useEffect(() => {
     loadProduct();
     loadSellerInfo();
     loadIsWishlisted(productId);
   }, [productId]);
 
+  const BID_RESPONSE_MESSAGES = {
+    NOT_ALLOWED: "해당 상품에 접근할 권한이 없습니다.",
+    USER_NOT_FOUND: "존재하지 않은 아이디입니다. 고객센터에 문의하세요",
+    PRODUCT_NOT_FOUND: "존재하지 않은 상품입니다.",
+    SELLER_NOT_ALLOWED: "판매자는 입찰을 할 수 없습니다.",
+    QUANTITY_ERROR: "입찰가는 1000원 단위로 입력해주세요.",
+    LOW_PRICE: "현재 최고가 보다 높은 금액만 입찰가능합니다.",
+    INVALID_INPUT_FORMAT: "올바르지 않은 입력입니다.",
+    BID_VALIDATION_ERROR: "올바르지 않은 입력입니다.",
+    INTERNAL_ERROR: "입찰 처리중 오류가 발생했습니다. 고객센터에 문의하세요",
+  } as const;
+
   // 입찰 응답 처리
-  const handleBidResponse = (data: any) => {
+  const handleBidResponse = (data: BidResponse) => {
     console.log("입찰 응답 수신:", data);
 
     // 타임아웃 제거
@@ -270,26 +297,69 @@ const AuctionDetail = () => {
 
     if (data.success) {
       // 성공 처리
-      showWarning(data.message || "입찰이 완료되었습니다!");
+      // showWarning(data.message || "입찰이 완료되었습니다!");
+      console.log(data.message);
       setBidAmount(0); // 입력 초기화
     } else {
       // 실패 처리
-      showWarning(data.message || "입찰에 실패했습니다.");
+      switch (data.errorCode) {
+        case "NOT_ALLOWED":
+          showError(BID_RESPONSE_MESSAGES.NOT_ALLOWED);
+          break;
+        case "USER_NOT_FOUND":
+          showError(BID_RESPONSE_MESSAGES.USER_NOT_FOUND);
+          showLogin();
+          break;
+        case "PRODUCT_NOT_FOUND":
+          showError(BID_RESPONSE_MESSAGES.PRODUCT_NOT_FOUND);
+          break;
+        case "SELLER_NOT_ALLOWED":
+          showWarning(BID_RESPONSE_MESSAGES.SELLER_NOT_ALLOWED);
+          break;
+        case "QUANTITY_ERROR":
+          showWarning(BID_RESPONSE_MESSAGES.QUANTITY_ERROR);
+          break;
+        case "LOW_PRICE":
+          showWarning(BID_RESPONSE_MESSAGES.LOW_PRICE);
+          break;
+        case "INVALID_INPUT_FORMAT":
+          showWarning(BID_RESPONSE_MESSAGES.INVALID_INPUT_FORMAT);
+          break;
+        case "BID_VALIDATION_ERROR":
+          showWarning(BID_RESPONSE_MESSAGES.BID_VALIDATION_ERROR);
+          break;
+        case "INTERNAL_ERROR":
+          showError(BID_RESPONSE_MESSAGES.INTERNAL_ERROR);
+          break;
+      }
     }
+  };
+
+  const validateBidAmount = (amountString: string): string | null => {
+    const amount = parseInt(amountString.replace(/,/g, ""), 10);
+
+    if (!amountString || isNaN(amount) || amount <= 0) {
+      return BID_RESPONSE_MESSAGES.INVALID_INPUT_FORMAT;
+    }
+
+    if (amount % 1000 !== 0) {
+      return BID_RESPONSE_MESSAGES.QUANTITY_ERROR;
+    }
+    return null; // 검증 통과
   };
 
   // 전역 에러 처리
-  const handleGlobalError = (error: any) => {
-    console.error("WebSocket 전역 에러:", error);
+  // const handleGlobalError = (error: any) => {
+  //   console.error("WebSocket 전역 에러:", error);
 
-    if (bidTimeoutRef.current) {
-      clearTimeout(bidTimeoutRef.current);
-      bidTimeoutRef.current = null;
-    }
+  //   if (bidTimeoutRef.current) {
+  //     clearTimeout(bidTimeoutRef.current);
+  //     bidTimeoutRef.current = null;
+  //   }
 
-    setBidLoading(false);
-    alert(error.message || "오류가 발생했습니다.");
-  };
+  //   setBidLoading(false);
+  //   alert(error.message || "오류가 발생했습니다.");
+  // };
 
   useEffect(() => {
     if (!product) return;
@@ -331,7 +401,7 @@ const AuctionDetail = () => {
 
         // 1. 경매 현황 구독 (누구나 가능)
         stomp.subscribe(`/topic/auction/${productId}`, (message) => {
-          console.log("📢 경매 현황:", message.body);
+          console.log("경매 현황:", message.body);
           const payload = JSON.parse(message.body);
           setBidLogs((prev) => [payload, ...prev]);
         });
@@ -339,14 +409,14 @@ const AuctionDetail = () => {
         // 2. 개인 응답 구독 (토큰 있을 때만)
         if (token) {
           stomp.subscribe("/user/queue/bid_response", (response) => {
-            console.log("📨 개인 응답:", response.body);
+            console.log("개인 응답:", response.body);
             handleBidResponse(JSON.parse(response.body));
           });
 
-          stomp.subscribe("/user/queue/errors", (error) => {
-            console.log("❌ 에러:", error.body);
-            handleGlobalError(JSON.parse(error.body));
-          });
+          // stomp.subscribe("/user/queue/errors", (error) => {
+          //   console.log("에러:", error.body);
+          //   handleGlobalError(JSON.parse(error.body));
+          // });
         }
       },
       (error) => {
@@ -373,8 +443,9 @@ const AuctionDetail = () => {
       return;
     }
 
-    if (!bidAmount || bidAmount <= 0) {
-      showWarning("입찰 금액을 입력해주세요.");
+    const amountError = validateBidAmount(bidAmount);
+    if (amountError) {
+      showWarning(amountError);
       return;
     }
 
@@ -394,9 +465,11 @@ const AuctionDetail = () => {
       showError("입찰 처리 시간 초과. 다시 시도해주세요.");
     }, 3000);
 
+    const amount = parseInt(bidAmount.replace(/,/g, ""), 10);
+
     const bid = {
       productId: productId,
-      bidAmount: bidAmount,
+      bidAmount: amount,
       isWinned: "N",
     };
 
@@ -695,7 +768,7 @@ const AuctionDetail = () => {
                     <input
                       type="text"
                       value={bidAmount}
-                      onChange={(e) => setBidAmount(e.target.value)}
+                      onChange={handleBidAmountChange}
                       placeholder="₩2,500,000"
                       className="w-full bg-white/10 border border-black/20 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-[rgb(118,90,255)]"
                     />

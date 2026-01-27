@@ -2,7 +2,7 @@ import type { BidLogDto, ProductDto, SellerDto } from "./AuctionDetailDto";
 import type { ApiResponse } from "../../type/CommonType";
 
 export const fetchBidsFromRedis = async (
-  productId: number
+  productId: number,
 ): Promise<ApiResponse<BidLogDto[]>> => {
   const response = await fetch(`http://localhost:8080/bid/redis/${productId}`, {
     method: "GET",
@@ -19,7 +19,7 @@ export const fetchBidsFromRedis = async (
 };
 
 export const fetchProductById = async (
-  productId: number
+  productId: number | null,
 ): Promise<ApiResponse<ProductDto>> => {
   const response = await fetch(`http://localhost:8080/product/${productId}`, {
     method: "GET",
@@ -36,7 +36,7 @@ export const fetchProductById = async (
 };
 
 export const fetchSellerByProductId = async (
-  productId: number | null
+  productId: number | null,
 ): Promise<ApiResponse<SellerDto>> => {
   const response = await fetch(
     `http://localhost:8080/user/seller/${productId}`,
@@ -45,7 +45,7 @@ export const fetchSellerByProductId = async (
       headers: {
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   if (!response.ok) {
@@ -56,7 +56,7 @@ export const fetchSellerByProductId = async (
 };
 
 export const fetchBidsFromDB = async (
-  productId: number
+  productId: number,
 ): Promise<ApiResponse<BidLogDto[]>> => {
   const response = await fetch(`http://localhost:8080/bid/all/${productId}`, {
     method: "GET",
@@ -74,7 +74,7 @@ export const fetchBidsFromDB = async (
 
 export const fetchIsWishlisted = async (
   token: string | null,
-  productId: null | number
+  productId: null | number,
 ): Promise<ApiResponse<number | null>> => {
   const response = await fetch(
     `http://localhost:8080/wishlist/isWishlisted/${productId}`,
@@ -84,7 +84,7 @@ export const fetchIsWishlisted = async (
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   if (!response.ok) {

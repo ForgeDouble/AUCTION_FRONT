@@ -32,3 +32,11 @@ export interface SellerDto {
   selledBidCount: number;
   email: string;
 }
+
+export interface BidResponse {
+  success: boolean;
+  message: string | null;
+  data: string | null;
+  errorCode: string;
+  timestamp: number;
+}
