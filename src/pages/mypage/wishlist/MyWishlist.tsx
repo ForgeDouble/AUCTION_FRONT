@@ -335,18 +335,18 @@ const MyWishlist = () => {
         return name.includes(q) || content.includes(q);
       });
 
-<!--       setCurrentPage(page);
-      console.log(data);
-    } catch (error) {
-      console.error(error);
-      if (error instanceof UnauthorizedError) {
-        showLogin();
-      } else {
-        showError();
-      }
-      checkAuth();
-    } finally {
-      setLoading(false); -->
+//       setCurrentPage(page);
+//       console.log(data);
+//     } catch (error) {
+//       console.error(error);
+//       if (error instanceof UnauthorizedError) {
+//         showLogin();
+//       } else {
+//         showError();
+//       }
+//       checkAuth();
+//     } finally {
+//       setLoading(false);
 
     }
     return list;
