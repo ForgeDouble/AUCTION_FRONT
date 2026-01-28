@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "../../../hooks/useAuth";
-
 import type { UserDto } from "../MyPageDto";
 import {
   fetchLoginUser,
@@ -30,7 +29,6 @@ import {
   deleteMyProfileImage,
 } from "../MyPageApi";
 import { useModal } from "@/contexts/ModalContext";
-import ProfileImageUpload from "@/pages/mypage/profile/ProfileImageUpload";
 
 interface ProfileFieldProps {
   label: string;
@@ -145,7 +143,7 @@ const MyProfile = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { showLogin, showError, showWarning } = useModal();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState<UserDto | null>(null);
   const [tempUser, setTempUser] = useState<UserDto | null>(null);
@@ -154,7 +152,6 @@ const MyProfile = () => {
 
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
   const nicknameWarnedRef = useRef(false);
-
 
   useEffect(() => {
     if (!isEditing) setPhotoMenuOpen(false);
@@ -175,7 +172,7 @@ const MyProfile = () => {
         ...raw,
         createdAt: raw.createdAt.split("T")[0].replace(/-/g, "."),
       };
-      setUserProfileImage(data.result.profileImageUrl);
+
       setUser(userProfile);
       setTempUser((prev) => (isEditing ? prev : userProfile));
     } catch (e: any) {
@@ -183,32 +180,6 @@ const MyProfile = () => {
       showError(e?.message ?? "서버 오류가 발생했습니다.");
     }
   }, [isEditing, showLogin, showError]);
-
-  const loadUpdateUser = async () => {
-    try {
-      const token = localStorage.getItem("accessToken");
-      if (token == null) {
-        showLogin();
-        console.error("Missing AccessToken");
-        return;
-      }
-      const userUpdateDto: UserUpdateDto = {
-        name: tempUser?.name ?? "",
-        nickname: tempUser?.nickname ?? "",
-        phone: tempUser?.phone ?? "",
-        address: tempUser?.address ?? "",
-        birthday: tempUser?.birthday ?? "",
-        gender: tempUser?.gender ?? "M",
-      };
-
-      await fetchUpdateUser(token, userUpdateDto);
-      setIsEditing(false);
-      setUser(tempUser);
-    } catch (error) {
-      console.error(error);
-      showError();
-    }
-  };
 
   useEffect(() => {
     loadLoginUser();
@@ -484,7 +455,7 @@ const MyProfile = () => {
               <div className="flex-1" />
             </div>
           </div>
-          
+
           <div className="lg:col-span-8 h-full">
             <div className="bg-white rounded-[2rem] p-8 lg:p-10 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] border border-gray-100/50 h-full relative">
               <div className="flex items-center justify-between mb-10">

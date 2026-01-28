@@ -70,31 +70,31 @@ const AuctionDetail = () => {
   const [reportMode, setReportMode] = useState<"USER" | "PRODUCT">("USER");
 
 
-<!--   const { userEmail: authEmail, userId: authUserId } = useAuth();
+  // const { userEmail: authEmail, userId: authUserId } = useAuth();
 
-  const myEmailNorm = useMemo(() => {
-    return String(authEmail ?? "").trim().toLowerCase();
-  }, [authEmail]);
+  // const myEmailNorm = useMemo(() => {
+  //   return String(authEmail ?? "").trim().toLowerCase();
+  // }, [authEmail]);
 
-  const isSelfSeller = useMemo(() => {
-    const sellerEmailNorm = String(sellerInfo?.email ?? "").trim().toLowerCase();
+  // const isSelfSeller = useMemo(() => {
+  //   const sellerEmailNorm = String(sellerInfo?.email ?? "").trim().toLowerCase();
 
-    const myId = authUserId != null ? Number(authUserId) : null;
-    const sellerId = sellerInfo?.userId != null ? Number(sellerInfo.userId) : null;
+  //   const myId = authUserId != null ? Number(authUserId) : null;
+  //   const sellerId = sellerInfo?.userId != null ? Number(sellerInfo.userId) : null;
 
-    const sameId = myId != null && sellerId != null && myId === sellerId;
-    const sameEmail = myEmailNorm !== "" && sellerEmailNorm !== "" && myEmailNorm === sellerEmailNorm;
+  //   const sameId = myId != null && sellerId != null && myId === sellerId;
+  //   const sameEmail = myEmailNorm !== "" && sellerEmailNorm !== "" && myEmailNorm === sellerEmailNorm;
 
-    return sameId || sameEmail;
-  }, [authUserId, myEmailNorm, sellerInfo?.email, sellerInfo?.userId]);
+  //   return sameId || sameEmail;
+  // }, [authUserId, myEmailNorm, sellerInfo?.email, sellerInfo?.userId]);
 
-  const canChatSeller = useMemo(() => {
-    return !isSelfSeller && Boolean(sellerInfo?.email);
-  }, [isSelfSeller, sellerInfo?.email]);
+  // const canChatSeller = useMemo(() => {
+  //   return !isSelfSeller && Boolean(sellerInfo?.email);
+  // }, [isSelfSeller, sellerInfo?.email]);
 
-  const canReportSeller = useMemo(() => {
-    return !isSelfSeller && Boolean(sellerInfo?.userId);
-  }, [isSelfSeller, sellerInfo?.userId]); -->
+  // const canReportSeller = useMemo(() => {
+  //   return !isSelfSeller && Boolean(sellerInfo?.userId);
+  // }, [isSelfSeller, sellerInfo?.userId]);
 
 
   const calculateTimeLeft = (endTime: string) => {
@@ -286,20 +286,20 @@ const AuctionDetail = () => {
 
 
   // 본인 판단 여부 확인
-<!--   const myEmail = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("userEmail");
-      return String(raw ?? "").trim().toLowerCase();
-    } catch {
-      return "";
-    }
-  }, []);
+  //  const myEmail = useMemo(() => {
+  //   try {
+  //     const raw = localStorage.getItem("userEmail");
+  //     return String(raw ?? "").trim().toLowerCase();
+  //   } catch {
+  //     return "";
+  //   }
+  // }, []);
 
-  const isMyProduct = useMemo(() => {
-    const sellerEmail = String(sellerInfo?.email ?? "").trim().toLowerCase();
-    if (!myEmail || !sellerEmail) return false;
-    return myEmail === sellerEmail;
-  }, [myEmail, sellerInfo?.email]); -->
+  // const isMyProduct = useMemo(() => {
+  //   const sellerEmail = String(sellerInfo?.email ?? "").trim().toLowerCase();
+  //   if (!myEmail || !sellerEmail) return false;
+  //   return myEmail === sellerEmail;
+  // }, [myEmail, sellerInfo?.email]);
 
   // 콤마 포맷팅 함수
   const formatNumber = (value: string): string => {
@@ -943,12 +943,11 @@ const AuctionDetail = () => {
                 ))}
               </div>
 
-<!--               <button className="w-full mt-4 text-[rgb(118,90,255)] hover:text-blue-300 transition-colors">
+              {/* <button className="w-full mt-4 text-[rgb(118,90,255)] hover:text-blue-300 transition-colors">
                 더 보기
               </button>
             </div>
 
-            {/* 판매자 정보 */}
             <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-black">판매자 정보</h3>
@@ -1008,10 +1007,7 @@ const AuctionDetail = () => {
                     {sellerInfo?.selledBidCount}건
                   </span>
                 </div>
-                {/* <div className="flex justify-between">
-                  <span className="text-gray-400">평균 평점:</span>
-                  <span className="text-white">4.9/5.0</span>
-                </div> */}
+
               </div>
 
               <button
@@ -1027,7 +1023,7 @@ const AuctionDetail = () => {
               >
                 <MessageCircle className="h-4 w-4 inline mr-2" />
                 판매자 문의
-              </button> -->
+              </button> */}
 
             </div>
           </div>
