@@ -80,7 +80,7 @@ export default function ChatListPopup() {
                     </div>
 
 
-                    {r.adminChat && (
+                    {r.inquiry && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 shrink-0">
                         문의
                       </span>

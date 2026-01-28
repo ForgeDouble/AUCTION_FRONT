@@ -23,7 +23,7 @@ export default function ChatRoomList({ rooms, onOpen }: Props) {
                                     {r.title}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {r.adminChat && (
+                                    {r.inquiry && (
                                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
                                             문의
                                         </span>
