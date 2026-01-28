@@ -8,7 +8,9 @@ import {
   RefreshCw,
   SendHorizonal,
   Paperclip,
-  X
+  X,
+  Pencil,
+  Check
 } from "lucide-react";
 import { adminApi } from "../adminApi";
 import type { AdminChatMemberRow, AdminChatMessageRow, AdminChatRoomRow } from "../adminTypes";
@@ -70,7 +72,6 @@ function nameFromEmail(email: string) {
 }
 
 function getSenderEmail(m: AdminChatMessageRow) {
-  // 서버가 senderId를 email로 주는 경우가 많아서 2순위로 둠
   return emailLike(m.sender?.email) || emailLike(m.senderId) || "";
 }
 
@@ -175,6 +176,10 @@ export default function AdminChatPage() {
   const [pickedFiles, setPickedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
 
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId) ?? null,
@@ -292,6 +297,8 @@ export default function AdminChatPage() {
   };
 
   const selectRoom = async (roomId: string) => {
+    setEditingTitle(false);
+    setTitleDraft("");
     setActiveRoomId(roomId);
 
     await adminApi.enterChatRoom(roomId);
@@ -372,6 +379,11 @@ export default function AdminChatPage() {
 
   const leave = async () => {
     if (!activeRoomId) return;
+    if (!canLeaveRoom) {
+      alert("운영자 단체방은 나갈 수 없습니다.");
+      return;
+    }
+
     if (!confirm("이 채팅방에서 나가시겠습니까?")) return;
 
     await adminApi.leaveChatRoom(activeRoomId);
@@ -419,6 +431,65 @@ export default function AdminChatPage() {
 
   const removePickedFile = (idx: number) => {
     setPickedFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const canRename = useMemo(() => {
+    if (!activeRoomId || !activeRoom) return false;
+    const typeOk = activeRoom.roomType === "ADMIN_GROUP" || activeRoom.roomType === "STAFF_GROUP";
+    if (!typeOk) return false;
+
+    if ((activeRoom.roomName ?? "").trim() === "운영자 단체방") return false;
+
+    return true;
+  }, [activeRoomId, activeRoom]);
+
+  const canLeaveRoom = useMemo(() => {
+  if (!activeRoomId || !activeRoom) return false;
+
+  const name = String(activeRoom.roomName ?? "").trim();
+  if (activeRoom.roomType === "ADMIN_GROUP") return false;
+  if (name === "운영자 단체방") return false;
+
+  return true;
+}, [activeRoomId, activeRoom]);
+
+  const beginEditTitle = () => {
+    if (!activeRoomId || !activeRoom) return;
+
+    if (!canRename) {
+      alert("이 방은 제목 변경이 불가합니다.");
+      return;
+    }
+
+    setTitleDraft((activeRoom?.roomName ?? "").trim());
+    setEditingTitle(true);
+  };
+
+  const cancelEditTitle = () => {
+    setEditingTitle(false);
+    setTitleDraft("");
+  };
+
+  const saveEditTitle = async () => {
+    if (!activeRoomId) return;
+
+    const next = String(titleDraft ?? "").trim();
+    if (!next) return;
+
+    setSavingTitle(true);
+    try {
+      await adminApi.renameChatRoomTitle(activeRoomId, next);
+      setRooms((prev) => prev.map((r) => (r.id === activeRoomId ? { ...r, roomName: next } : r)));
+
+      setEditingTitle(false);
+      setTitleDraft("");
+      await refreshRooms();
+    } catch (e: any) {
+      console.error(e);
+      alert(String(e?.message ?? "제목 변경 실패"));
+    } finally {
+      setSavingTitle(false);
+    }
   };
 
   const clearPickedFiles = () => setPickedFiles([]);
@@ -553,8 +624,66 @@ const inputBase =
           {/* 헤더 */}
           <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-white">
             <div>
-              <div className="text-sm font-bold text-gray-900">
-                {activeRoom?.roomName ?? "채팅방을 선택하세요"}
+
+              <div className="flex items-center gap-2">
+                {!editingTitle ? (
+                  <div className="text-sm font-bold text-gray-900">
+                    {activeRoom?.roomName ?? "채팅방을 선택하세요"}
+                  </div>
+                ) : (
+                  <input
+                    value={titleDraft}
+                    onChange={(e) => setTitleDraft(e.target.value)}
+                    disabled={savingTitle}
+                    className="text-sm font-bold text-gray-900 bg-transparent border-b border-gray-300 px-1 py-0.5 w-[260px] outline-none"
+                    placeholder="채팅방 제목 (30자 이하)"
+                    maxLength={30}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void saveEditTitle();
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        cancelEditTitle();
+                      }
+                    }}
+                  />
+                )}
+
+                {!editingTitle ? (
+                  <button
+                    type="button"
+                    onClick={beginEditTitle}
+                    title="제목 수정"
+                    className={"p-0 bg-transparent border-0 shadow-none " + (canRename ? "" : "opacity-40")}
+                  >
+                    <Pencil className="w-3 h-3 text-gray-700" />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void saveEditTitle()}
+                      disabled={savingTitle}
+                      title="저장 (Enter)"
+                      className="p-0 bg-transparent border-0 shadow-none"
+                    >
+                      {savingTitle ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 text-gray-700" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={cancelEditTitle}
+                      disabled={savingTitle}
+                      title="취소 (ESC)"
+                      className="p-0 bg-transparent border-0 shadow-none"
+                    >
+                      <X className="w-4 h-4 text-gray-700" />
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="text-[11px] text-gray-500">
                 {activeRoomId ? `roomId: ${activeRoomId}` : ""}
@@ -582,8 +711,9 @@ const inputBase =
 
               <button
                 onClick={() => void leave()}
-                disabled={!activeRoomId}
+                disabled={!activeRoomId || !canLeaveRoom}
                 className="px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-60"
+                title={!activeRoomId ? "" : (!canLeaveRoom ? "운영자 단체방은 나갈 수 없습니다." : "나가기")}
               >
                 <LogOut className="w-4 h-4" />
                 나가기
@@ -893,21 +1023,48 @@ function MembersModal(props: { onClose: () => void; members: AdminChatMemberRow[
 }
 
 function InviteModal(props: { roomId: string; onClose: () => void; onInvited: () => void }) {
+  const { adminEmail } = useAdminStore();
+  const me = useMemo(() => String(adminEmail ?? "").trim().toLowerCase(), [adminEmail]);
+  
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<AdminChatMemberRow[]>([]);
   const [pick, setPick] = useState<string>("");
 
   useEffect(() => {
     void (async () => {
-      const [admins, inquiries] = await Promise.all([adminApi.listAdminMembers(), adminApi.listInquiryMembers()]);
-      const merged = [...admins, ...inquiries].reduce((acc, cur) => {
-        if (!acc.some((x) => x.email === cur.email)) acc.push(cur);
-        return acc;
-      }, [] as AdminChatMemberRow[]);
-      setCandidates(merged);
-      setPick(merged[0]?.email ?? "");
+      try {
+        const [admins, inquiries, members] = await Promise.all([
+          adminApi.listAdminMembers(),
+          adminApi.listInquiryMembers(),
+          adminApi.getChatRoomMembers(props.roomId),
+        ]);
+        const merged = [...admins, ...inquiries].reduce((acc, cur) => {
+          if (!acc.some((x) => String(x.email ?? "").trim().toLowerCase() === String(cur.email ?? "").trim().toLowerCase())) {
+            acc.push(cur);
+          }
+          return acc;
+        }, [] as AdminChatMemberRow[]);
+
+        const memberEmailSet = new Set(
+          (members ?? []).map((m) => String(m.email ?? "").trim().toLowerCase())
+        );
+        const filtered = merged.filter((m) => {
+          const email = String(m.email ?? "").trim().toLowerCase();
+          if (!email) return false;
+          if (email === me) return false;
+          if (memberEmailSet.has(email)) return false;
+          return true;
+        });
+
+        setCandidates(filtered);
+        setPick(filtered[0]?.email ?? "");
+      } catch (e) {
+        console.error(e);
+        setCandidates([]);
+        setPick("");
+      }
     })();
-  }, []);
+  }, [me, props.roomId]);
 
   const invite = async () => {
     if (!pick) return;
@@ -931,21 +1088,28 @@ function InviteModal(props: { roomId: string; onClose: () => void; onInvited: ()
         value={pick}
         onChange={(e) => setPick(e.target.value)}
         className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm"
+        disabled={candidates.length === 0}
       >
         {candidates.map((c) => (
           <option key={c.email} value={c.email}>
             {(c.nickname ?? c.email) + " (" + (c.authority ?? "-") + ")"}
           </option>
         ))}
+        {candidates.length === 0 ? (
+          <option value="">초대 가능한 운영진이 없습니다.</option>
+        ) : null}
       </select>
 
       <div className="mt-4 flex justify-end gap-2">
-        <button onClick={props.onClose} className="px-3 py-2 rounded-xl border border-gray-200 text-sm hover:bg-gray-50">
+        <button
+          onClick={props.onClose}
+          className="px-3 py-2 rounded-xl border border-gray-200 text-sm hover:bg-gray-50"
+        >
           취소
         </button>
         <button
           onClick={() => void invite()}
-          disabled={loading}
+          disabled={loading || !pick}
           className="px-3 py-2 rounded-xl bg-violet-600 text-white text-sm hover:bg-violet-700 disabled:opacity-60"
         >
           초대
@@ -955,7 +1119,11 @@ function InviteModal(props: { roomId: string; onClose: () => void; onInvited: ()
   );
 }
 
+
 function CreateGroupModal(props: { onClose: () => void; onCreated: (roomId: string) => void }) {
+  const { adminEmail } = useAdminStore();
+  const me = useMemo(() => String(adminEmail ?? "").trim().toLowerCase(), [adminEmail]);
+
   const [title, setTitle] = useState("운영진 그룹채팅");
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<AdminChatMemberRow[]>([]);
@@ -963,14 +1131,23 @@ function CreateGroupModal(props: { onClose: () => void; onCreated: (roomId: stri
 
   useEffect(() => {
     void (async () => {
-      const [admins, inquiries] = await Promise.all([adminApi.listAdminMembers(), adminApi.listInquiryMembers()]);
+      const [admins, inquiries] = await Promise.all([
+        adminApi.listAdminMembers(),
+        adminApi.listInquiryMembers(),
+      ]);
+
       const merged = [...admins, ...inquiries].reduce((acc, cur) => {
         if (!acc.some((x) => x.email === cur.email)) acc.push(cur);
         return acc;
       }, [] as AdminChatMemberRow[]);
-      setCandidates(merged);
+
+      const filtered = merged.filter(
+        (m) => String(m.email ?? "").trim().toLowerCase() !== me
+      );
+
+      setCandidates(filtered);
     })();
-  }, []);
+  }, [me]);
 
   const toggle = (email: string) => setSelected((p) => ({ ...p, [email]: !p[email] }));
 

@@ -371,7 +371,7 @@ const Home = () => {
                 onClick={() => navigate(`/register`)}
                 className="px-8 py-3 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-semibold hover:bg-[rgb(90,58,252)] cursor-pointer transition-colors"
               >
-                무료 회원가입
+                 회원가입
                 <ArrowRight className="inline-block ml-2 h-4 w-4" />
               </button>
               <button

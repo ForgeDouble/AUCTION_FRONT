@@ -10,6 +10,8 @@ export interface ChatRoomDto {
   adminChat?: boolean;
   peerNickname?: string;
   productId?: number;
+
+  inquiry?: boolean;
 }
 
 export interface ChatMessageDto {

@@ -11,6 +11,8 @@ export type Authority = "USER" | "ADMIN" | "INQUIRY";
 
 export type Gender = "M" | "W"; 
 
+export type ChatRoomType = "NORMAL" | "INQUIRY" | "ADMIN_GROUP" | "STAFF_GROUP";
+
 export interface OverviewStats {
   todayNewUsers: number;
   todayCreatedAuctions: number;
@@ -91,7 +93,6 @@ export interface AdminReportItemRow {
 }
 
 // 인수인계 부분
-
 export interface NoticeRow {
   id: number;
   category: NoticeCategory;
@@ -194,3 +195,60 @@ export type AdminUserPageRes = {
   totalPages: number;
   counts?: AdminUserCounts;
 };
+
+// 채팅 관련
+export type ChatUserSummary = {
+  userId?: number;
+  email: string;
+  nickname?: string | null;
+  authority?: "USER" | "INQUIRY" | "ADMIN";
+  profileImageUrl?: string | null;
+};
+
+export type AdminChatRoomRow = {
+  id: string;
+  roomName: string;
+  roomType?: ChatRoomType;
+  adminChat?: boolean;
+  participantIds?: string[];
+  recentText?: string | null;
+  recentTime?: string | null;
+  unread?: number;
+  // canRename?: boolean
+  // roomKey?: string
+};
+
+export type AdminChatFileRow = {
+  fileName: string;
+  fileUrl: string;
+};
+
+export type AdminChatMessageRow = {
+  id: string;
+  roomId: string;
+  senderId: string;
+  messageType: "TALK" | "IMAGE" | "FILE" | "SYSTEM";
+  message?: string | null;
+  files?: AdminChatFileRow[];
+  createdAt?: string | null;
+  sender?: ChatUserSummary | null;
+};
+
+export type AdminChatCreateGroupReq = {
+  title?: string | null;
+  participantEmails?: string[];
+  staffOnly?: boolean;
+};
+
+export type AdminChatInviteReq = {
+  targetEmail: string;
+};
+
+export type AdminChatMemberRow = {
+  userId?: number;
+  email: string;
+  nickname?: string | null;
+  authority?: "USER" | "INQUIRY" | "ADMIN";
+  profileImageUrl?: string | null;
+};
+

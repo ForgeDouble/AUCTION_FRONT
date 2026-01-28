@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import ReportModal from "@/components/report/ReportModal";
 import { openRoom } from "@/api/chatApi";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Heart,
   Share2,
@@ -54,11 +55,35 @@ const AuctionDetail = () => {
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 실시간 입찰 내역 저장
   const [stompClient, setStompClient] = useState(null);
   const [copied, setCopied] = useState(false);
-
   // 신고 모달 연결
   const [reportOpen, setReportOpen] = useState(false);
   const [reportMode, setReportMode] = useState<"USER" | "PRODUCT">("USER");
 
+  const { userEmail: authEmail, userId: authUserId } = useAuth();
+
+  const myEmailNorm = useMemo(() => {
+    return String(authEmail ?? "").trim().toLowerCase();
+  }, [authEmail]);
+
+  const isSelfSeller = useMemo(() => {
+    const sellerEmailNorm = String(sellerInfo?.email ?? "").trim().toLowerCase();
+
+    const myId = authUserId != null ? Number(authUserId) : null;
+    const sellerId = sellerInfo?.userId != null ? Number(sellerInfo.userId) : null;
+
+    const sameId = myId != null && sellerId != null && myId === sellerId;
+    const sameEmail = myEmailNorm !== "" && sellerEmailNorm !== "" && myEmailNorm === sellerEmailNorm;
+
+    return sameId || sameEmail;
+  }, [authUserId, myEmailNorm, sellerInfo?.email, sellerInfo?.userId]);
+
+  const canChatSeller = useMemo(() => {
+    return !isSelfSeller && Boolean(sellerInfo?.email);
+  }, [isSelfSeller, sellerInfo?.email]);
+
+  const canReportSeller = useMemo(() => {
+    return !isSelfSeller && Boolean(sellerInfo?.userId);
+  }, [isSelfSeller, sellerInfo?.userId]);
 
   const calculateTimeLeft = (endTime: string) => {
     const now = dayjs();
@@ -244,6 +269,22 @@ const AuctionDetail = () => {
     }
   };
 
+  // 본인 판단 여부 확인
+  const myEmail = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("userEmail");
+      return String(raw ?? "").trim().toLowerCase();
+    } catch {
+      return "";
+    }
+  }, []);
+
+  const isMyProduct = useMemo(() => {
+    const sellerEmail = String(sellerInfo?.email ?? "").trim().toLowerCase();
+    if (!myEmail || !sellerEmail) return false;
+    return myEmail === sellerEmail;
+  }, [myEmail, sellerInfo?.email]);
+
   useEffect(() => {
     loadProduct();
     loadSellerInfo();
@@ -394,6 +435,10 @@ const AuctionDetail = () => {
     } catch (e: any) {
       console.error(e);
       alert("채팅방 연결 실패\n" + String(e?.message ?? ""));
+    }
+    if (isSelfSeller) {
+      alert("본인 상품에는 판매자 문의(1:1 채팅)를 할 수 없습니다.");
+      return;
     }
   };
 
@@ -711,21 +756,30 @@ const AuctionDetail = () => {
             {/* 판매자 정보 */}
             <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-white">판매자 정보</h3>
-                  <div
-                    className="flex items-center text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
-                    onClick={() => {
-                      if (!sellerInfo?.userId) {
-                        alert("판매자 정보(userId)가 없어 신고할 수 없습니다.");
-                        return;
-                      }
-                      setReportMode("USER");
-                      setReportOpen(true);
-                    }}
-                  >
-                    <Siren className="h-4 w-4 mr-1" />
-                    <span className="text-sm">신고하기</span>
-                  </div>
+                <h3 className="text-xl font-bold text-black">판매자 정보</h3>
+                  
+                <button
+                  type="button"
+                  disabled={!canReportSeller}
+                  onClick={() => {
+                    if (!canReportSeller) return;
+
+                    setReportMode("USER");
+                    setReportOpen(true);
+                  }}
+                  className={
+                    "flex items-center transition-colors " +
+                    (canReportSeller
+                      ? "text-gray-400 hover:text-red-400 cursor-pointer"
+                      : "text-gray-300 cursor-not-allowed opacity-60")
+                  }
+                  title={canReportSeller ? "신고하기" : "본인 신고는 불가합니다."}
+                >
+                  <Siren className="h-4 w-4 mr-1" />
+                  <span className="text-sm">신고하기</span>
+                </button>
+
+
               </div>
 
               <div className="flex items-center mb-4">
@@ -767,9 +821,15 @@ const AuctionDetail = () => {
 
               <button
                 onClick={handleContactSeller}
-                className="w-full mt-4 bg-white/10 border border-white/20 text-white py-2 rounded-lg hover:bg-white/20 transition-all duration-300"
+                disabled={!canChatSeller}
+                className={
+                  "w-full mt-4 border py-2 rounded-lg transition-all duration-300 flex items-center justify-center " +
+                  (canChatSeller
+                    ? "bg-[rgb(118,90,255)]/100 border-white/20 text-white hover:bg-[rgb(174, 158, 255)]"
+                    : "bg-gray-200/30 border-gray-300/40 text-gray-400 cursor-not-allowed opacity-70")
+                }
+                title={canChatSeller ? "판매자 문의" : "본인 상품에는 문의할 수 없습니다."}
               >
-
                 <MessageCircle className="h-4 w-4 inline mr-2" />
                 판매자 문의
               </button>

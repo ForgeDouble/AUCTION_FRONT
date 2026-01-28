@@ -69,7 +69,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetchLoginEmail(token);
       const payload = parseJwt(token);
 
-      const emailFromServer = response?.result ?? null;
+      const serverResult = response?.result;
+
+      const emailFromServer =
+      typeof serverResult === "string"
+      ? serverResult
+      : serverResult?.email ?? serverResult?.email ?? null;
       const emailFromToken = payload?.email ?? payload?.sub ?? null;
 
       setUserEmail(emailFromServer || emailFromToken);

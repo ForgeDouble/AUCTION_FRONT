@@ -1,345 +1,592 @@
-import { useEffect, useState } from "react";
+// src/pages/.../MyProfile.tsx
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import {
   User,
+  Camera,
+  LogOut,
+  Edit2,
+  Check,
+  X,
   Mail,
+  Smartphone,
   MapPin,
   Calendar,
-  Edit2,
-  Save,
-  X,
-  LogOut,
-  Cake,
-  PersonStanding,
   User2,
+  ChevronRight,
+  Heart,
+  Gavel,
+  Trash2,
 } from "lucide-react";
+
 import { useAuth } from "../../../hooks/useAuth";
-import { type UserDto } from "../MyPageDto";
-import { fetchLoginUser } from "../MyPageApi";
+import type { UserDto } from "../MyPageDto";
+import {
+  fetchLoginUser,
+  updateMyProfileBasic,
+  updateMyNickname,
+  uploadMyProfileImage,
+  deleteMyProfileImage,
+} from "../MyPageApi";
 import { useModal } from "@/contexts/ModalContext";
+
+interface ProfileFieldProps {
+  label: string;
+  value: any;
+  icon: any;
+  isEditable?: boolean;
+  onChange?: (e: any) => void;
+  type?: string;
+  options?: { value: string; label: string }[];
+  isEditing: boolean;
+  helperText?: string;
+}
+
+const ProfileField = ({
+  label,
+  value,
+  icon: Icon,
+  isEditable = false,
+  onChange,
+  type = "text",
+  options = [],
+  isEditing,
+  helperText,
+}: ProfileFieldProps) => {
+  const readOnly = !isEditable;
+
+  const wrapperScale = isEditing && isEditable ? "scale-[1.01]" : "";
+  const viewBoxClass = readOnly
+    ? "bg-gray-50 border border-gray-200 text-gray-500"
+    : "bg-white border border-gray-100 text-gray-900 shadow-sm group-hover:border-[#765AFF]/30";
+
+  return (
+    <div className="group flex flex-col">
+      <div className="ml-1 min-h-[34px]">
+        <div className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
+          <Icon className="w-3.5 h-3.5" />
+          {label}
+        </div>
+        <div className="mt-1 min-h-[14px] text-[11px] text-gray-400">
+          {helperText ? helperText : <span className="invisible">자리맞춤</span>}
+        </div>
+      </div>
+
+      <div className={`relative transition-all duration-300 ${wrapperScale}`}>
+        {isEditing && isEditable ? (
+          type === "radio" ? (
+            <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-200 h-12 items-center">
+              {options.map((opt: any) => (
+                <label key={opt.value} className="flex-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name={label}
+                    value={opt.value}
+                    checked={value === opt.value}
+                    onChange={onChange}
+                    className="peer sr-only"
+                  />
+                  <div className="py-2 text-center text-sm font-medium text-gray-500 rounded-xl transition-all peer-checked:bg-white peer-checked:text-[#765AFF] peer-checked:shadow-sm">
+                    {opt.label}
+                  </div>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <input
+              type={type}
+              value={value ?? ""}
+              onChange={onChange}
+              className="w-full h-12 px-5 bg-gray-50 border-0 rounded-2xl text-gray-900 font-medium focus:ring-2 focus:ring-[#765AFF]/20 focus:bg-white transition-all outline-none placeholder:text-gray-300"
+            />
+          )
+        ) : (
+          <div className={`w-full h-12 px-5 rounded-2xl flex items-center justify-between transition-colors ${viewBoxClass}`}>
+            <span className={readOnly ? "font-medium" : "font-medium"}>
+              {type === "radio"
+                ? options.find((o: any) => o.value === value)?.label || value
+                : value || <span className="text-gray-300 font-normal">미입력</span>}
+            </span>
+            {!isEditing && !readOnly && (
+              <div className="w-1.5 h-1.5 rounded-full bg-gray-200 group-hover:bg-[#765AFF] transition-colors" />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const MenuItem = ({
+  onClick,
+  icon: Icon,
+  label,
+  colorClass = "bg-purple-50 text-[#765AFF]",
+}: any) => (
+  <button
+    onClick={onClick}
+    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors text-sm text-gray-600 group"
+  >
+    <span className="flex items-center gap-3">
+      <div
+        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors group-hover:bg-[#765AFF] group-hover:text-white ${colorClass}`}
+      >
+        <Icon className="w-4 h-4" />
+      </div>
+      <span className="font-medium">{label}</span>
+    </span>
+    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#765AFF]" />
+  </button>
+);
 
 const MyProfile = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const { showLogin, showError } = useModal();
+  const { showLogin, showError, showWarning } = useModal();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [user, setUser] = useState<UserDto | null>(null);
+  const [tempUser, setTempUser] = useState<UserDto | null>(null);
 
-  const [user, setUser] = useState<UserDto>();
-  const [tempUser, setTempUser] = useState<UserDto>();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleSave = () => {
-    setUser(tempUser);
-    setIsEditing(false);
-    // TODO: API 호출하여 프로필 업데이트
-  };
+  const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
+  const nicknameWarnedRef = useRef(false);
 
-  const handleCancel = () => {
-    setTempUser(user);
-    setIsEditing(false);
-  };
+  useEffect(() => {
+    if (!isEditing) setPhotoMenuOpen(false);
+  }, [isEditing]);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
-  const loadLoginUser = async () => {
+  const loadLoginUser = useCallback(async () => {
     try {
-      const token = localStorage.getItem("accessToken");
-      if (token == null) {
+      const t = localStorage.getItem("accessToken");
+      if (!t) {
         showLogin();
-        console.error("Missing AccessToken");
         return;
       }
-      const data = await fetchLoginUser(token);
-      const userProfile = {
-        ...data.result,
-        createdAt: data.result.createdAt.split("T")[0].replace(/-/g, "."),
+
+      const data = await fetchLoginUser(t);
+      const raw = (data as any).result;
+
+      const userProfile: UserDto = {
+        ...raw,
+        createdAt: raw.createdAt.split("T")[0].replace(/-/g, "."),
       };
 
       setUser(userProfile);
-      console.log(data);
-    } catch (error) {
-      console.error(error);
-      showError();
+      setTempUser((prev) => (isEditing ? prev : userProfile));
+    } catch (e: any) {
+      console.error(e);
+      showError(e?.message ?? "서버 오류가 발생했습니다.");
     }
-  };
-
-  useEffect(() => {
-    if (user) {
-      setTempUser(user);
-    }
-  }, [user]);
+  }, [isEditing, showLogin, showError]);
 
   useEffect(() => {
     loadLoginUser();
-  }, []);
+  }, [loadLoginUser]);
+
+  const startEdit = useCallback(() => {
+    if (!user) return;
+    setTempUser({ ...user });
+    setIsEditing(true);
+    nicknameWarnedRef.current = false;
+  }, [user]);
+
+  const handleCancel = useCallback(() => {
+    setTempUser(user ? { ...user } : null);
+    setIsEditing(false);
+    nicknameWarnedRef.current = false;
+    setPhotoMenuOpen(false);
+  }, [user]);
+
+  const handleLogout = useCallback(() => {
+    logout();
+    navigate("/");
+  }, [logout, navigate]);
+
+  const handleSave = useCallback(async () => {
+    const t = localStorage.getItem("accessToken");
+    if (!t) {
+      showLogin();
+      return;
+    }
+    if (!user || !tempUser) return;
+
+    const nameChanged = (tempUser.name ?? "") !== (user.name ?? "");
+    const addressChanged = (tempUser.address ?? "") !== (user.address ?? "");
+    const phoneChanged = (tempUser.phone ?? "") !== (user.phone ?? "");
+
+    const nicknameChanged =
+      (tempUser.nickname ?? "").trim() !== (user.nickname ?? "").trim() &&
+      (tempUser.nickname ?? "").trim().length > 0;
+
+    try {
+      if (nameChanged || addressChanged || phoneChanged) {
+        await updateMyProfileBasic(t, {
+          name: nameChanged ? tempUser.name : undefined,
+          address: addressChanged ? tempUser.address : undefined,
+          phone: phoneChanged ? tempUser.phone : undefined,
+        });
+      }
+    } catch (e: any) {
+      console.error(e);
+      showError(e?.message ?? "기본정보 수정 중 오류가 발생했습니다.");
+      return;
+    }
+
+    if (nicknameChanged) {
+      if (!nicknameWarnedRef.current) {
+        nicknameWarnedRef.current = true;
+        showWarning("닉네임은 규칙/중복/7일 제한이 적용됩니다");
+      }
+
+      try {
+        await updateMyNickname(t, (tempUser.nickname ?? "").trim());
+      } catch (e: any) {
+        console.error(e);
+        await loadLoginUser();
+        showError(e?.message ?? "닉네임 수정 중 오류가 발생했습니다.");
+        return;
+      }
+    }
+
+    await loadLoginUser();
+    setIsEditing(false);
+    nicknameWarnedRef.current = false;
+  }, [loadLoginUser, showLogin, showError, showWarning, tempUser, user]);
+
+  const openSelector = useCallback(() => {
+    if (!isEditing) return;
+    setPhotoMenuOpen(false);
+    fileInputRef.current?.click();
+  }, [isEditing]);
+
+  const onPickImage = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      try {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const t = localStorage.getItem("accessToken");
+        if (!t) {
+          showLogin();
+          return;
+        }
+
+        await uploadMyProfileImage(t, file);
+        await loadLoginUser();
+      } catch (err: any) {
+        console.error(err);
+        showError(err?.message ?? "프로필 이미지 업로드 실패");
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    },
+    [loadLoginUser, showLogin, showError]
+  );
+
+  const onDeleteImage = useCallback(async () => {
+    try {
+      const t = localStorage.getItem("accessToken");
+      if (!t) {
+        showLogin();
+        return;
+      }
+      setPhotoMenuOpen(false);
+      await deleteMyProfileImage(t);
+      await loadLoginUser();
+    } catch (e: any) {
+      console.error(e);
+      showError(e?.message ?? "프로필 이미지 삭제 실패");
+    }
+  }, [loadLoginUser, showLogin, showError]);
+
+  const viewUser = isEditing ? tempUser : user;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black pt-24 pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* 헤더 */}
-        <div className="bg-black/40 backdrop-blur-lg rounded-2xl border border-white/10 p-8 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <User className="w-12 h-12 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white mb-2">
-                  {user?.nickname || null}
-                </h1>
-                <p className="text-gray-400">{user?.email || null}</p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 text-gray-300 hover:text-red-400 transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>로그아웃</span>
-            </button>
+    <div className="min-h-screen bg-[#F8F9FC] pt-20 pb-28 font-sans">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* 상단 */}
+        <div className="flex justify-between items-end mb-8 px-2">
+          <div>
+            <br></br>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+              내 프로필
+            </h1>
+            <p className="text-gray-500 mt-2 text-sm font-medium">
+              계정 설정 및 활동 내역
+            </p>
           </div>
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center space-x-2 text-gray-400 hover:text-red-500 transition-colors text-sm font-medium px-4 py-2 rounded-full hover:bg-red-50"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>로그아웃</span>
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* 메인 컨텐츠 */}
-          <div className="lg:col-span-4">
-            <div className="bg-black/40 backdrop-blur-lg rounded-2xl border border-white/10 p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">프로필 정보</h2>
+        {/* 핵심: items-stretch + 양 컬럼 h-full + 왼쪽 flex-1 */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+          {/* 왼쪽 */}
+          <div className="lg:col-span-4 flex flex-col gap-6 h-full">
+            {/* 프로필 카드 */}
+            <div className="bg-white rounded-[2rem] p-8 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] border border-gray-100/50 flex flex-col items-center text-center relative overflow-hidden">
+              <div className="absolute top-0 w-full h-32 bg-gradient-to-b from-gray-50 to-white z-0" />
+
+              <div className="relative z-10 mt-4">
+                <div className="w-32 h-32 rounded-full bg-white p-1.5 shadow-xl shadow-gray-200/50 relative">
+                  <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-100">
+                    {user?.profileImageUrl ? (
+                      <img
+                        src={user.profileImageUrl}
+                        alt="프로필"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-12 h-12 text-gray-300" />
+                    )}
+                  </div>
+
+                  {isEditing && (
+                    <div className="absolute -bottom-1 right-1">
+                      <button
+                        type="button"
+                        onClick={() => setPhotoMenuOpen((v) => !v)}
+                        className="bg-[#765AFF] text-white p-2.5 rounded-full shadow-lg hover:bg-[#6348e6] transition-transform hover:scale-105 active:scale-95"
+                        title="프로필 사진"
+                      >
+                        <Camera className="w-4 h-4" />
+                      </button>
+
+                      {photoMenuOpen && (
+                        <div className="absolute bottom-12 right-0 w-36 bg-white border border-gray-100 rounded-2xl shadow-xl p-1">
+                          <button
+                            type="button"
+                            onClick={openSelector}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 text-sm text-gray-700"
+                          >
+                            <Camera className="w-4 h-4 text-[#765AFF]" />
+                            <span className="font-medium">사진 변경</span>
+                          </button>
+
+                          {user?.profileImageUrl && (
+                            <button
+                              type="button"
+                              onClick={onDeleteImage}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span className="font-medium">사진 삭제</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={onPickImage}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="relative z-10 mt-6 mb-2">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {user?.nickname || "닉네임 없음"}
+                </h2>
+                <p className="text-gray-400 text-sm mt-1">
+                  {user?.email || ""}
+                </p>
+              </div>
+
+              <div className="relative z-10 mt-6 w-full pt-6 border-t border-gray-100">
+                <div className="flex justify-between items-center px-4">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 font-semibold">
+                      가입일
+                    </p>
+                    <p className="text-gray-800 font-bold mt-1 text-sm">
+                      {user?.createdAt || ""}
+                    </p>
+                  </div>
+                  <div className="h-8 w-[1px] bg-gray-200"></div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 font-semibold">상태</p>
+                    <p className="text-[#765AFF] font-bold mt-1 text-sm flex items-center gap-1 justify-center">
+                      <span className="w-2 h-2 rounded-full bg-[#765AFF]"></span>
+                      활동중
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 pb-7 shadow-sm border border-gray-100 flex-1 flex flex-col">
+              <div className="flex items-center justify-between text-gray-800 font-bold mb-5 px-1">
+                <span>내 활동 내역</span>
+              </div>
+
+              <div className="space-y-1">
+                <MenuItem
+                  icon={Calendar}
+                  label="내 경매 내역"
+                  onClick={() => navigate("/mypage/auctionlist")}
+                  colorClass="bg-blue-50 text-blue-500"
+                />
+                <MenuItem
+                  icon={Heart}
+                  label="내 찜 목록"
+                  onClick={() => navigate("/mypage/wishlist")}
+                  colorClass="bg-red-50 text-red-500"
+                />
+                <MenuItem
+                  icon={Gavel}
+                  label="내 입찰 목록"
+                  onClick={() => navigate("/my_bid_list")}
+                  colorClass="bg-purple-50 text-purple-500"
+                />
+              </div>
+              <div className="flex-1" />
+            </div>
+          </div>
+
+          <div className="lg:col-span-8 h-full">
+            <div className="bg-white rounded-[2rem] p-8 lg:p-10 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] border border-gray-100/50 h-full relative">
+              <div className="flex items-center justify-between mb-10">
+                <h3 className="text-xl font-bold text-gray-900">기본 정보</h3>
+
                 {!isEditing ? (
                   <button
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    onClick={startEdit}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-transparent text-gray-500 hover:bg-[#765AFF]/5 hover:text-[#765AFF] transition-all"
+                    title="수정"
                   >
-                    <Edit2 className="w-4 h-4" />
-                    <span>수정</span>
+                    <Edit2 className="w-5 h-5" />
                   </button>
                 ) : (
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={handleSave}
-                      className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      <Save className="w-4 h-4" />
-                      <span>저장</span>
-                    </button>
+                  <div className="flex items-center gap-3">
                     <button
                       onClick={handleCancel}
-                      className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                      className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+                      title="취소"
                     >
-                      <X className="w-4 h-4" />
-                      <span>취소</span>
+                      <X className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#765AFF] text-white hover:bg-[#6348e6] transition-all shadow-lg shadow-[#765AFF]/30"
+                      title="저장"
+                    >
+                      <Check className="w-5 h-5" />
                     </button>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-6">
-                {/* 이름 */}
-                <div>
-                  <label className="flex items-center space-x-2 text-gray-400 mb-2">
-                    <User className="w-4 h-4" />
-                    <span>이름</span>
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={tempUser?.name || ""}
-                      onChange={(e) =>
-                        tempUser &&
-                        setTempUser({
-                          ...tempUser,
-                          name: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
-                    />
-                  ) : (
-                    <p className="text-white text-lg">{user?.name || null}</p>
-                  )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
+                <ProfileField
+                  label="이름"
+                  value={viewUser?.name}
+                  icon={User2}
+                  isEditable={true}
+                  isEditing={isEditing}
+                  onChange={(e: any) =>
+                    setTempUser((prev) => ({
+                      ...(prev ?? (user as UserDto)),
+                      name: e.target.value,
+                    }))
+                  }
+                />
+
+                <ProfileField
+                  label="닉네임"
+                  value={viewUser?.nickname}
+                  icon={User}
+                  isEditable={true}
+                  isEditing={isEditing}
+                  onChange={(e: any) =>
+                    setTempUser((prev) => ({
+                      ...(prev ?? (user as UserDto)),
+                      nickname: e.target.value,
+                    }))
+                  }
+                />
+
+                <div className="md:col-span-2">
+                  <ProfileField
+                    label="이메일 주소"
+                    value={user?.email}
+                    icon={Mail}
+                    isEditable={false}
+                    isEditing={isEditing}
+                  />
                 </div>
-                {/* 닉네임 */}
-                <div>
-                  <label className="flex items-center space-x-2 text-gray-400 mb-2">
-                    <User2 className="w-4 h-4" />
-                    <span>닉네임</span>
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={tempUser?.nickname || ""}
-                      onChange={(e) =>
-                        tempUser &&
-                        setTempUser({
-                          ...tempUser,
-                          nickname: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
-                    />
-                  ) : (
-                    <p className="text-white text-lg">
-                      {user?.nickname || null}
-                    </p>
-                  )}
+
+                <ProfileField
+                  label="전화번호"
+                  value={viewUser?.phone}
+                  icon={Smartphone}
+                  isEditable={true}
+                  isEditing={isEditing}
+                  onChange={(e: any) => {
+                    const onlyDigits = String(e.target.value ?? "").replace(/[^0-9]/g, "");
+                    setTempUser((prev) => ({
+                      ...(prev ?? (user as UserDto)),
+                      phone: onlyDigits,
+                    }));
+                  }}
+                />
+
+                <ProfileField
+                  label="생년월일"
+                  value={user?.birthday}
+                  icon={Calendar}
+                  isEditable={false}
+                  isEditing={isEditing}
+                />
+
+                <div className="md:col-span-2">
+                  <ProfileField
+                    label="주소"
+                    value={viewUser?.address}
+                    icon={MapPin}
+                    isEditable={true}
+                    isEditing={isEditing}
+                    onChange={(e: any) =>
+                      setTempUser((prev) => ({
+                        ...(prev ?? (user as UserDto)),
+                        address: e.target.value,
+                      }))
+                    }
+                  />
                 </div>
-                {/* 이메일 */}
-                <div>
-                  <label className="flex items-center space-x-2 text-gray-400 mb-2">
-                    <Mail className="w-4 h-4" />
-                    <span>이메일</span>
-                  </label>
-                  <p className="text-white text-lg">{user?.email || null}</p>
-                  <p className="text-gray-500 text-sm mt-1">
-                    이메일은 변경할 수 없습니다
-                  </p>
-                </div>
-                {/* 전화번호 */}
-                <div>
-                  <label className="flex items-center space-x-2 text-gray-400 mb-2">
-                    <User2 className="w-4 h-4" />
-                    <span>전화번호</span>
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={tempUser?.phone || ""}
-                      onChange={(e) =>
-                        tempUser &&
-                        setTempUser({
-                          ...tempUser,
-                          phone: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
-                    />
-                  ) : (
-                    <p className="text-white text-lg">{user?.phone || null}</p>
-                  )}
-                </div>
-                {/* 주소 */}
-                <div>
-                  <label className="flex items-center space-x-2 text-gray-400 mb-2">
-                    <MapPin className="w-4 h-4" />
-                    <span>주소</span>
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={tempUser?.address || ""}
-                      onChange={(e) =>
-                        tempUser &&
-                        setTempUser({
-                          ...tempUser,
-                          address: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
-                    />
-                  ) : (
-                    <p className="text-white text-lg">
-                      {user?.address || null}
-                    </p>
-                  )}
-                </div>
-                {/* 생년월일 */}
-                <div>
-                  <label className="flex items-center space-x-2 text-gray-400 mb-2">
-                    <Cake className="w-4 h-4" />
-                    <span>생년월일</span>
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={tempUser?.birthday?.replace(/\./g, "-") || ""}
-                      onChange={(e) =>
-                        tempUser &&
-                        setTempUser({
-                          ...tempUser,
-                          birthday: e.target.value.replace(/-/g, "."),
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors [color-scheme:dark]"
-                    />
-                  ) : (
-                    <p className="text-white text-lg">
-                      {user?.birthday || null}
-                    </p>
-                  )}
-                </div>
-                {/* 성별 */}
-                <div>
-                  <label className="flex items-center space-x-2 text-gray-400 mb-2">
-                    <PersonStanding className="w-4 h-4" />
-                    <span>성별</span>
-                  </label>
-                  {isEditing ? (
-                    <div className="flex space-x-4">
-                      <label className="flex-1 cursor-pointer">
-                        <input
-                          type="radio"
-                          value="M"
-                          checked={tempUser?.gender === "M"}
-                          onChange={(e) =>
-                            tempUser &&
-                            setTempUser({
-                              ...tempUser,
-                              gender: e.target.value,
-                            })
-                          }
-                          className="peer sr-only"
-                        />
-                        <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white text-center transition-all peer-checked:bg-purple-600 peer-checked:border-purple-500 hover:border-purple-500/50">
-                          남성
-                        </div>
-                      </label>
-                      <label className="flex-1 cursor-pointer">
-                        <input
-                          type="radio"
-                          value="F"
-                          checked={tempUser?.gender === "F"}
-                          onChange={(e) =>
-                            tempUser &&
-                            setTempUser({
-                              ...tempUser,
-                              gender: e.target.value,
-                            })
-                          }
-                          className="peer sr-only"
-                        />
-                        <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white text-center transition-all peer-checked:bg-purple-600 peer-checked:border-purple-500 hover:border-purple-500/50">
-                          여성
-                        </div>
-                      </label>
-                    </div>
-                  ) : (
-                    <p className="text-white text-lg">
-                      {user?.gender === "M"
-                        ? "남성"
-                        : user?.gender === "F"
-                        ? "여성"
-                        : ""}
-                    </p>
-                  )}
-                </div>
-                {/* 가입일 */}
-                <div>
-                  <label className="flex items-center space-x-2 text-gray-400 mb-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>가입일</span>
-                  </label>
-                  <p className="text-white text-lg">
-                    {user?.createdAt || null}
-                  </p>
+
+                <div className="md:col-span-2">
+                  <ProfileField
+                    label="성별"
+                    value={user?.gender}
+                    icon={User}
+                    isEditable={false}
+                    isEditing={isEditing}
+                    type="radio"
+                    options={[
+                      { value: "M", label: "남성" },
+                      { value: "W", label: "여성" }, 
+                      { value: "F", label: "여성" },
+                    ]}
+                  />
                 </div>
               </div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

@@ -23,6 +23,9 @@ import type {
   AdminChatRoomRow
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+
 // import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
 
 function nowIso(): string {
@@ -33,7 +36,7 @@ function nowIso(): string {
 //   return Math.max(min, Math.min(max, n));
 // }
 
-// 권한 확인을 위한 헬퍼
+// 권한 확인
 function parseAuthorityFromTokenPayload(payload: Record<string, unknown>): "ADMIN" | "INQUIRY" | "USER" {
   const pick =
     (payload as any)?.authority ??
@@ -49,6 +52,15 @@ function parseAuthorityFromTokenPayload(payload: Record<string, unknown>): "ADMI
   if (cleaned.includes("ADMIN")) return "ADMIN";
   if (cleaned.includes("INQUIRY")) return "INQUIRY";
   return "USER";
+}
+
+function safeParse<T>(s: string | null): T | null {
+  if (!s) return null;
+  try {
+    return JSON.parse(s) as T;
+  } catch {
+    return null;
+  }
 }
 
 function safeGetAdminProfile(): { email: string; nick: string; role: string } {
@@ -110,7 +122,7 @@ export interface AdminStore {
   adminEmail: string;
   adminNick: string;
   adminRole: string;
-
+  rtConnected: boolean;
   query: string;
   setQuery: (v: string) => void;
 
@@ -245,6 +257,17 @@ export interface AdminStore {
   setChatRooms: React.Dispatch<React.SetStateAction<AdminChatRoomRow[]>>;
   refreshChatRooms: () => Promise<void>;
   chatUnreadTotal: number;
+
+  setAdminNick: (nick: string) => void;
+
+  profileImageUrl: string | null;
+  setProfileImageUrl: (url: string | null) => void;
+
+  notifEnabled: boolean;
+  setNotifEnabled: (v: boolean) => void;
+
+  birthdayOpen: boolean;
+  setBirthdayOpen: (v: boolean) => void;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -256,7 +279,11 @@ export function useAdminStore(): AdminStore {
 }
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const profile = useMemo(() => safeGetAdminProfile(), []);
+  // const profile = useMemo(() => safeGetAdminProfile(), []);
+  const [profile, setProfile] = useState(() => safeGetAdminProfile());
+  const setAdminNick = useCallback((nick: string) => {
+    setProfile((p) => ({ ...p, nick: String(nick ?? "").trim() || p.nick }));
+  }, []);
   const [query, setQuery] = useState<string>("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>(nowIso());
 
@@ -302,7 +329,138 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [usersCounts, setUsersCounts] = useState<AdminUserCounts>({ ADMIN: 0, INQUIRY: 0, USER: 0 });
 
   const [chatRooms, setChatRooms] = useState<AdminChatRoomRow[]>([]);
+  type AdminRealtimePayload = {
+    realtimeUsers?: number;
+    todayActiveUsers?: number;
+    ongoingAuctions?: number;
+    ts?: number;
+  };
+  const [rtConnected, setRtConnected] = useState(false);
+  const rtClientRef = useRef<Client | null>(null);
+  const [rtTokenVersion, setRtTokenVersion] = useState(0);
 
+  type AdminPrefs = {
+    profileImageUrl?: string | null;
+    notifEnabled?: boolean;
+    birthdayOpen?: boolean;
+  };
+
+  const prefsKey = useMemo(() => `admin_prefs_${profile.email}`, [profile.email]);
+
+  const [profileImageUrl, setProfileImageUrlState] = useState<string | null>(null);
+  const [notifEnabled, setNotifEnabledState] = useState<boolean>(true);
+  const [birthdayOpen, setBirthdayOpenState] = useState<boolean>(false);
+
+  useEffect(() => {
+    const prefs = safeParse<AdminPrefs>(localStorage.getItem(prefsKey));
+    if (!prefs) return;
+
+    setProfileImageUrlState(prefs.profileImageUrl ?? null);
+    setNotifEnabledState(typeof prefs.notifEnabled === "boolean" ? prefs.notifEnabled : true);
+    setBirthdayOpenState(typeof prefs.birthdayOpen === "boolean" ? prefs.birthdayOpen : false);
+  }, [prefsKey]);
+
+  useEffect(() => {
+    const next: AdminPrefs = {
+      profileImageUrl,
+      notifEnabled,
+      birthdayOpen,
+    };
+    localStorage.setItem(prefsKey, JSON.stringify(next));
+  }, [prefsKey, profileImageUrl, notifEnabled, birthdayOpen]);
+
+  const setProfileImageUrl = useCallback((url: string | null) => {
+    setProfileImageUrlState(url ? String(url) : null);
+  }, []);
+
+  const setNotifEnabled = useCallback((v: boolean) => setNotifEnabledState(Boolean(v)), []);
+  const setBirthdayOpen = useCallback((v: boolean) => setBirthdayOpenState(Boolean(v)), []);
+
+  // 닉네임 / 프로필 관련
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const me = await adminApi.getMyDetail();
+
+        const nick =
+          (me as any)?.nick ??
+          (me as any)?.nickname ??
+          (me as any)?.name ??
+          null;
+
+        if (alive && typeof nick === "string" && nick.trim()) {
+          setAdminNick(nick.trim());
+        }
+        if (alive && me && typeof me === "object" && "profileImageUrl" in (me as any)) {
+          const url = (me as any).profileImageUrl;
+          setProfileImageUrlState(url ? String(url) : null);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [prefsKey, setAdminNick]);
+
+  // ws 관련
+  useEffect(() => {
+    const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
+    const token = localStorage.getItem("accessToken");
+    if (!base || !token) {
+      setRtConnected(false);
+      return;
+    }
+
+    if (rtClientRef.current) {
+      try { rtClientRef.current.deactivate(); } catch {}
+      rtClientRef.current = null;
+    }
+
+    const urlBase = base.replace(/\/$/, "");
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${urlBase}/ws-admin`) as any,
+      connectHeaders: { Authorization: `Bearer ${token}` },
+      reconnectDelay: 3000,
+      debug: () => {},
+      onConnect: () => {
+        setRtConnected(true);
+
+        client.subscribe("/topic/admin/realtime", (frame) => {
+          try {
+            const data = JSON.parse(frame.body || "{}") as {
+              realtimeUsers?: number;
+              ts?: number;
+            };
+            setStats((prev) => ({
+              ...prev,
+              realtimeUsers: Number(data.realtimeUsers ?? prev.realtimeUsers ?? 0),
+            }));
+
+            setLastUpdatedAt(nowIso());
+          } catch (e) {
+            console.error("admin realtime parse error", e);
+          }
+        });
+      },
+      onWebSocketClose: () => setRtConnected(false),
+      onStompError: () => setRtConnected(false),
+    });
+
+    rtClientRef.current = client;
+    client.activate();
+
+    return () => {
+      try { client.deactivate(); } catch {}
+      rtClientRef.current = null;
+      setRtConnected(false);
+    };
+  }, [rtTokenVersion]);
+
+  
   const computeCountsFromItems = useCallback((items: AdminUserRow[]): AdminUserCounts => {
     return items.reduce(
       (acc, u) => {
@@ -502,40 +660,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const refreshUsersPage = useCallback(
     async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
-      try {
-        const page = Math.max(0, Number(params?.page ?? usersPageIndex));
-        const size = Math.max(1, Math.min(Number(params?.size ?? usersPageSize), 100));
-        const role = params?.role ?? "ALL";
-        const q = params?.q ?? "";
-
-        const res = await adminApi.getUsersPage({ page, size, role, q });
-
-        setUsers(res.items ?? []);
-        setUsersPageIndex(res.page ?? page);
-        setUsersPageSize(res.size ?? size);
-        setUsersTotalElements(res.totalElements ?? 0);
-        setUsersTotalPages(Math.max(1, res.totalPages ?? 1));
-
-        if (res.counts) {
-          setUsersCounts({
-            ADMIN: Number(res.counts.ADMIN ?? 0),
-            INQUIRY: Number(res.counts.INQUIRY ?? 0),
-            USER: Number(res.counts.USER ?? 0),
-          });
-          return;
-        }
-        if (res.totalElements > 0 && res.totalElements <= (res.items?.length ?? 0)) {
-          setUsersCounts(computeCountsFromItems(res.items));
-          return;
-        }
-      } catch (e) {
-        console.error(e);
-        setUsers([]);
-        setUsersTotalElements(0);
-        setUsersTotalPages(1);
-      }
+      await fetchUsersPage(params);
     },
-    [usersPageIndex, usersPageSize, computeCountsFromItems]
+    [fetchUsersPage]
   );
   
   const createAdminUser = useCallback(
@@ -613,6 +740,57 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     void refreshAll();
   }, []);
+
+  // useEffect(() => {
+  //   const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
+  //   const token = localStorage.getItem("accessToken");
+
+  //   if (!token) return;
+
+  //   if (rtClientRef.current) {
+  //     try { rtClientRef.current.deactivate(); } catch {}
+  //     rtClientRef.current = null;
+  //   }
+
+  //   const urlBase = base.replace(/\/$/, "");
+  //   const sock = new SockJS(`${urlBase}/ws-admin`);
+
+  //   const client = new Client({
+  //     webSocketFactory: () => sock as any,
+  //     connectHeaders: {
+  //       Authorization: `Bearer ${token}`,
+  //     },
+  //     reconnectDelay: 2000,
+  //     debug: () => {},
+  //     onConnect: () => {
+  //       client.subscribe("/topic/admin/realtime", (frame) => {
+  //         try {
+  //           const data = JSON.parse(frame.body || "{}") as AdminRealtimePayload;
+
+  //           setStats((prev) => ({
+  //             ...prev,
+  //             realtimeUsers: Number(data.realtimeUsers ?? prev.realtimeUsers ?? 0),
+  //             todayActiveUsers: Number(data.todayActiveUsers ?? prev.todayActiveUsers ?? 0),
+  //             ongoingAuctions: Number(data.ongoingAuctions ?? prev.ongoingAuctions ?? 0),
+  //           }));
+
+  //           setLastUpdatedAt(nowIso());
+  //         } catch (e) {
+  //           console.error("admin realtime parse error", e);
+  //         }
+  //       });
+  //     },
+  //   });
+
+  //   rtClientRef.current = client;
+  //   client.activate();
+
+  //   return () => {
+  //     try { client.deactivate(); } catch {}
+  //     rtClientRef.current = null;
+  //   };
+  // }, [rtTokenVersion]);
+
 
   const suspendAuction = (auctionId: string): void => {
     (async () => {
@@ -754,10 +932,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error("extendAdminSession: token missing");
     }
     localStorage.setItem("accessToken", token);
+    setRtTokenVersion((v) => v + 1);
   }, []);
   
-
-
   // 뱃지 관련 카운팅 함수
   const pinnedNoticesCount = useMemo(() => notices.filter((n) => n.pinned).length, [notices]);
   const noticesCount = useMemo(() => noticeTotalElements, [noticeTotalElements]);
@@ -770,6 +947,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     adminEmail: profile.email,
     adminNick: profile.nick,
     adminRole: profile.role,
+    rtConnected,
 
     query,
     setQuery,
@@ -872,6 +1050,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setChatRooms,
     refreshChatRooms,
     chatUnreadTotal,
+
+    setAdminNick,
+
+    profileImageUrl,
+    setProfileImageUrl,
+
+    notifEnabled,
+    setNotifEnabled,
+
+    birthdayOpen,
+    setBirthdayOpen,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
