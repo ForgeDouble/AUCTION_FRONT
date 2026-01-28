@@ -1,6 +1,12 @@
 // src/pages/.../MyPageApi.ts
 import type { ApiResponse } from "../../type/CommonType";
-import type { BidListDto, ProductListDto, UserDto } from "./MyPageDto";
+import type {
+  BidListDto,
+  ProductListDto,
+  UserDto,
+  UserUpdateDto,
+} from "./MyPageDto";
+
 
 const BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://localhost:8080";
@@ -26,7 +32,7 @@ async function throwApiError(response: Response, fallback: string) {
 
 /** 내 정보 조회 */
 export const fetchLoginUser = async (
-  token: string | null
+  token: string | null,
 ): Promise<ApiResponse<UserDto>> => {
   const response = await fetch(`${BASE}/user/detail`, {
     method: "GET",
@@ -97,7 +103,7 @@ export async function fetchProductsByUser(
 export const fetchBidsByUser = async (
   token: string | null,
   page: number = 0,
-  size: number = 10
+  size: number = 10,
 ): Promise<
   ApiResponse<{
     content: BidListDto[];
@@ -111,8 +117,13 @@ export const fetchBidsByUser = async (
     `${BASE}/bid/allByUser?page=${page}&size=${size}`,
     {
       method: "GET",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }
+
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    },
+
   );
 
   if (!response.ok) {
@@ -171,6 +182,7 @@ export const updateMyProfileBasic = async (
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: fd,
   });
+
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
@@ -233,9 +245,84 @@ export const deleteMyProfileImage = async (
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 
+
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
     await throwApiError(response, "프로필 이미지 삭제 실패");
+  }
+
+  return response.json();
+};
+
+export const fetchUpdateUser = async (
+  token: string | null,
+  userUpdateDto: UserUpdateDto,
+): Promise<ApiResponse<null>> => {
+  const formData = new FormData();
+
+  formData.append("name", userUpdateDto.name);
+  formData.append("nickname", userUpdateDto.nickname);
+  formData.append("phone", userUpdateDto.phone);
+  formData.append("address", userUpdateDto.address);
+  formData.append("gender", userUpdateDto.gender);
+  formData.append("birthday", userUpdateDto.birthday);
+
+  const response = await fetch(`http://localhost:8080/user/update`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch UserUpdate: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+export const fetchUploadORReplaceImage = async (
+  token: string | null,
+  file: File | null,
+): Promise<ApiResponse<{ url: string }>> => {
+  // 반환 타입 수정
+  // file이 null인 경우 처리
+  if (!file) {
+    throw new Error("File is required");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`http://localhost:8080/user/image`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // Content-Type은 자동으로 설정되므로 명시하지 않음
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload image: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+export const fetchDeleteImage = async (
+  token: string | null,
+): Promise<ApiResponse<null>> => {
+  const response = await fetch(`http://localhost:8080/user/image/delete`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete image: ${response.status}`);
   }
 
   return response.json();

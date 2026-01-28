@@ -1,6 +1,6 @@
 export interface BidLogDto {
   userId: number;
-  userName: string;
+  userNickName: string;
   productId: number;
   bidAmount: number;
   createdAt: string;
@@ -31,4 +31,12 @@ export interface SellerDto {
   createdAt: string;
   selledBidCount: number;
   email: string;
+}
+
+export interface BidResponse {
+  success: boolean;
+  message: string | null;
+  data: string | null;
+  errorCode: string;
+  timestamp: number;
 }

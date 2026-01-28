@@ -14,6 +14,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PageInfo, ProductListDto } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
 import { useModal } from "@/contexts/ModalContext";
+import { useAuth } from "@/hooks/useAuth";
+import { UnauthorizedError } from "@/type/Errors";
 
 type StatusFilter = "ALL" | "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";
 type ViewMode = "grid" | "list";
@@ -214,6 +216,7 @@ function ViewToggle({
 
 const MyWishlist = () => {
   const { showLogin, showError } = useModal();
+  const { checkAuth } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -308,6 +311,7 @@ const MyWishlist = () => {
         else showError(e?.message ?? "찜 목록 조회 중 오류가 발생했습니다.");
       } finally {
         setLoading(false);
+
       }
     },
     [showLogin, showError]
@@ -330,6 +334,20 @@ const MyWishlist = () => {
         const content = String(p.productContent ?? "").toLowerCase();
         return name.includes(q) || content.includes(q);
       });
+
+<!--       setCurrentPage(page);
+      console.log(data);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof UnauthorizedError) {
+        showLogin();
+      } else {
+        showError();
+      }
+      checkAuth();
+    } finally {
+      setLoading(false); -->
+
     }
     return list;
   }, [wishlist, appliedStatus, appliedSearch]);
@@ -339,6 +357,7 @@ const MyWishlist = () => {
     if (Number.isNaN(newPage) || newPage < 0 || newPage >= pageInfo.totalPages) return;
     updateURLParams(searchParams, setSearchParams, { page: newPage });
   };
+
 
   const applySearch = () => {
     updateURLParams(searchParams, setSearchParams, {
@@ -514,6 +533,7 @@ const MyWishlist = () => {
                     <div className="h-10 bg-zinc-100 rounded-2xl animate-pulse w-full mt-3" />
                   </div>
                 </div>
+
               ))}
             </div>
           ) : visibleProducts.length === 0 ? (
@@ -556,6 +576,7 @@ const MyWishlist = () => {
                       >
                         <div className="p-4">
                           <div className="relative overflow-hidden rounded-2xl ring-1 ring-black/5">
+
                             {product.previewImageUrl ? (
                               <img
                                 src={product.previewImageUrl}
@@ -635,6 +656,7 @@ const MyWishlist = () => {
                             {product.productName}
                           </h3>
 
+
                           <div className="mt-3 grid grid-cols-2 gap-3">
                             <div className="rounded-2xl bg-white/60 ring-1 ring-black/5 p-3">
                               <p className="text-xs font-bold text-zinc-500">
@@ -643,12 +665,15 @@ const MyWishlist = () => {
                               <p
                                 className={cn(
                                   "mt-1 text-lg font-extrabold",
+
                                   product.status === "SELLED"
                                     ? "text-violet-700"
                                     : product.status === "NOTSELLED"
+
                                     ? "text-zinc-400"
                                     : "text-emerald-700"
                                 )}
+
                               >
                                 {(product.latestBidAmount ?? 0) === 0
                                   ? "입찰 없음"
@@ -656,11 +681,13 @@ const MyWishlist = () => {
                               </p>
                             </div>
 
+
                             <div className="rounded-2xl bg-white/60 ring-1 ring-black/5 p-3">
                               <p className="text-xs font-bold text-zinc-500">입찰 수</p>
                               <p className="mt-1 text-lg font-extrabold text-zinc-900">
                                 {Math.max(0, (product.bidCount ?? 0) - 1)}건
                               </p>
+
                             </div>
                           </div>
 
@@ -761,6 +788,11 @@ const MyWishlist = () => {
                                   auctionEndTime={product.auctionEndTime}
                                 />
                               </>
+
+                            )}
+
+                            {product.status === "PROCESSING" && (
+                              <div className="mt-3 pt-3 border-t border-black/20 pb-4"></div>
                             )}
                           </div>
                         </div>

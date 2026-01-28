@@ -358,11 +358,11 @@ const Home = () => {
       {/* CTA 섹션 */}
       <section className="py-16 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gray-900 rounded-3xl px-8 py-10 md:px-12 md:py-12 text-center text-white border border-gray-800">
+          <div className="bg-gray-50 rounded-3xl px-8 py-10 md:px-12 md:py-12 text-center text-gray-900 border border-gray-100 shadow-xl">
             <h2 className="text-2xl md:text-3xl font-semibold mb-4">
               지금 바로 AuctionHub와 함께하세요
             </h2>
-            <p className="text-sm md:text-base text-gray-300 mb-8">
+            <p className="text-sm md:text-base text-gray-600 mb-8">
               몇 번의 클릭만으로 회원가입을 완료하고, 첫 번째 프리미엄 경매를
               시작해보세요.
             </p>
@@ -378,7 +378,7 @@ const Home = () => {
                 onClick={() => {
                   navigate(`auction_list`);
                 }}
-                className="px-8 py-3 rounded-xl border border-gray-600 text-sm font-semibold text-gray-100 hover:bg-gray-800 cursor-pointer transition-colors"
+                className="px-8 py-3 rounded-xl bg-gray-600 border text-sm font-semibold text-gray-100 hover:bg-gray-800 cursor-pointer transition-colors"
               >
                 경매 둘러보기
               </button>
@@ -386,59 +386,6 @@ const Home = () => {
           </div>
         </div>
       </section>
-
-      {/* 푸터 */}
-      <footer className="bg-gray-900 border-t border-gray-800 py-12 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Gavel className="h-7 w-7 text-[rgb(118,90,255)]" />
-                <span className="text-xl font-semibold text-white">
-                  AuctionHub
-                </span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                프리미엄 아이템을 안전하고 투명하게 거래할 수 있는 온라인 경매
-                플랫폼입니다.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-white font-semibold mb-4 text-sm">서비스</h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>경매 참여</li>
-                <li>판매하기</li>
-                <li>감정 서비스</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-white font-semibold mb-4 text-sm">
-                고객지원
-              </h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>FAQ</li>
-                <li>1:1 문의</li>
-                <li>이용약관</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-white font-semibold mb-4 text-sm">연락처</h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>📞 1588-1234</li>
-                <li>📧 help@auctionhub.kr</li>
-                <li>🕒 평일 09:00 - 18:00</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-800 mt-8 pt-6 text-center text-gray-500 text-xs">
-            <p>&copy; 2025 AuctionHub. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

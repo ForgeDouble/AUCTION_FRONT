@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
@@ -15,13 +15,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Star,
   MessageCircle,
   AlertTriangle,
   CheckCircle,
   ArrowUp,
   Check,
   Siren,
+  User,
+  DollarSign,
 } from "lucide-react";
 import {
   fetchBidsFromDB,
@@ -34,32 +35,42 @@ import {
   type SellerDto,
   type BidLogDto,
   type ProductDto,
+  type BidResponse,
 } from "./AuctionDetailDto";
 import dayjs from "dayjs";
 import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
 import { useNumberParam } from "@/hooks/useNumberParam";
+import { useModal } from "@/contexts/ModalContext";
 
 const AuctionDetail = () => {
   const productId = useNumberParam("productId");
+  const { showWarning, showError, showLogin } = useModal();
   const [product, setProduct] = useState<ProductDto>();
   const [sellerInfo, setSellerInfo] = useState<SellerDto>();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [bidAmount, setBidAmount] = useState(0);
+  const [bidAmount, setBidAmount] = useState<string>("");
   const [wishlistId, setWishlistId] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState({
     hours: 0,
     minutes: 0,
     seconds: 0,
   });
-  const [isWatching, setIsWatching] = useState(false);
+  // const [isWatching, setIsWatching] = useState(false);
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]); // 실시간 입찰 내역 저장
   const [stompClient, setStompClient] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  const [bidLoading, setBidLoading] = useState(false);
+  // const [bidTimeout, setBidTimeout] = useState<NodeJS.Timeout | null>(null);
+  const bidTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+
   // 신고 모달 연결
   const [reportOpen, setReportOpen] = useState(false);
   const [reportMode, setReportMode] = useState<"USER" | "PRODUCT">("USER");
 
-  const { userEmail: authEmail, userId: authUserId } = useAuth();
+
+<!--   const { userEmail: authEmail, userId: authUserId } = useAuth();
 
   const myEmailNorm = useMemo(() => {
     return String(authEmail ?? "").trim().toLowerCase();
@@ -83,7 +94,8 @@ const AuctionDetail = () => {
 
   const canReportSeller = useMemo(() => {
     return !isSelfSeller && Boolean(sellerInfo?.userId);
-  }, [isSelfSeller, sellerInfo?.userId]);
+  }, [isSelfSeller, sellerInfo?.userId]); -->
+
 
   const calculateTimeLeft = (endTime: string) => {
     const now = dayjs();
@@ -164,6 +176,9 @@ const AuctionDetail = () => {
   /* 상품 조회 */
   const loadProduct = async () => {
     try {
+      if (!productId) {
+        showError("서버 오류가 발생했습니다.다시 시도해주세요.");
+      }
       const data = await fetchProductById(productId);
       setProduct(data.result);
     } catch (error) {
@@ -269,8 +284,9 @@ const AuctionDetail = () => {
     }
   };
 
+
   // 본인 판단 여부 확인
-  const myEmail = useMemo(() => {
+<!--   const myEmail = useMemo(() => {
     try {
       const raw = localStorage.getItem("userEmail");
       return String(raw ?? "").trim().toLowerCase();
@@ -283,13 +299,117 @@ const AuctionDetail = () => {
     const sellerEmail = String(sellerInfo?.email ?? "").trim().toLowerCase();
     if (!myEmail || !sellerEmail) return false;
     return myEmail === sellerEmail;
-  }, [myEmail, sellerInfo?.email]);
+  }, [myEmail, sellerInfo?.email]); -->
+
+  // 콤마 포맷팅 함수
+  const formatNumber = (value: string): string => {
+    const number = value.replace(/[^0-9]/g, "");
+    if (number === "") return "";
+    return parseInt(number, 10).toLocaleString("ko-KR");
+  };
+  // input 핸들러
+  const handleBidAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatNumber(e.target.value);
+    setBidAmount(formatted);
+  };
+
 
   useEffect(() => {
     loadProduct();
     loadSellerInfo();
     loadIsWishlisted(productId);
   }, [productId]);
+
+  const BID_RESPONSE_MESSAGES = {
+    NOT_ALLOWED: "해당 상품에 접근할 권한이 없습니다.",
+    USER_NOT_FOUND: "존재하지 않은 아이디입니다. 고객센터에 문의하세요",
+    PRODUCT_NOT_FOUND: "존재하지 않은 상품입니다.",
+    SELLER_NOT_ALLOWED: "판매자는 입찰을 할 수 없습니다.",
+    QUANTITY_ERROR: "입찰가는 1000원 단위로 입력해주세요.",
+    LOW_PRICE: "현재 최고가 보다 높은 금액만 입찰가능합니다.",
+    INVALID_INPUT_FORMAT: "올바르지 않은 입력입니다.",
+    BID_VALIDATION_ERROR: "올바르지 않은 입력입니다.",
+    INTERNAL_ERROR: "입찰 처리중 오류가 발생했습니다. 고객센터에 문의하세요",
+  } as const;
+
+  // 입찰 응답 처리
+  const handleBidResponse = (data: BidResponse) => {
+    console.log("입찰 응답 수신:", data);
+
+    // 타임아웃 제거
+    if (bidTimeoutRef.current) {
+      clearTimeout(bidTimeoutRef.current);
+      bidTimeoutRef.current = null;
+    }
+
+    // 로딩 해제
+    setBidLoading(false);
+
+    if (data.success) {
+      // 성공 처리
+      // showWarning(data.message || "입찰이 완료되었습니다!");
+      console.log(data.message);
+      setBidAmount(""); // 입력 초기화
+    } else {
+      // 실패 처리
+      switch (data.errorCode) {
+        case "NOT_ALLOWED":
+          showError(BID_RESPONSE_MESSAGES.NOT_ALLOWED);
+          break;
+        case "USER_NOT_FOUND":
+          showError(BID_RESPONSE_MESSAGES.USER_NOT_FOUND);
+          showLogin();
+          break;
+        case "PRODUCT_NOT_FOUND":
+          showError(BID_RESPONSE_MESSAGES.PRODUCT_NOT_FOUND);
+          break;
+        case "SELLER_NOT_ALLOWED":
+          showWarning(BID_RESPONSE_MESSAGES.SELLER_NOT_ALLOWED);
+          break;
+        case "QUANTITY_ERROR":
+          showWarning(BID_RESPONSE_MESSAGES.QUANTITY_ERROR);
+          break;
+        case "LOW_PRICE":
+          showWarning(BID_RESPONSE_MESSAGES.LOW_PRICE);
+          break;
+        case "INVALID_INPUT_FORMAT":
+          showWarning(BID_RESPONSE_MESSAGES.INVALID_INPUT_FORMAT);
+          break;
+        case "BID_VALIDATION_ERROR":
+          showWarning(BID_RESPONSE_MESSAGES.BID_VALIDATION_ERROR);
+          break;
+        case "INTERNAL_ERROR":
+          showError(BID_RESPONSE_MESSAGES.INTERNAL_ERROR);
+          break;
+      }
+    }
+  };
+
+  const validateBidAmount = (amountString: string): string | null => {
+    const amount = parseInt(amountString.replace(/,/g, ""), 10);
+
+    if (!amountString || isNaN(amount) || amount <= 0) {
+      return BID_RESPONSE_MESSAGES.INVALID_INPUT_FORMAT;
+    }
+
+    if (amount % 1000 !== 0) {
+      return BID_RESPONSE_MESSAGES.QUANTITY_ERROR;
+    }
+    return null; // 검증 통과
+  };
+
+  // 전역 에러 처리
+  // const handleGlobalError = (error: any) => {
+  //   console.error("WebSocket 전역 에러:", error);
+
+  //   if (bidTimeoutRef.current) {
+  //     clearTimeout(bidTimeoutRef.current);
+  //     bidTimeoutRef.current = null;
+  //   }
+
+  //   setBidLoading(false);
+  //   alert(error.message || "오류가 발생했습니다.");
+  // };
 
   useEffect(() => {
     if (!product) return;
@@ -312,50 +432,51 @@ const AuctionDetail = () => {
 
   // WebSocket 구독
   useEffect(() => {
-    // 상품 정보가 없거나 경매가 종료된 경우 WebSocket 연결 안 함
-    if (
-      !product ||
-      product.status === "SELLED" ||
-      product.status === "NOTSELLED" ||
-      product.status === "READY"
-    ) {
-      console.log("경매가 진행 중이 아니므로 WebSocket 연결하지 않음");
-      return;
-    }
+    if (!product || product.status !== "PROCESSING") return;
 
-    const socket = new SockJS("http://localhost:8080/ws-public"); // 공개 엔드포인트
+    const token = localStorage.getItem("accessToken");
+
+    // 토큰이 있으면 인증된 연결, 없으면 공개 연결
+    const endpoint = token ? "/ws" : "/ws-public";
+    const socket = new SockJS(`http://localhost:8080${endpoint}`);
     const stomp = Stomp.over(socket);
-    stomp.heartbeat.outgoing = 10000;
-    stomp.heartbeat.incoming = 10000;
-    stomp.debug = () => {};
+
+    stomp.debug = (str) => console.log("🔧 STOMP:", str);
 
     stomp.connect(
-      {}, // 인증 헤더 없음
+      token ? { Authorization: `Bearer ${token}` } : {}, // 토큰 있을 때만 헤더 추가
       () => {
-        console.log("경매 WebSocket 연결 성공");
+        console.log("연결 성공 - 엔드포인트:", endpoint);
         setStompClient(stomp);
 
-        // 구독
+        // 1. 경매 현황 구독 (누구나 가능)
         stomp.subscribe(`/topic/auction/${productId}`, (message) => {
+          console.log("경매 현황:", message.body);
           const payload = JSON.parse(message.body);
-          const refinedPayload: BidLogDto = {
-            ...payload,
-            createdAt: dayjs(payload.createdAt).format("YYYY-MM-DD HH:mm:ss"),
-          };
-          console.log("📩 받은 메시지:", refinedPayload);
-          setBidLogs((prev) => [refinedPayload, ...prev]);
+          setBidLogs((prev) => [payload, ...prev]);
         });
+
+        // 2. 개인 응답 구독 (토큰 있을 때만)
+        if (token) {
+          stomp.subscribe("/user/queue/bid_response", (response) => {
+            console.log("개인 응답:", response.body);
+            handleBidResponse(JSON.parse(response.body));
+          });
+
+          // stomp.subscribe("/user/queue/errors", (error) => {
+          //   console.log("에러:", error.body);
+          //   handleGlobalError(JSON.parse(error.body));
+          // });
+        }
       },
       (error) => {
-        console.error("경매 WebSocket 연결 실패:", error);
+        console.error("❌ 연결 실패:", error);
       },
     );
 
     return () => {
       if (stomp && stomp.connected) {
-        stomp.disconnect(() => {
-          console.log("경매 WebSocket 연결 해제");
-        });
+        stomp.disconnect();
       }
     };
   }, [product, productId]);
@@ -363,27 +484,58 @@ const AuctionDetail = () => {
   // 입찰 메시지 보내기
   const sendBid = () => {
     if (product?.status !== "PROCESSING") {
-      alert("진행 중인 경매가 아닙니다.");
+      showError("진행중인 경매가 아닙니다.");
       return;
     }
 
-    if (stompClient && bidAmount) {
-      const token = localStorage.getItem("accessToken");
-      if (token == null) {
-        throw Error("No Token");
-        return;
-      }
+    if (!stompClient) {
+      showError("서버와 연결되지 않았습니다. 페이지를 새로고침해주세요.");
+      return;
+    }
 
-      const bid = {
-        productId: productId,
-        bidAmount: bidAmount,
-        isWinned: "N",
-      };
+    const amountError = validateBidAmount(bidAmount);
+    if (amountError) {
+      showWarning(amountError);
+      return;
+    }
+
+    const token = localStorage.getItem("accessToken");
+    if (token == null) {
+      showLogin();
+      console.error("Missing Token");
+      return;
+    }
+
+    // 로딩 시작
+    setBidLoading(true);
+
+    // 타임아웃 설정 (3초)
+    bidTimeoutRef.current = setTimeout(() => {
+      setBidLoading(false);
+      showError("입찰 처리 시간 초과. 다시 시도해주세요.");
+    }, 3000);
+
+    const amount = parseInt(bidAmount.replace(/,/g, ""), 10);
+
+    const bid = {
+      productId: productId,
+      bidAmount: amount,
+      isWinned: "N",
+    };
+
+    try {
       stompClient.send(
         "/app/bid",
         { Authorization: `Bearer ${token}` },
         JSON.stringify(bid),
       ); // 서버쪽 @MessageMapping("/bid")
+      console.log("입찰 요청 전송:", bid);
+    } catch (error) {
+      clearTimeout(bidTimeoutRef.current);
+      setBidLoading(false);
+      showError("입찰 요청 전송 실패");
+      console.error("입찰 전송 오류:", error);
+    } finally {
       setBidAmount("");
     }
   };
@@ -401,14 +553,23 @@ const AuctionDetail = () => {
   };
 
   const openRoomWindow = (roomId: string) => {
-    const w = 420, h = 720;
+    const w = 420,
+      h = 720;
     const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2);
     const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2);
 
     window.open(
       "/chat?roomId=" + encodeURIComponent(roomId),
       "chat_room_" + roomId,
-      "popup=yes,width=" + w + ",height=" + h + ",left=" + left + ",top=" + top + ",resizable=yes,scrollbars=yes"
+      "popup=yes,width=" +
+        w +
+        ",height=" +
+        h +
+        ",left=" +
+        left +
+        ",top=" +
+        top +
+        ",resizable=yes,scrollbars=yes",
     );
   };
 
@@ -421,12 +582,17 @@ const AuctionDetail = () => {
 
     const sellerEmail = sellerInfo?.email;
     if (!sellerEmail) {
-      alert("판매자 이메일 정보가 없어 채팅을 열 수 없습니다. (sellerInfo.email 누락)");
+      alert(
+        "판매자 이메일 정보가 없어 채팅을 열 수 없습니다. (sellerInfo.email 누락)",
+      );
       return;
     }
 
     try {
-      const roomId = await openRoom(token, { targetEmail: sellerEmail, adminChat: false });
+      const roomId = await openRoom(token, {
+        targetEmail: sellerEmail,
+        adminChat: false,
+      });
       if (!roomId) {
         alert("채팅방 생성/조회에 실패했습니다.");
         return;
@@ -441,7 +607,6 @@ const AuctionDetail = () => {
       return;
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -553,7 +718,7 @@ const AuctionDetail = () => {
             </div>
 
             {/* 상품 설명 */}
-            <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6 mt-6">
+            <div className="min-h-66 bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6 mt-6">
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 상품 설명
               </h3>
@@ -594,120 +759,149 @@ const AuctionDetail = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-6">
                 {product?.productName}
               </h1>
-              {/* <p className="text-gray-400 mb-6">1965년 오리지널 다이얼</p> */}
 
               {/* 현재 입찰가 */}
-              <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-xl p-4 mb-6">
-                <div className="text-sm text-gray-600 mb-1">
-                  현재 최고 입찰가
+              <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-xl p-6 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm text-gray-600 font-medium">
+                    현재 최고 입찰가
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-green-400" />
                 </div>
                 <div className="text-4xl font-bold text-green-400 mb-2">
                   ₩{bidLogs[0]?.bidAmount}
                 </div>
-                <div className="flex items-center text-gray-600">
-                  <Users className="h-4 w-4 mr-1" />
-                  <span>23명 참여</span>
-                  <Eye className="h-4 w-4 ml-4 mr-1" />
-                  <span>156명 관심</span>
-                </div>
               </div>
 
               {/* 입찰 시작가 */}
-              <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-xl p-4 mb-6">
-                <div className="text-sm text-gray-600 mb-1">입찰 시작가</div>
-                <div className="text-4xl font-bold text-green-400 mb-2">
+              <div className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-xl p-6 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm text-gray-600 font-medium">
+                    입찰 시작가
+                  </div>
+                  <DollarSign className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="text-4xl font-bold text-blue-400 mb-2">
                   ₩{product?.price}
                 </div>
               </div>
 
               {/* 남은 시간 */}
-              <div className="bg-gradient-to-r from-red-600/20 to-orange-600/20 rounded-xl p-4 mb-6">
-                <div className="text-sm text-gray-600 mb-2">
-                  마감까지 남은 시간
+              <div className="bg-gradient-to-r from-red-600/20 to-orange-600/20 rounded-xl p-6 mb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-sm text-gray-600 font-medium">
+                    마감까지 남은 시간
+                  </div>
+                  <Clock className="h-5 w-5 text-red-400" />
                 </div>
-                <div className="flex justify-between text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-red-400">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center bg-white/10 rounded-lg p-3">
+                    <div className="text-3xl font-bold text-red-400">
                       {timeLeft.hours.toString().padStart(2, "0")}
                     </div>
-                    <div className="text-xs text-gray-600">시간</div>
+                    <div className="text-xs text-gray-600 mt-1">시간</div>
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-red-400">
+                  <div className="text-center bg-white/10 rounded-lg p-3">
+                    <div className="text-3xl font-bold text-red-400">
                       {timeLeft.minutes.toString().padStart(2, "0")}
                     </div>
-                    <div className="text-xs text-gray-600">분</div>
+                    <div className="text-xs text-gray-600 mt-1">분</div>
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-red-400">
+                  <div className="text-center bg-white/10 rounded-lg p-3">
+                    <div className="text-3xl font-bold text-red-400">
                       {timeLeft.seconds.toString().padStart(2, "0")}
                     </div>
-                    <div className="text-xs text-gray-600">초</div>
+                    <div className="text-xs text-gray-600 mt-1">초</div>
                   </div>
                 </div>
               </div>
 
-              {/* 입찰 입력 */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-gray-900 font-semibold block mb-2">
-                    입찰 금액
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={bidAmount}
-                      onChange={(e) => setBidAmount(e.target.value)}
-                      placeholder="₩2,500,000"
-                      className="w-full bg-white/10 border border-black/20 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-[rgb(118,90,255)]"
-                    />
-                  </div>
-                  <div className="text-sm text-gray-400 mt-1">
-                    최소 입찰가: ₩2,500,000 (현재가 + ₩50,000)
-                  </div>
-                </div>
-
-                <div className="flex space-x-2">
-                  <button
-                    className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 ${
-                      product?.status === "PROCESSING"
-                        ? "bg-[rgb(118,90,255)] text-white hover:from-purple-700 hover:to-pink-700"
-                        : "bg-gray-600 text-gray-400 cursor-not-allowed"
-                    }`}
-                    onClick={() => sendBid()}
-                    disabled={product?.status !== "PROCESSING"}
-                  >
-                    {product?.status === "PROCESSING"
-                      ? "입찰하기"
-                      : "경매 종료"}
-                  </button>
-                  {/* {product?.status === "PROCESSING" && (
-                    <button className="bg-yellow-600 text-white px-4 py-3 rounded-xl hover:bg-yellow-700 transition-all duration-300 font-bold">
-                      즉시구매
-                    </button>
-                  )} */}
-                </div>
-              </div>
-
-              {/* 안전 보장 */}
-              <div className="mt-6 p-4 bg-blue-600/20 rounded-xl">
-                <div className="flex items-center mb-2">
-                  <Shield className="h-5 w-5 text-blue-400 mr-2" />
-                  <span className="text-gray-900 font-semibold">안전 보장</span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  전문가 감정 완료 • 에스크로 보호 • 7일 반품 보장
-                </div>
+              {/* 경매 상태 인디케이터 */}
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${product?.status === "PROCESSING" ? "bg-green-400 animate-pulse" : "bg-gray-400"}`}
+                ></div>
+                <span
+                  className={`text-sm font-medium ${product?.status === "PROCESSING" ? "text-green-400" : "text-gray-400"}`}
+                >
+                  {product?.status === "PROCESSING"
+                    ? "경매 진행중"
+                    : "경매 종료"}
+                </span>
               </div>
             </div>
 
-            {/* 입찰 현황 */}
+            {/* 판매자 정보 */}
             <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">판매자 정보</h3>
+                <div
+                  className="flex items-center text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (!sellerInfo?.userId) {
+                      alert("판매자 정보(userId)가 없어 신고할 수 없습니다.");
+                      return;
+                    }
+                    setReportMode("USER");
+                    setReportOpen(true);
+                  }}
+                >
+                  <Siren className="h-4 w-4 mr-1" />
+                  <span className="text-sm">신고하기</span>
+                </div>
+              </div>
+
+              <div className="flex items-center mb-4">
+                {sellerInfo?.profileImageUrl ? (
+                  <img
+                    src={sellerInfo.profileImageUrl}
+                    alt={`프로필이미지`}
+                    className="w-12 h-12 border border-gray-300 rounded-full"
+                  />
+                ) : (
+                  <User className="w-12 h-12 text-gray-400 border border-gray-300 rounded-full" />
+                )}
+
+                <div className="ml-3">
+                  <div className="text-gray-900 font-semibold">
+                    {sellerInfo?.nickname}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-900">가입일:</span>
+                  <span className="text-gray-600">{sellerInfo?.createdAt}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-900">완료된 경매:</span>
+                  <span className="text-gray-600">
+                    {sellerInfo?.selledBidCount}건
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleContactSeller}
+                className="w-full mt-4 bg-white/10 border border-black/20 text-gray-900 py-2 rounded-lg hover:bg-black/10 transition-all duration-300 cursor-pointer"
+              >
+                <MessageCircle className="h-4 w-4 inline mr-2" />
+                판매자 문의
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+          {/* 왼쪽: 입찰 현황 */}
+          <div className="lg:col-span-2">
+            <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6 h-[600px] flex flex-col">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
                 <TrendingUp className="h-5 w-5 mr-2" />
                 입찰 현황
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-3 overflow-y-auto flex-1">
                 {bidLogs.map((bid, index) => (
                   <div
                     key={index}
@@ -721,7 +915,7 @@ const AuctionDetail = () => {
                   >
                     <div>
                       <div className="text-gray-900 font-semibold">
-                        {bid.userName}
+                        {bid.userNickName}
                       </div>
                       <div className="text-gray-600 text-sm">
                         {bid.createdAt}
@@ -748,7 +942,8 @@ const AuctionDetail = () => {
                   </div>
                 ))}
               </div>
-              <button className="w-full mt-4 text-[rgb(118,90,255)] hover:text-blue-300 transition-colors">
+
+<!--               <button className="w-full mt-4 text-[rgb(118,90,255)] hover:text-blue-300 transition-colors">
                 더 보기
               </button>
             </div>
@@ -832,80 +1027,56 @@ const AuctionDetail = () => {
               >
                 <MessageCircle className="h-4 w-4 inline mr-2" />
                 판매자 문의
-              </button>
+              </button> -->
+
             </div>
           </div>
-        </div>
 
-        {/* 하단 탭 섹션 */}
-        <div className="mt-12">
-          <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl overflow-hidden">
-            {/* 탭 헤더 */}
-            <div className="flex border-b border-black/20">
-              <button className="flex-1 py-4 text-white bg-[rgb(118,90,255)] font-semibold">
-                상세 정보
-              </button>
-              <button className="flex-1 py-4 text-gray-600 hover:text-gray-900 hover:bg-white/5 transition-all">
-                배송/반품
-              </button>
-              <button className="flex-1 py-4 text-gray-600 hover:text-900 hover:bg-white/5 transition-all">
-                문의 (3)
-              </button>
-            </div>
-
-            {/* 탭 콘텐츠 */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* 오른쪽: 입찰 금액 입력 */}
+          <div className="flex flex-col justify-end">
+            <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-6">입찰하기</h3>
+              <div className="space-y-6">
                 <div>
-                  <h4 className="text-gray-900 font-semibold mb-3">
-                    제품 사양
-                  </h4>
-                  <div className="space-y-2 text-gray-600">
-                    <div className="flex justify-between py-2 border-b border-black/20">
-                      <span>케이스 크기</span>
-                      <span>40mm</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-black/20">
-                      <span>케이스 소재</span>
-                      <span>스테인리스 스틸</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-black/20">
-                      <span>방수</span>
-                      <span>200m</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-black/20">
-                      <span>무브먼트</span>
-                      <span>자동</span>
-                    </div>
+                  <label className="text-gray-900 font-semibold block mb-3">
+                    입찰 금액
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={bidAmount}
+                      onChange={handleBidAmountChange}
+                      placeholder="₩2,500,000"
+                      className="w-full bg-white/10 border border-black/20 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-[rgb(118,90,255)]"
+                    />
+                  </div>
+                  <div className="text-sm text-gray-400 mt-2">
+                    최소 입찰가: ₩2,500,000 (현재가 + ₩50,000)
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="text-gray-900 font-semibold mb-3">
-                    감정 결과
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      <span>진품 인증 완료</span>
-                    </div>
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      <span>기능 동작 정상</span>
-                    </div>
-                    <div className="flex items-center text-yellow-600">
-                      <AlertTriangle className="h-5 w-5 mr-2" />
-                      <span>미세한 사용 흔적 있음</span>
-                    </div>
-
-                    <div className="mt-4 p-3 bg-blue-600/30 rounded-lg">
-                      <div className="text-sm text-blue-600">
-                        감정사: 김시계 (20년 경력) <br />
-                        감정일: 2025.09.10
+                <button
+                  className={`w-full py-3 rounded-xl font-bold transition-all duration-300 relative ${
+                    product?.status === "PROCESSING" && !bidLoading
+                      ? "bg-[rgb(118,90,255)] text-white hover:bg-purple-700"
+                      : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  }`}
+                  onClick={() => sendBid()}
+                  disabled={product?.status !== "PROCESSING" || bidLoading}
+                >
+                  {bidLoading ? (
+                    <>
+                      <span className="opacity-0">입찰하기</span>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       </div>
-                    </div>
-                  </div>
-                </div>
+                    </>
+                  ) : product?.status === "PROCESSING" ? (
+                    "입찰하기"
+                  ) : (
+                    "경매 종료"
+                  )}
+                </button>
               </div>
             </div>
           </div>
@@ -919,10 +1090,7 @@ const AuctionDetail = () => {
         targetUserName={sellerInfo?.nickname}
       />
     </div>
-
-    
   );
-
 };
 
 export default AuctionDetail;

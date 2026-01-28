@@ -23,11 +23,18 @@ import MyProfile from "./pages/mypage/profile/MyProfile";
 import ModalProvider from "./contexts/ModalProvider";
 import ProtectedRoute from "./components/route/ProtectedRoute";
 import PublicRoute from "./components/route/PublicRoute";
+import Footer from "./components/Footer";
 
 function App() {
   const location = useLocation();
   const state = location.state as { backgroundLocation?: Location } | null;
   const backgroundLocation = state?.backgroundLocation;
+
+  // Footer를 숨길 경로들 정의
+  const hideFooterPaths = ["/chat-popup", "/chat-list", "/chat"];
+  const shouldHideFooter =
+    hideFooterPaths.includes(location.pathname) ||
+    location.pathname.startsWith("/admin");
 
   return (
     <ModalProvider>
@@ -140,6 +147,7 @@ function App() {
               }
             />
           </Routes>
+          {!shouldHideFooter && <Footer />}
 
           {/* 2) 모달 화면: backgroundLocation이 있을 때만 "위에 덮는 모달" 렌더 */}
           {backgroundLocation && (
