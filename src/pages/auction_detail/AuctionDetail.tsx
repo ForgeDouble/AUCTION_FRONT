@@ -64,11 +64,9 @@ const AuctionDetail = () => {
   // const [bidTimeout, setBidTimeout] = useState<NodeJS.Timeout | null>(null);
   const bidTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-
   // 신고 모달 연결
   const [reportOpen, setReportOpen] = useState(false);
   const [reportMode, setReportMode] = useState<"USER" | "PRODUCT">("USER");
-
 
   // const { userEmail: authEmail, userId: authUserId } = useAuth();
 
@@ -95,7 +93,6 @@ const AuctionDetail = () => {
   // const canReportSeller = useMemo(() => {
   //   return !isSelfSeller && Boolean(sellerInfo?.userId);
   // }, [isSelfSeller, sellerInfo?.userId]);
-
 
   const calculateTimeLeft = (endTime: string) => {
     const now = dayjs();
@@ -284,7 +281,6 @@ const AuctionDetail = () => {
     }
   };
 
-
   // 본인 판단 여부 확인
   //  const myEmail = useMemo(() => {
   //   try {
@@ -312,7 +308,6 @@ const AuctionDetail = () => {
     const formatted = formatNumber(e.target.value);
     setBidAmount(formatted);
   };
-
 
   useEffect(() => {
     loadProduct();
@@ -1024,7 +1019,6 @@ const AuctionDetail = () => {
                 <MessageCircle className="h-4 w-4 inline mr-2" />
                 판매자 문의
               </button> */}
-
             </div>
           </div>
 

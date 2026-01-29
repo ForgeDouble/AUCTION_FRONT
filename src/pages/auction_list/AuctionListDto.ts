@@ -15,6 +15,7 @@ export interface ProductListDto {
   path: categoryDto[];
   latestBidAmount: number | null;
   bidCount: number;
+  wishlistCount: number;
   createdAt: string;
   auctionEndTime: string;
 }

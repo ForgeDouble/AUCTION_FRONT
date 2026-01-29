@@ -123,7 +123,7 @@ const AuctionListPage = () => {
       case "마감임박":
         return "bg-red-500";
       case "진행중":
-        return "bg-green-500";
+        return "bg-[rgb(118,90,255)]";
       default:
         return "bg-blue-500";
     }
@@ -716,7 +716,7 @@ const AuctionListPage = () => {
                         </div>
                       </div>
                       <div className="p-6">
-                        <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">
                           {auction.productName}
                         </h3>
                         <div className="flex items-center justify-between mb-4">
@@ -724,7 +724,7 @@ const AuctionListPage = () => {
                             <div className="text-xs text-gray-600">
                               현재 입찰가
                             </div>
-                            <div className="text-xl font-bold text-green-400">
+                            <div className="text-xl font-bold text-gray-900">
                               {auction.latestBidAmount
                                 ? formatPrice(auction.latestBidAmount)
                                 : "0원"}
@@ -737,14 +737,10 @@ const AuctionListPage = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between mb-4 text-xs text-gray-600">
+                        <div className="flex items-center justify-end mb-4 text-xs text-gray-600">
                           <div className="flex items-center">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            지역이름
-                          </div>
-                          <div className="flex items-center">
-                            <Star className="h-3 w-3 mr-1 text-yellow-400 fill-current" />
-                            0
+                            <Heart className="h-3 w-3 mr-1 text-red-400 fill-current" />
+                            {auction.wishlistCount ? auction.wishlistCount : 0}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mb-4 text-xs text-gray-600">
