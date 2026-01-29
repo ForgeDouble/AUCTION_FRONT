@@ -318,10 +318,18 @@ const AuctionListPage = () => {
     }
   };
   useEffect(() => {
-    loadProductList(0, pageSize);
+    const pageFromURL = parseInt(searchParams.get("page") || "0");
+    const categoryFromURL = parseInt(searchParams.get("categoryId") || "0");
+    const sortFromURL = searchParams.get("sortBy") || "newest";
+
+    setCurrentPage(pageFromURL);
+    setSelectedCategory(categoryFromURL);
+    setSortBy(sortFromURL);
+
+    loadProductList(pageFromURL, pageSize);
     loadParentCategories();
     loadWishlistByUser();
-  }, []);
+  }, []); // 빈 배열 유지
 
   // 모든 경매의 타이머 업데이트
   useEffect(() => {
@@ -362,14 +370,20 @@ const AuctionListPage = () => {
 
   // sortBy 변경 시 첫 페이지로 이동하며 재조회
   useEffect(() => {
-    updateURLParams({
-      page: 0,
-      sortBy,
-      categoryId: selectedCategory,
-      // search: searchQuery,
-    });
-    loadProductList(0, pageSize);
-  }, [sortBy, selectedCategory, selectedStatuses /* ,searchQuery */]);
+    // URL에서 온 초기 로드가 아닐 때만 실행
+    if (
+      currentPage !== parseInt(searchParams.get("page") || "0") ||
+      selectedCategory !== parseInt(searchParams.get("categoryId") || "0") ||
+      sortBy !== searchParams.get("sortBy")
+    ) {
+      updateURLParams({
+        page: 0,
+        sortBy,
+        categoryId: selectedCategory,
+      });
+      loadProductList(0, pageSize);
+    }
+  }, [sortBy, selectedCategory, selectedStatuses]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -739,7 +753,7 @@ const AuctionListPage = () => {
                         </div>
                         <div className="flex items-center justify-end mb-4 text-xs text-gray-600">
                           <div className="flex items-center">
-                            <Heart className="h-3 w-3 mr-1 text-red-400 fill-current" />
+                            <Heart className="h-3.5 w-3.5 mr-2 text-gray-400" />
                             {auction.wishlistCount ? auction.wishlistCount : 0}
                           </div>
                         </div>
@@ -835,7 +849,7 @@ const AuctionListPage = () => {
                               <div className="text-xs text-gray-500 mb-0.5">
                                 현재 입찰가
                               </div>
-                              <div className="text-2xl font-bold text-green-600">
+                              <div className="text-2xl font-bold text-gray-900">
                                 {formatPrice(auction.latestBidAmount || 0)}
                               </div>
                             </div>
@@ -856,8 +870,10 @@ const AuctionListPage = () => {
                           <div className="flex flex-col items-end space-y-2">
                             <div className="flex items-center space-x-3 shrink-0 mb-4">
                               <div className="flex items-center text-gray-500 text-xs">
-                                <MapPin className="h-3.5 w-3.5 mr-1 text-gray-400" />
-                                "지역이름"
+                                <Heart className="h-3.5 w-3.5 mr-1 text-gray-400" />
+                                {auction.wishlistCount
+                                  ? auction.wishlistCount
+                                  : 0}
                               </div>
                               <div className="flex items-center space-x-1.5 border-l border-gray-200 pl-3">
                                 <span className="text-sm text-gray-500 uppercase">
