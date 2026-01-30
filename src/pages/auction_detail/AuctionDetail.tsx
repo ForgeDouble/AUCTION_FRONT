@@ -395,7 +395,8 @@ const AuctionDetail = () => {
   };
 
   const isLive = product?.status === "PROCESSING";
-  const currentTopPrice = bidLogs.length > 0 ? Number(bidLogs[0].bidAmount) : Number(product?.price || 0);
+  const currentTopPrice =
+    bidLogs.length > 0 ? Number(bidLogs[0].bidAmount) : Number(product?.price || 0);
 
   return (
     <div className="min-h-screen bg-white pb-28 lg:h-screen lg:overflow-hidden lg:pb-0">
@@ -403,7 +404,7 @@ const AuctionDetail = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div
-              className="w-10 h-10 rounded-2xl text-white flex items-center justify-center shadow-sm"
+              className="w-10 h-10 rounded-2xl text-white flex items-center justify-center"
               style={{ backgroundColor: ACCENT }}
             >
               <Gavel className="w-5 h-5" />
@@ -427,24 +428,26 @@ const AuctionDetail = () => {
             >
               {isLive ? "LIVE" : "CLOSED"}
             </span>
-            <span className="hidden sm:inline text-xs text-slate-400">Lot #{productId}</span>
+            <span className="hidden sm:inline text-xs text-slate-400">POT #{productId}</span>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 lg:h-[calc(100vh-64px)] lg:overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:h-full">
-          {/* LEFT (독립 스크롤) */}
-          <div className="lg:col-span-7 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:pr-2">
-            <div className="rounded-[28px] border border-slate-100 bg-white shadow-[0_12px_30px_-24px_rgba(15,23,42,0.45)] overflow-hidden">
+          {/* LEFT */}
+          <div className="lg:col-span-8 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:pr-2 no-scrollbar">
+            <div className="rounded-[28px] border border-slate-100 bg-white overflow-hidden">
               {/* Header */}
               <div className="p-6 md:p-8">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-slate-500 font-semibold">Lot #{productId}</span>
+                      <span className="text-xs text-slate-500 font-semibold">POT #{productId}</span>
                       <span className="text-slate-300">•</span>
-                      <span className="text-xs text-slate-500">{isLive ? "경매 진행 중" : "경매 종료"}</span>
+                      <span className="text-xs text-slate-500">
+                        {isLive ? "경매 진행 중" : "경매 종료"}
+                      </span>
 
                       {isLive && (
                         <span
@@ -515,7 +518,7 @@ const AuctionDetail = () => {
                   <div className="absolute inset-0 bg-gradient-to-b from-slate-50 to-white" />
 
                   <div className="relative z-10 h-full p-5 sm:p-6">
-                    <div className="h-full w-full rounded-[26px] border border-slate-100 bg-white shadow-[0_10px_24px_-22px_rgba(15,23,42,0.35)] overflow-hidden">
+                    <div className="h-full w-full rounded-[26px] border border-slate-100 bg-white overflow-hidden">
                       <div className="h-full w-full flex items-center justify-center">
                         <img
                           src={mainImageUrl}
@@ -530,7 +533,7 @@ const AuctionDetail = () => {
 
                   {!isLive && (
                     <div className="absolute inset-0 z-20 bg-white/70 backdrop-blur-[2px] flex items-center justify-center">
-                      <div className="px-6 py-3 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center gap-2">
+                      <div className="px-6 py-3 rounded-2xl bg-white border border-slate-200 flex items-center gap-2">
                         <Clock className="w-5 h-5 text-slate-900" />
                         <span className="font-extrabold text-slate-900">경매 종료</span>
                       </div>
@@ -540,14 +543,14 @@ const AuctionDetail = () => {
                   <button
                     onClick={prevImage}
                     disabled={images.length <= 1}
-                    className="absolute z-30 left-5 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="absolute z-30 left-5 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white border border-slate-200 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="w-5 h-5 text-slate-800" />
                   </button>
                   <button
                     onClick={nextImage}
                     disabled={images.length <= 1}
-                    className="absolute z-30 right-5 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="absolute z-30 right-5 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white border border-slate-200 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ChevronRight className="w-5 h-5 text-slate-800" />
                   </button>
@@ -555,7 +558,7 @@ const AuctionDetail = () => {
                   <div className="absolute z-30 top-5 right-5 flex gap-2">
                     <button
                       onClick={handleWishlistToggle}
-                      className="p-3 rounded-full border shadow-sm transition active:scale-95"
+                      className="p-3 rounded-full border transition active:scale-95"
                       style={{
                         backgroundColor: wishlistId ? "rgba(244,63,94,0.10)" : "white",
                         color: wishlistId ? "rgb(244,63,94)" : "#64748b",
@@ -572,7 +575,7 @@ const AuctionDetail = () => {
                           setCopied(true);
                           setTimeout(() => setCopied(false), 1800);
                         }}
-                        className="p-3 rounded-full bg-white text-slate-500 border border-slate-200 shadow-sm hover:bg-slate-50 transition active:scale-95"
+                        className="p-3 rounded-full bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 transition active:scale-95"
                       >
                         {copied ? (
                           <Check className="w-5 h-5" style={{ color: ACCENT }} />
@@ -582,7 +585,7 @@ const AuctionDetail = () => {
                       </button>
 
                       {copied && (
-                        <div className="absolute right-0 top-12 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs shadow-xl">
+                        <div className="absolute right-0 top-12 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs">
                           링크가 복사됐어요
                         </div>
                       )}
@@ -590,7 +593,7 @@ const AuctionDetail = () => {
                   </div>
 
                   <div className="absolute z-30 bottom-5 left-5">
-                    <div className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-extrabold text-slate-700 shadow-sm">
+                    <div className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-extrabold text-slate-700">
                       {images.length > 0 ? `${currentImageIndex + 1} / ${images.length}` : "0 / 0"}
                     </div>
                   </div>
@@ -608,7 +611,6 @@ const AuctionDetail = () => {
                             className="w-[74px] h-[74px] rounded-2xl overflow-hidden border transition"
                             style={{
                               borderColor: active ? "rgba(118,90,255,0.50)" : "rgba(148,163,184,0.35)",
-                              boxShadow: active ? "0 12px 24px -20px rgba(118,90,255,0.55)" : "none",
                             }}
                             title={`이미지 ${idx + 1}`}
                           >
@@ -692,12 +694,10 @@ const AuctionDetail = () => {
             </div>
           </div>
 
-          {/* RIGHT (독립 스크롤 + 폭 더 넓게) */}
-          <div className="lg:col-span-5 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:pl-2">
+          {/* RIGHT */}
+          <div className="lg:col-span-4 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:pl-2 no-scrollbar">
             <div className="space-y-6">
-              {/* 입찰 + 실시간 내역 카드 */}
-              <div className="rounded-[28px] border border-slate-100 bg-white shadow-[0_12px_30px_-24px_rgba(15,23,42,0.45)] overflow-hidden">
-                {/* 입찰 패널 */}
+              <div className="rounded-[28px] border border-slate-100 bg-white overflow-hidden">
                 <div className="p-6">
                   <div className="flex items-start justify-between">
                     <div>
@@ -797,7 +797,6 @@ const AuctionDetail = () => {
 
                 <div className="border-t border-slate-100" />
 
-                {/* 실시간 입찰내역: 번호 제거 */}
                 <div className="p-5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -848,9 +847,7 @@ const AuctionDetail = () => {
                                   <div
                                     className="w-9 h-9 rounded-2xl border flex items-center justify-center text-[12px] font-extrabold"
                                     style={{
-                                      borderColor: isTop
-                                        ? "rgba(118,90,255,0.35)"
-                                        : "rgba(148,163,184,0.35)",
+                                      borderColor: isTop ? "rgba(118,90,255,0.35)" : "rgba(148,163,184,0.35)",
                                       backgroundColor: isTop ? "rgba(118,90,255,0.12)" : "white",
                                       color: isTop ? ACCENT : "#334155",
                                     }}
@@ -905,8 +902,7 @@ const AuctionDetail = () => {
                 </div>
               </div>
 
-              {/* 판매자 정보 */}
-              <div className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.45)]">
+              <div className="rounded-[28px] border border-slate-100 bg-white p-6">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-sm font-extrabold text-slate-900">판매자 정보</div>
