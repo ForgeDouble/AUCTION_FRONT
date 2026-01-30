@@ -24,6 +24,8 @@ import ModalProvider from "./contexts/ModalProvider";
 import ProtectedRoute from "./components/route/ProtectedRoute";
 import PublicRoute from "./components/route/PublicRoute";
 import Footer from "./components/Footer";
+import ForgotPassword from "./pages/forgot_password/ForgotPassword";
+import ResetPassword from "./pages/forgot_password/ResetPassword";
 
 function App() {
   const location = useLocation();
@@ -78,6 +80,22 @@ function App() {
                   </PublicRoute>
                 }
               />
+              <Route
+                path="/find_password"
+                element={
+                  <PublicRoute redirectTo="/">
+                    <ForgotPassword />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/reset_password"
+                element={
+                  <PublicRoute redirectTo="/">
+                    <ResetPassword />
+                  </PublicRoute>
+                }
+              />
               <Route path="/auction_list" element={<AuctionListPage />} />
               <Route
                 path="/mypage/profile"
@@ -114,7 +132,7 @@ function App() {
               <Route
                 path="/sell_product"
                 element={
-                  <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                  <ProtectedRoute allowedRoles={["USER"]}>
                     <SellProductPage />
                   </ProtectedRoute>
                 }
