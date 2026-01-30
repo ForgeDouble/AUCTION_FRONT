@@ -605,38 +605,38 @@ const AuctionDetail = () => {
                     </div>
                   </div>
 
-                  <div className="absolute z-30 bottom-5 left-5">
+                  {/* <div className="absolute z-30 bottom-5 left-5">
                     <div className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-extrabold text-slate-700">
                       {images.length > 0 ? `${currentImageIndex + 1} / ${images.length}` : "0 / 0"}
                     </div>
-                  </div>
+                  </div> */}
                 </div>
 
                 {images.length > 1 && (
-                  <div className="px-5 pb-5 -mt-2">
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                      {images.map((img, idx) => {
+                  <div className="px-6 pb-6 -mt-2">
+                    <div className="flex items-center justify-center gap-2">
+                      {images.map((_, idx) => {
                         const active = idx === currentImageIndex;
                         return (
                           <button
                             key={idx}
+                            type="button"
                             onClick={() => setCurrentImageIndex(idx)}
-                            className="w-[74px] h-[74px] rounded-2xl overflow-hidden border transition"
+                            className={`h-1 rounded-full transition-all ${
+                              active ? "w-10" : "w-6 hover:w-8"
+                            }`}
                             style={{
-                              borderColor: active ? "rgba(118,90,255,0.50)" : "rgba(148,163,184,0.35)",
+                              backgroundColor: active ? ACCENT : "rgba(148,163,184,0.45)",
                             }}
-                            title={`이미지 ${idx + 1}`}
-                          >
-                            <img
-                              src={img.url}
-                              alt="thumb"
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                              decoding="async"
-                            />
-                          </button>
+                            aria-label={`이미지 ${idx + 1}로 이동`}
+                            aria-current={active ? "true" : "false"}
+                          />
                         );
                       })}
+                    </div>
+
+                    <div className="mt-2 text-center text-xs font-extrabold text-slate-400 tabular-nums">
+                      {currentImageIndex + 1} / {images.length}
                     </div>
                   </div>
                 )}
