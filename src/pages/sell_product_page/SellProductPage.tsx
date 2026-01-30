@@ -104,6 +104,7 @@ const SellProductPage = () => {
     setImageError("");
   };
 
+  /* 입력 감지 함수 */
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
