@@ -67,6 +67,9 @@ const AuctionDetail = () => {
   // 본인 상품 여부 등 로직 (필요시 복구)
   const isSelfSeller = false;
 
+  // 입찰정책 펼치기/닫기 관련
+  const [bidPolicyOpen, setBidPolicyOpen] = useState(false);
+
   // 포인트 컬러
   const ACCENT = "rgb(118,90,255)";
   const ACCENT_SOFT = "rgba(118,90,255,0.10)";
@@ -222,6 +225,17 @@ const AuctionDetail = () => {
     BID_VALIDATION_ERROR: "올바르지 않은 입력입니다.",
     INTERNAL_ERROR: "입찰 처리중 오류가 발생했습니다. 고객센터에 문의하세요",
   } as const;
+
+  // 입찰 정책 관련
+  const BID_POLICIES = [
+    "경매 진행 중(LIVE) 상태에서만 입찰할 수 있어요.",
+    "로그인한 사용자만 입찰할 수 있어요.",
+    "판매자는 본인 상품에 입찰할 수 없어요.",
+    "입찰 금액은 1,000원 단위로 입력해야 해요.",
+    "현재 최고가보다 높은 금액만 입찰할 수 있어요.",
+    "입찰은 전송 후 취소/철회가 불가능해요.",
+    "실시간 내역은 네트워크 상황에 따라 지연될 수 있으며, 최종 결과는 서버 기록이 기준이에요.",
+  ];
 
   const handleBidResponse = (data: BidResponse) => {
     if (bidTimeoutRef.current) {
@@ -515,15 +529,14 @@ const AuctionDetail = () => {
                 />
 
                 <div className="relative aspect-[4/3]">
-                  <div className="absolute inset-0 bg-gradient-to-b from-slate-50 to-white" />
-
-                  <div className="relative z-10 h-full p-5 sm:p-6">
+                  {/* <div className="absolute inset-0 bg-gradient-to-b from-slate-50 to-white" /> */}
+                  <div className="relative z-10 h-full p-4 sm:p-5">
                     <div className="h-full w-full rounded-[26px] border border-slate-100 bg-white overflow-hidden">
                       <div className="h-full w-full flex items-center justify-center">
                         <img
                           src={mainImageUrl}
                           alt="Product"
-                          className="w-full h-full object-contain p-4 sm:p-7 transition-transform duration-500"
+                          className="w-full h-full object-contain p-4 sm:p-6 transition-transform duration-500"
                           loading="lazy"
                           decoding="async"
                         />
@@ -543,29 +556,29 @@ const AuctionDetail = () => {
                   <button
                     onClick={prevImage}
                     disabled={images.length <= 1}
-                    className="absolute z-30 left-5 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white border border-slate-200 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="absolute z-30 left-5 top-1/2 -translate-y-1/2 p-3 rounded-full bg-transparent hover:bg-black/5 transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="w-5 h-5 text-slate-800" />
                   </button>
                   <button
                     onClick={nextImage}
                     disabled={images.length <= 1}
-                    className="absolute z-30 right-5 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white border border-slate-200 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="absolute z-30 right-5 top-1/2 -translate-y-1/2 p-3 rounded-full bg-transparent hover:bg-black/5 transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ChevronRight className="w-5 h-5 text-slate-800" />
                   </button>
 
-                  <div className="absolute z-30 top-5 right-5 flex gap-2">
+                  <div className="absolute z-30 top-3 right-3 flex gap-1.5">
                     <button
                       onClick={handleWishlistToggle}
-                      className="p-3 rounded-full border transition active:scale-95"
+                      className="p-2.5 rounded-full border transition active:scale-95"
                       style={{
                         backgroundColor: wishlistId ? "rgba(244,63,94,0.10)" : "white",
                         color: wishlistId ? "rgb(244,63,94)" : "#64748b",
                         borderColor: wishlistId ? "rgba(244,63,94,0.18)" : "rgba(148,163,184,0.35)",
                       }}
                     >
-                      <Heart className={`w-5 h-5 ${wishlistId ? "fill-current" : ""}`} />
+                      <Heart className={`w-4 h-4 ${wishlistId ? "fill-current" : ""}`} />
                     </button>
 
                     <div className="relative">
@@ -575,17 +588,17 @@ const AuctionDetail = () => {
                           setCopied(true);
                           setTimeout(() => setCopied(false), 1800);
                         }}
-                        className="p-3 rounded-full bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 transition active:scale-95"
+                        className="p-2.5 rounded-full bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 transition active:scale-95"
                       >
                         {copied ? (
-                          <Check className="w-5 h-5" style={{ color: ACCENT }} />
+                          <Check className="w-4 h-4" style={{ color: ACCENT }} />
                         ) : (
-                          <Share2 className="w-5 h-5" />
+                          <Share2 className="w-4 h-4" />
                         )}
                       </button>
 
                       {copied && (
-                        <div className="absolute right-0 top-12 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs">
+                        <div className="absolute right-0 top-10 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs">
                           링크가 복사됐어요
                         </div>
                       )}
@@ -701,9 +714,9 @@ const AuctionDetail = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="text-sm font-extrabold text-slate-900">입찰</div>
+                      {/* <div className="text-sm font-extrabold text-slate-900">입찰</div> */}
                       <div className="text-xs text-slate-500 mt-1">
-                        {isLive ? "실시간으로 반영됩니다." : "경매가 종료되었습니다."}
+                        {isLive ? "" : "경매가 종료되었습니다."}
                       </div>
                     </div>
 
@@ -791,7 +804,24 @@ const AuctionDetail = () => {
                       )}
                     </button>
 
-                    <div className="text-[11px] text-slate-500 text-center">* 입찰은 1,000원 단위 · 취소 불가</div>
+                    <div className="mt-3 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                      <button type="button" onClick={() => setBidPolicyOpen((v) => !v)} className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition" >
+                        <div className="flex items-center gap-2"> <AlertCircle className="w-4 h-4" style={{ color: ACCENT }} />
+                          <span className="text-sm font-extrabold text-slate-900">입찰 정책</span>
+                        </div>
+                        <span className="text-xs font-extrabold" style={{ color: ACCENT }}>
+                          {bidPolicyOpen ? "접기" : "펼치기"}
+                        </span>
+                      </button>
+                      <div className="px-4 pb-4 text-xs text-slate-600 leading-relaxed" style={{ maxHeight: bidPolicyOpen ? 320 : 92, overflow: "hidden", transition: "max-height 220ms ease", }} >
+                        <ul className="space-y-1"> {BID_POLICIES.map((t, i) => ( <li key={i}>• {t}</li> ))} </ul>
+                        {!bidPolicyOpen && (
+                          <div className="mt-2 text-[11px]" style={{ color: ACCENT }}>
+                            더 보기
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
