@@ -11,7 +11,7 @@ import { requestFcmToken } from "@/firebase/firebase";
 import { registerDeviceToken } from "../../api/pushApi";
 
 const LoginPage = () => {
-  const nav = useNavigate();
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -166,14 +166,8 @@ const LoginPage = () => {
                 <div className="flex items-center gap-2.5 text-[13px] font-bold text-gray-400">
                   <button
                     type="button"
-                    className="hover:text-gray-600 transition-colors"
-                  >
-                    아이디 찾기
-                  </button>
-                  <span className="w-1 h-1 bg-gray-200 rounded-full" />
-                  <button
-                    type="button"
-                    className="hover:text-gray-600 transition-colors"
+                    className="hover:text-gray-600 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/find_password`)}
                   >
                     비밀번호 찾기
                   </button>
@@ -204,7 +198,7 @@ const LoginPage = () => {
             <div className="mt-4 pt-3 border-t border-gray-50 text-center">
               <button
                 type="button"
-                onClick={() => nav("/register")}
+                onClick={() => navigate("/register")}
                 className="inline-flex items-center justify-center gap-2 text-gray-500 hover:text-[rgb(118,90,255)] transition-all group cursor-pointer"
               >
                 <span className="text-[14px] font-semibold">
