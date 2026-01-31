@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
@@ -67,7 +68,45 @@ const AuctionDetail = () => {
   const [detailExpanded, setDetailExpanded] = useState(false);
 
   // 본인 상품 여부 등 로직 (필요시 복구)
-  const isSelfSeller = false;
+  // const isSelfSeller = false;
+
+  const { userEmail: authEmail, userId: authUserId } = useAuth();
+
+const myEmailNorm = useMemo(() => {
+const fromAuth = String(authEmail ?? "").trim().toLowerCase();
+if (fromAuth) return fromAuth;
+
+// fallback: 혹시 auth가 늦게 채워질 때 대비
+const raw =
+localStorage.getItem("userEmail") ||
+localStorage.getItem("email") ||
+localStorage.getItem("userId") ||
+"";
+return String(raw).trim().toLowerCase();
+}, [authEmail]);
+
+const sellerEmailNorm = useMemo(() => {
+return String(sellerInfo?.email ?? "").trim().toLowerCase();
+}, [sellerInfo?.email]);
+
+const isSelfSeller = useMemo(() => {
+const myId = authUserId != null ? Number(authUserId) : null;
+const sellerId = sellerInfo?.userId != null ? Number(sellerInfo.userId) : null;
+
+const sameId = myId != null && sellerId != null && myId === sellerId;
+const sameEmail =
+myEmailNorm !== "" && sellerEmailNorm !== "" && myEmailNorm === sellerEmailNorm;
+
+return sameId || sameEmail;
+}, [authUserId, myEmailNorm, sellerEmailNorm, sellerInfo?.userId]);
+
+const canChatSeller = useMemo(() => {
+return !isSelfSeller && Boolean(sellerInfo?.email);
+}, [isSelfSeller, sellerInfo?.email]);
+
+const canReportSeller = useMemo(() => {
+return !isSelfSeller && Boolean(sellerInfo?.userId);
+}, [isSelfSeller, sellerInfo?.userId]);
 
   // 입찰정책 펼치기/닫기 관련
   const [bidPolicyOpen, setBidPolicyOpen] = useState(false);
@@ -388,6 +427,10 @@ const AuctionDetail = () => {
   };
 
   const handleContactSeller = async () => {
+    if (!canChatSeller) {
+      alert("본인 상품에는 판매자 문의(채팅)가 불가합니다.");
+      return;
+    }
     const token = localStorage.getItem("accessToken");
     if (!token) {
       alert("로그인이 필요합니다.");
@@ -939,19 +982,25 @@ const AuctionDetail = () => {
                   </div>
 
                   <button
+                    type="button"
+                    disabled={!canReportSeller}
                     onClick={() => {
-                    if (!sellerInfo?.userId) {
-                    alert("판매자 정보(userId)가 없어 신고할 수 없습니다.");
-                    return;
-                    }
-                    setReportMode("USER");
-                    setReportOpen(true);
+                      if (!canReportSeller) return;
+                      setReportMode("USER");
+                      setReportOpen(true);
                     }}
-                    className="text-xs font-extrabold text-slate-400 hover:text-rose-600 flex items-center gap-1 transition"
+                    className={
+                      "text-xs font-extrabold flex items-center gap-1 transition " +
+                      (canReportSeller
+                        ? "text-slate-400 hover:text-rose-600 cursor-pointer"
+                        : "text-slate-300 cursor-not-allowed opacity-60")
+                    }
+                    title={canReportSeller ? "신고" : "본인에게는 신고할 수 없습니다."}
                   >
                     <Siren className="w-3.5 h-3.5" />
                     신고
                   </button>
+
                 </div>
 
                 <div className="mt-5 flex items-center gap-4">
@@ -975,9 +1024,16 @@ const AuctionDetail = () => {
 
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <button
-                    onClick={handleContactSeller}
-                    className="py-3 rounded-2xl bg-white border border-slate-200 text-slate-900 font-extrabold text-sm hover:bg-slate-50 transition flex items-center justify-center gap-2"
-                  >
+onClick={handleContactSeller}
+disabled={!canChatSeller}
+className={
+"py-3 rounded-2xl border font-extrabold text-sm transition flex items-center justify-center gap-2 " +
+(canChatSeller
+? "bg-white border-slate-200 text-slate-900 hover:bg-slate-50"
+: "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-70")
+}
+title={canChatSeller ? "1:1 문의" : "본인 상품에는 판매자 문의(채팅)가 불가합니다."}
+>
                     <MessageCircle className="w-4 h-4" />
                     1:1 문의
                   </button>
