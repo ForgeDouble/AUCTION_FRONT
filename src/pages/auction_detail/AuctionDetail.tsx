@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
-// import ReportModal from "@/components/report/ReportModal";
+import ReportModal from "@/components/report/ReportModal";
 import { openRoom } from "@/api/chatApi";
 import {
   Heart,
@@ -58,8 +58,10 @@ const AuctionDetail = () => {
   const bidTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 신고 관련 state
-  const [reportMode, setReportMode] = useState<string>("");
+  // const [reportMode, setReportMode] = useState<string>("");
+  // const [reportOpen, setReportOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [reportMode, setReportMode] = useState<"USER" | "PRODUCT">("USER");
 
   // UI 전용: 상세 펼침/접기
   const [detailExpanded, setDetailExpanded] = useState(false);
@@ -941,9 +943,12 @@ const AuctionDetail = () => {
 
                   <button
                     onClick={() => {
-                      if (!sellerInfo?.userId) return;
-                      setReportMode("USER");
-                      setReportOpen(true);
+                    if (!sellerInfo?.userId) {
+                    alert("판매자 정보(userId)가 없어 신고할 수 없습니다.");
+                    return;
+                    }
+                    setReportMode("USER");
+                    setReportOpen(true);
                     }}
                     className="text-xs font-extrabold text-slate-400 hover:text-rose-600 flex items-center gap-1 transition"
                   >
@@ -986,14 +991,13 @@ const AuctionDetail = () => {
                   </div>
                 </div>
 
-                {/* ReportModal 필요시 주석 해제
                 <ReportModal
                   open={reportOpen}
                   onClose={() => setReportOpen(false)}
-                  targetType={reportMode}
-                  targetId={reportMode === "USER" ? sellerInfo?.userId : productId}
+                  mode={reportMode}
+                  targetUserId={sellerInfo?.userId}
+                  targetUserName={sellerInfo?.nickname}
                 />
-                */}
               </div>
             </div>
           </div>
