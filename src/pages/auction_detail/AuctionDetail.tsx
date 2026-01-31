@@ -110,6 +110,10 @@ const AuctionDetail = () => {
     return !isSelfSeller && Boolean(sellerInfo?.userId);
   }, [isSelfSeller, sellerInfo?.userId]);
 
+  const canWishlist = useMemo(() => {
+    return !isSelfSeller;
+  }, [isSelfSeller]);
+
   // 입찰정책 펼치기/닫기 관련
   const [bidPolicyOpen, setBidPolicyOpen] = useState(false);
 
@@ -217,6 +221,10 @@ const AuctionDetail = () => {
   };
 
   const handleDeleteWishlist = async (wishlistId: number) => {
+    if (!canWishlist) {
+      showWarning("본인 상품은 찜(위시리스트) 할 수 없습니다.");
+      return;
+    }
     try {
       const token = localStorage.getItem("accessToken");
       if (token == null) throw Error("No Token");
@@ -254,8 +262,19 @@ const AuctionDetail = () => {
   useEffect(() => {
     loadProduct();
     loadSellerInfo();
-    loadIsWishlisted(productId);
+    // loadIsWishlisted(productId);
   }, [productId]);
+
+  useEffect(() => {
+    if (!productId) return;
+
+    if (isSelfSeller) {
+    setWishlistId(null);
+    return;
+    }
+
+    loadIsWishlisted(productId);
+  }, [productId, isSelfSeller]);
 
   const BID_RESPONSE_MESSAGES = {
     NOT_ALLOWED: "해당 상품에 접근할 권한이 없습니다.",
@@ -671,14 +690,15 @@ const AuctionDetail = () => {
                   <div className="absolute z-30 top-3 right-3 flex gap-1.5">
                     <button
                       onClick={handleWishlistToggle}
-                      className="p-2.5 rounded-full border transition active:scale-95"
+                      disabled={!canWishlist}
+                      className={"p-2.5 rounded-full border transition active:scale-95" + (canWishlist ? "" : "opacity-50 cursor-not-allowed")}
                       style={{
-                        backgroundColor: wishlistId ? "rgba(244,63,94,0.10)" : "white",
-                        color: wishlistId ? "rgb(244,63,94)" : "#64748b",
-                        borderColor: wishlistId ? "rgba(244,63,94,0.18)" : "rgba(148,163,184,0.35)",
+                        backgroundColor: !canWishlist ? "rgba(148,163,184,0.10)" : wishlistId ? "rgba(244,63,94,0.10)" : "white",
+                        color: !canWishlist ? "#94a3b8" : wishlistId ? "rgb(244,63,94)" : "#64748b",
+                        borderColor: !canWishlist ? "rgba(148,163,184,0.35)" : wishlistId ? "rgba(244,63,94,0.18)" : "rgba(148,163,184,0.35)",
                       }}
                     >
-                      <Heart className={`w-4 h-4 ${wishlistId ? "fill-current" : ""}`} />
+                      <Heart className={`w-4 h-4 ${(wishlistId && canWishlist) ? "fill-current" : ""}`} />
                     </button>
 
                     <div className="relative">
@@ -1079,16 +1099,16 @@ const AuctionDetail = () => {
 
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <button
-onClick={handleContactSeller}
-disabled={!canChatSeller}
-className={
-"py-3 rounded-2xl border font-extrabold text-sm transition flex items-center justify-center gap-2 " +
-(canChatSeller
-? "bg-white border-slate-200 text-slate-900 hover:bg-slate-50"
-: "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-70")
-}
-title={canChatSeller ? "1:1 문의" : "본인 상품에는 판매자 문의(채팅)가 불가합니다."}
->
+                    onClick={handleContactSeller}
+                    disabled={!canChatSeller}
+                    className={
+                    "py-3 rounded-2xl border font-extrabold text-sm transition flex items-center justify-center gap-2 " +
+                    (canChatSeller
+                    ? "bg-white border-slate-200 text-slate-900 hover:bg-slate-50"
+                    : "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-70")
+                    }
+                    title={canChatSeller ? "1:1 문의" : "본인 상품에는 판매자 문의(채팅)가 불가합니다."}
+                  >
                     <MessageCircle className="w-4 h-4" />
                     1:1 문의
                   </button>
