@@ -52,7 +52,9 @@ const AuctionDetail = () => {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]);
-  const [stompClient, setStompClient] = useState<any>(null);
+  // const [stompClient, setStompClient] = useState<any>(null);
+  const stompRef = useRef<any>(null);
+  const socketRef = useRef<any>(null);
   const [copied, setCopied] = useState(false);
 
   const [bidLoading, setBidLoading] = useState(false);
@@ -72,41 +74,41 @@ const AuctionDetail = () => {
 
   const { userEmail: authEmail, userId: authUserId } = useAuth();
 
-const myEmailNorm = useMemo(() => {
-const fromAuth = String(authEmail ?? "").trim().toLowerCase();
-if (fromAuth) return fromAuth;
+  const myEmailNorm = useMemo(() => {
+    const fromAuth = String(authEmail ?? "").trim().toLowerCase();
+    if (fromAuth) return fromAuth;
 
-// fallback: 혹시 auth가 늦게 채워질 때 대비
-const raw =
-localStorage.getItem("userEmail") ||
-localStorage.getItem("email") ||
-localStorage.getItem("userId") ||
-"";
-return String(raw).trim().toLowerCase();
-}, [authEmail]);
 
-const sellerEmailNorm = useMemo(() => {
-return String(sellerInfo?.email ?? "").trim().toLowerCase();
-}, [sellerInfo?.email]);
+    const raw =
+      localStorage.getItem("userEmail") ||
+      localStorage.getItem("email") ||
+      localStorage.getItem("userId") ||
+      "";
+      return String(raw).trim().toLowerCase();
+  }, [authEmail]);
 
-const isSelfSeller = useMemo(() => {
-const myId = authUserId != null ? Number(authUserId) : null;
-const sellerId = sellerInfo?.userId != null ? Number(sellerInfo.userId) : null;
+  const sellerEmailNorm = useMemo(() => {
+    return String(sellerInfo?.email ?? "").trim().toLowerCase();
+  }, [sellerInfo?.email]);
 
-const sameId = myId != null && sellerId != null && myId === sellerId;
-const sameEmail =
-myEmailNorm !== "" && sellerEmailNorm !== "" && myEmailNorm === sellerEmailNorm;
+  const isSelfSeller = useMemo(() => {
+    const myId = authUserId != null ? Number(authUserId) : null;
+    const sellerId = sellerInfo?.userId != null ? Number(sellerInfo.userId) : null;
 
-return sameId || sameEmail;
-}, [authUserId, myEmailNorm, sellerEmailNorm, sellerInfo?.userId]);
+    const sameId = myId != null && sellerId != null && myId === sellerId;
+    const sameEmail =
+    myEmailNorm !== "" && sellerEmailNorm !== "" && myEmailNorm === sellerEmailNorm;
 
-const canChatSeller = useMemo(() => {
-return !isSelfSeller && Boolean(sellerInfo?.email);
-}, [isSelfSeller, sellerInfo?.email]);
+  return sameId || sameEmail;
+  }, [authUserId, myEmailNorm, sellerEmailNorm, sellerInfo?.userId]);
 
-const canReportSeller = useMemo(() => {
-return !isSelfSeller && Boolean(sellerInfo?.userId);
-}, [isSelfSeller, sellerInfo?.userId]);
+  const canChatSeller = useMemo(() => {
+    return !isSelfSeller && Boolean(sellerInfo?.email);
+  }, [isSelfSeller, sellerInfo?.email]);
+
+  const canReportSeller = useMemo(() => {
+    return !isSelfSeller && Boolean(sellerInfo?.userId);
+  }, [isSelfSeller, sellerInfo?.userId]);
 
   // 입찰정책 펼치기/닫기 관련
   const [bidPolicyOpen, setBidPolicyOpen] = useState(false);
@@ -336,41 +338,93 @@ return !isSelfSeller && Boolean(sellerInfo?.userId);
   }, [product]);
 
   useEffect(() => {
-    if (!product || product.status !== "PROCESSING") return;
-    const token = localStorage.getItem("accessToken");
-    const endpoint = token ? "/ws" : "/ws-public";
-    const socket = new SockJS(`http://localhost:8080${endpoint}`);
-    const stomp = Stomp.over(socket);
+  const isLive = product?.status === "PROCESSING";
+  if (!productId || !isLive) {
+    // 라이브가 아니면 혹시 남아있는 연결 정리
+    try {
+      if (stompRef.current) stompRef.current.disconnect(() => {});
+    } catch {}
+    stompRef.current = null;
 
-    stomp.connect(
-      token ? { Authorization: `Bearer ${token}` } : {},
-      () => {
-        setStompClient(stomp);
-        stomp.subscribe(`/topic/auction/${productId}`, (message) => {
-          const payload = JSON.parse(message.body);
-          setBidLogs((prev) => [payload, ...prev]);
+    try {
+      if (socketRef.current) socketRef.current.close();
+    } catch {}
+    socketRef.current = null;
+
+    return;
+  }
+
+  let alive = true;
+
+  // effect 시작 시 기존 연결 정리(중복 방지)
+  try {
+    if (stompRef.current) stompRef.current.disconnect(() => {});
+  } catch {}
+  stompRef.current = null;
+
+  try {
+    if (socketRef.current) socketRef.current.close();
+  } catch {}
+  socketRef.current = null;
+
+  const token = localStorage.getItem("accessToken");
+  const endpoint = token ? "/ws" : "/ws-public";
+
+  const socket = new SockJS(`http://localhost:8080${endpoint}`);
+  socketRef.current = socket;
+
+  const stomp = Stomp.over(socket);
+  stompRef.current = stomp;
+
+  stomp.debug = () => {};
+
+  stomp.connect(
+    token ? { Authorization: `Bearer ${token}` } : {},
+    () => {
+      if (!alive) return;
+
+      stomp.subscribe(`/topic/auction/${productId}`, (message) => {
+        if (!alive) return;
+        const payload = JSON.parse(message.body);
+        setBidLogs((prev) => [payload, ...prev]);
+      });
+
+      if (token) {
+        stomp.subscribe("/user/queue/bid_response", (response) => {
+          if (!alive) return;
+          handleBidResponse(JSON.parse(response.body));
         });
-        if (token) {
-          stomp.subscribe("/user/queue/bid_response", (response) => {
-            handleBidResponse(JSON.parse(response.body));
-          });
-        }
-      },
-      (error) => console.error("❌ 연결 실패:", error)
-    );
+      }
+    },
+    (error) => {
+      if (!alive) return;
+      console.error("❌ 연결 실패:", error);
+    }
+  );
 
-    return () => {
-      if (stomp && stomp.connected) stomp.disconnect();
-    };
-  }, [product, productId]);
+  return () => {
+    alive = false;
+
+    try {
+      if (stompRef.current) stompRef.current.disconnect(() => {});
+    } catch {}
+    stompRef.current = null;
+
+    try {
+      if (socketRef.current) socketRef.current.close();
+    } catch {}
+    socketRef.current = null;
+  };
+}, [product?.status, productId]);
 
   const sendBid = () => {
     if (product?.status !== "PROCESSING") {
       showError("진행중인 경매가 아닙니다.");
       return;
     }
-    if (!stompClient) {
-      showError("서버 연결 확인 필요");
+    const stomp = stompRef.current;
+    if (!stomp || !stomp.connected) {
+      showError("서버와 연결되지 않았습니다. 새로고침 후 다시 시도해주세요.");
       return;
     }
     const amountError = validateBidAmount(bidAmount);
@@ -385,6 +439,7 @@ return !isSelfSeller && Boolean(sellerInfo?.userId);
     }
 
     setBidLoading(true);
+
     bidTimeoutRef.current = setTimeout(() => {
       setBidLoading(false);
       showError("응답 시간 초과");
@@ -394,7 +449,7 @@ return !isSelfSeller && Boolean(sellerInfo?.userId);
     const bid = { productId: productId, bidAmount: amount, isWinned: "N" };
 
     try {
-      stompClient.send("/app/bid", { Authorization: `Bearer ${token}` }, JSON.stringify(bid));
+      stomp.send("/app/bid", { Authorization: `Bearer ${token}` }, JSON.stringify(bid));
     } catch (error) {
       if (bidTimeoutRef.current) clearTimeout(bidTimeoutRef.current);
       setBidLoading(false);
