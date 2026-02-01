@@ -66,8 +66,14 @@ function NotificationMenu(props: {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotificationCategory>("ALL");
   const ref = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   useClickOutside(ref, () => setOpen(false));
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+  }, [tab]);
 
   const filtered =
     tab === "ALL" ? notifications : notifications.filter((n) => n.category === tab);
@@ -151,8 +157,10 @@ function NotificationMenu(props: {
             </div>
           </div>
 
-          {/* List */}
-          <div className="max-h-[420px] overflow-y-auto p-2 bg-white notif-scroll">
+          <div
+            ref={listRef}
+            className="max-h-[420px] overflow-y-auto p-2 bg-white notif-scroll"
+          >
             {filtered.length === 0 && (
               <div className="py-10 text-center text-xs text-black/40">
                 표시할 알림이 없습니다.
@@ -233,7 +241,7 @@ function UserMenu(props: {
   const ref = useRef<HTMLDivElement | null>(null);
 
   useClickOutside(ref, () => setOpen(false));
-
+  
   const firstLetter = !profileUrl && nickname ? nickname.charAt(0).toUpperCase() : "?";
 
   return (
