@@ -69,49 +69,61 @@ function NotificationMenu(props: {
 
   useClickOutside(ref, () => setOpen(false));
 
-  const filtered = tab === "ALL" ? notifications : notifications.filter((n) => n.category === tab);
+  const filtered =
+    tab === "ALL" ? notifications : notifications.filter((n) => n.category === tab);
 
-  const categoryMeta: Record<NotificationCategory, { label: string; className: string }> = {
-    ALL: { label: "전체", className: "bg-slate-100 text-slate-700" },
-    AUCTION: { label: "경매", className: "bg-violet-50 text-violet-700" },
-    INQUIRY: { label: "문의", className: "bg-sky-50 text-sky-700" },
-    PRODUCT: { label: "상품", className: "bg-emerald-50 text-emerald-700" },
-    CHAT: { label: "채팅", className: "bg-amber-50 text-amber-700" },
+  const handleToggle = () => setOpen((v) => !v);
+
+  const categoryMeta: Record<
+    NotificationCategory,
+    { label: string; className: string }
+  > = {
+    ALL: { label: "전체", className: "bg-black/5 text-black/60" },
+    AUCTION: { label: "경매", className: "bg-purple-600/10 text-purple-700" },
+    INQUIRY: { label: "문의", className: "bg-sky-600/10 text-sky-700" },
+    PRODUCT: { label: "상품", className: "bg-emerald-600/10 text-emerald-700" },
+    CHAT: { label: "채팅", className: "bg-amber-600/10 text-amber-700" },
   };
 
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="relative w-9 h-9 rounded-full grid place-items-center text-slate-700 hover:bg-black/5 active:scale-[0.98] transition"
+        onClick={handleToggle}
+        className="relative inline-flex items-center justify-center w-10 h-10 rounded-full bg-white ring-1 ring-black/10 text-black/70 hover:bg-black/5 hover:text-black/90 transition"
         aria-label="알림"
       >
         <Bell className="w-5 h-5" />
-        <IconBadge count={unreadCount} />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shadow-sm">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-3 w-[420px] rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden z-50">
-          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div className="absolute right-0 mt-3 w-[380px] rounded-2xl bg-white shadow-[0_18px_45px_rgba(0,0,0,0.10)] ring-1 ring-black/5 overflow-hidden z-[60]">
+          <div className="px-4 py-3 bg-white border-b border-black/5 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-900">알림</span>
+              <span className="text-[13px] font-semibold text-black/90">알림</span>
               {unreadCount > 0 && (
-                <span className="text-[11px] text-slate-500">새 알림 {unreadCount}개</span>
+                <span className="text-[11px] text-black/45">
+                  새 알림 {unreadCount}개
+                </span>
               )}
             </div>
 
             <button
               type="button"
               onClick={() => onMarkAllRead()}
-              className="text-[11px] font-semibold text-slate-500 hover:text-slate-900"
+              className="text-[11px] font-semibold text-black/45 hover:text-black/80 transition"
             >
               모두 읽음
             </button>
           </div>
 
-          <div className="px-4 py-3 border-b border-slate-200">
-            <div className="inline-flex p-1 rounded-xl bg-slate-100">
+          <div className="px-4 py-3 bg-white border-b border-black/5">
+            <div className="flex rounded-full bg-black/5 p-1 gap-1">
               {[
                 { key: "ALL", label: "전체" },
                 { key: "AUCTION", label: "경매" },
@@ -119,17 +131,17 @@ function NotificationMenu(props: {
                 { key: "PRODUCT", label: "상품" },
                 { key: "CHAT", label: "채팅" },
               ].map((t) => {
-                const active = tab === t.key;
+                const active = tab === (t.key as NotificationCategory);
                 return (
                   <button
                     key={t.key}
                     type="button"
                     onClick={() => setTab(t.key as NotificationCategory)}
                     className={
-                      "px-3 py-1.5 text-xs rounded-lg transition font-semibold " +
+                      "flex-1 py-1.5 rounded-full text-[11px] font-semibold transition " +
                       (active
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-600 hover:text-slate-900")
+                        ? "bg-white text-black/90 shadow-sm"
+                        : "text-black/45 hover:text-black/80 hover:bg-white/60")
                     }
                   >
                     {t.label}
@@ -139,68 +151,76 @@ function NotificationMenu(props: {
             </div>
           </div>
 
-          <div className="max-h-96 overflow-y-auto p-3 space-y-2">
+          {/* List */}
+          <div className="max-h-[420px] overflow-y-auto p-2 bg-white notif-scroll">
             {filtered.length === 0 && (
-              <div className="py-10 text-center text-xs text-slate-400">
+              <div className="py-10 text-center text-xs text-black/40">
                 표시할 알림이 없습니다.
               </div>
             )}
 
-            {filtered.map((n) => {
-              const meta = categoryMeta[n.category];
-              return (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    onClickItem(n);
-                  }}
-                  className={
-                    "w-full text-left px-4 py-3 rounded-xl border transition flex flex-col gap-1.5 " +
-                    (n.read
-                      ? "bg-white hover:bg-slate-50 border-slate-200"
-                      : "bg-violet-50/40 hover:bg-violet-50 border-violet-100")
-                  }
-                >
-                  <div className="flex justify-between items-center gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {!n.read && (
-                        <span className="w-2 h-2 rounded-full bg-violet-600 flex-shrink-0" />
-                      )}
-                      <span className="text-sm font-semibold text-slate-900 truncate">
-                        {n.title}
+            <div className="space-y-2">
+              {filtered.map((n) => {
+                const meta = categoryMeta[n.category];
+                const itemCls = n.read
+                  ? "bg-white ring-1 ring-black/5 hover:bg-black/5"
+                  : "bg-purple-600/5 ring-1 ring-purple-600/15 hover:bg-purple-600/10";
+
+                return (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      onClickItem(n);
+                    }}
+                    className={
+                      "w-full text-left px-3 py-2.5 rounded-xl transition " + itemCls
+                    }
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {!n.read && (
+                          <span className="w-2 h-2 rounded-full bg-purple-600 flex-shrink-0" />
+                        )}
+                        <span className="text-[13px] font-semibold text-black/90 truncate">
+                          {n.title}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-black/40 flex-shrink-0">
+                        {formatRelativeTime(n.createdAt)}
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 flex-shrink-0">
-                      {formatRelativeTime(n.createdAt)}
-                    </span>
-                  </div>
 
-                  <div className="mt-0.5 flex justify-between items-start gap-3">
-                    {n.body && (
-                      <p className="text-xs text-slate-600 leading-snug flex-1">
-                        {n.body}
-                      </p>
-                    )}
-                    <span
-                      className={
-                        "ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap " +
-                        meta.className
-                      }
-                    >
-                      {meta.label}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
+                    <div className="mt-1.5 flex items-start justify-between gap-3">
+                      {n.body ? (
+                        <p className="text-xs text-black/60 leading-snug flex-1">
+                          {n.body}
+                        </p>
+                      ) : (
+                        <span className="flex-1" />
+                      )}
+
+                      <span
+                        className={
+                          "px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap " +
+                          meta.className
+                        }
+                      >
+                        {meta.label}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
     </div>
   );
 }
+
 
 function UserMenu(props: {
   nickname: string;
@@ -285,7 +305,6 @@ function UserMenu(props: {
           </button>
 
           <div className="border-t border-slate-200" />
-
           <button
             type="button"
             onClick={() => {
@@ -381,7 +400,6 @@ export default function AuthButtons() {
         >
           로그인
         </button>
-
         <button
           type="button"
           className="h-9 px-4 rounded-full bg-violet-600 text-white hover:bg-violet-700 font-semibold shadow-sm transition"
@@ -413,7 +431,6 @@ export default function AuthButtons() {
         onClickItem={handleNotificationClick}
         onMarkAllRead={() => markAllRead()}
       />
-
       <div className="w-px h-5 bg-black/5 mx-1" />
 
       <UserMenu
