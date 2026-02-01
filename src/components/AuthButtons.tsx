@@ -21,9 +21,7 @@ function useClickOutside(
 
 function formatRelativeTime(createdAt: string): string {
   if (!createdAt) return "";
-  if (createdAt.indexOf("전") >= 0 || createdAt.indexOf("방금") >= 0) {
-    return createdAt;
-  }
+  if (createdAt.indexOf("전") >= 0 || createdAt.indexOf("방금") >= 0) return createdAt;
 
   const date = new Date(createdAt);
   if (isNaN(date.getTime())) return createdAt;
@@ -31,7 +29,6 @@ function formatRelativeTime(createdAt: string): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);
-
   if (diffSec < 60) return "방금 전";
 
   const diffMin = Math.floor(diffSec / 60);
@@ -49,6 +46,16 @@ function formatRelativeTime(createdAt: string): string {
   return y + "." + m + "." + d;
 }
 
+function IconBadge(props: { count: number }) {
+  const { count } = props;
+  if (count <= 0) return null;
+  return (
+    <span className="absolute -top-1 -right-1 bg-violet-600 text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shadow-sm">
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
 function NotificationMenu(props: {
   notifications: NotificationItem[];
   unreadCount: number;
@@ -64,41 +71,33 @@ function NotificationMenu(props: {
 
   const filtered = tab === "ALL" ? notifications : notifications.filter((n) => n.category === tab);
 
-  const handleToggle = () => setOpen((v) => !v);
-
-  const categoryMeta: Record<
-    NotificationCategory,
-    { label: string; className: string }
-  > = {
-    ALL: { label: "전체", className: "bg-slate-100 text-slate-600" },
-    AUCTION: { label: "경매", className: "bg-purple-50 text-purple-600" },
-    INQUIRY: { label: "문의", className: "bg-sky-50 text-sky-600" },
-    PRODUCT: { label: "상품", className: "bg-emerald-50 text-emerald-600" },
-    CHAT: { label: "채팅", className: "bg-amber-50 text-amber-600" },
+  const categoryMeta: Record<NotificationCategory, { label: string; className: string }> = {
+    ALL: { label: "전체", className: "bg-slate-100 text-slate-700" },
+    AUCTION: { label: "경매", className: "bg-violet-50 text-violet-700" },
+    INQUIRY: { label: "문의", className: "bg-sky-50 text-sky-700" },
+    PRODUCT: { label: "상품", className: "bg-emerald-50 text-emerald-700" },
+    CHAT: { label: "채팅", className: "bg-amber-50 text-amber-700" },
   };
 
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
-        onClick={handleToggle}
-        className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/30 text-white transition"
+        onClick={() => setOpen((v) => !v)}
+        className="relative w-9 h-9 rounded-full grid place-items-center text-slate-700 hover:bg-black/5 active:scale-[0.98] transition"
+        aria-label="알림"
       >
         <Bell className="w-5 h-5" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
+        <IconBadge count={unreadCount} />
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-3 w-96 rounded-2xl border border-white/60 bg-white/95 text-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.32)] backdrop-blur-xl overflow-hidden">
-          <div className="px-4 py-3 bg-white/95 border-b border-slate-200 flex items-center justify-between">
+        <div className="absolute right-0 mt-3 w-[420px] rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden z-50">
+          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900">알림</span>
               {unreadCount > 0 && (
-                <span className="text-[11px] text-slate-400">새 알림 {unreadCount}개</span>
+                <span className="text-[11px] text-slate-500">새 알림 {unreadCount}개</span>
               )}
             </div>
 
@@ -111,33 +110,38 @@ function NotificationMenu(props: {
             </button>
           </div>
 
-          <div className="flex text-[11px] border-b border-slate-200 bg-slate-50/80">
-            {[
-              { key: "ALL", label: "전체" },
-              { key: "AUCTION", label: "경매" },
-              { key: "INQUIRY", label: "문의" },
-              { key: "PRODUCT", label: "상품" },
-              { key: "CHAT", label: "채팅" },
-            ].map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTab(t.key as NotificationCategory)}
-                className={
-                  "flex-1 py-2 text-center transition-colors " +
-                  (tab === t.key
-                    ? "bg-purple-600 text-white font-semibold shadow-sm"
-                    : "text-slate-500 hover:bg-slate-100")
-                }
-              >
-                {t.label}
-              </button>
-            ))}
+          <div className="px-4 py-3 border-b border-slate-200">
+            <div className="inline-flex p-1 rounded-xl bg-slate-100">
+              {[
+                { key: "ALL", label: "전체" },
+                { key: "AUCTION", label: "경매" },
+                { key: "INQUIRY", label: "문의" },
+                { key: "PRODUCT", label: "상품" },
+                { key: "CHAT", label: "채팅" },
+              ].map((t) => {
+                const active = tab === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setTab(t.key as NotificationCategory)}
+                    className={
+                      "px-3 py-1.5 text-xs rounded-lg transition font-semibold " +
+                      (active
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900")
+                    }
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="max-h-96 overflow-y-auto p-4 space-y-2 bg-white/90">
+          <div className="max-h-96 overflow-y-auto p-3 space-y-2">
             {filtered.length === 0 && (
-              <div className="py-8 text-center text-xs text-slate-400">
+              <div className="py-10 text-center text-xs text-slate-400">
                 표시할 알림이 없습니다.
               </div>
             )}
@@ -155,20 +159,20 @@ function NotificationMenu(props: {
                   className={
                     "w-full text-left px-4 py-3 rounded-xl border transition flex flex-col gap-1.5 " +
                     (n.read
-                      ? "bg-white hover:bg-slate-50 border-slate-100"
-                      : "bg-purple-50/40 hover:bg-purple-50 border-purple-100")
+                      ? "bg-white hover:bg-slate-50 border-slate-200"
+                      : "bg-violet-50/40 hover:bg-violet-50 border-violet-100")
                   }
                 >
                   <div className="flex justify-between items-center gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       {!n.read && (
-                        <span className="w-2 h-2 rounded-full bg-pink-500 flex-shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-violet-600 flex-shrink-0" />
                       )}
                       <span className="text-sm font-semibold text-slate-900 truncate">
                         {n.title}
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-400 flex-shrink-0">
+                    <span className="text-[11px] text-slate-500 flex-shrink-0">
                       {formatRelativeTime(n.createdAt)}
                     </span>
                   </div>
@@ -181,7 +185,7 @@ function NotificationMenu(props: {
                     )}
                     <span
                       className={
-                        "ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap " +
+                        "ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap " +
                         meta.className
                       }
                     >
@@ -212,35 +216,37 @@ function UserMenu(props: {
 
   const firstLetter = !profileUrl && nickname ? nickname.charAt(0).toUpperCase() : "?";
 
-  const handleToggle = () => setOpen((v) => !v);
-
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
-        onClick={handleToggle}
-        className="flex items-center gap-2 rounded-full bg-white/5 hover:bg-white/15 border border-white/15 pl-1 pr-3 py-1 transition text-white"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 pl-1 pr-2 h-9 rounded-full hover:bg-black/5 active:scale-[0.99] transition"
+        aria-label="유저 메뉴"
       >
-        <div className="w-8 h-8 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center">
+        <div className="w-7 h-7 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center">
           {profileUrl ? (
             <img src={profileUrl} alt="profile" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-sm font-semibold">{firstLetter}</span>
+            <span className="text-xs font-bold text-slate-700">{firstLetter}</span>
           )}
         </div>
-        <span className="text-sm font-semibold max-w-[120px] truncate">{nickname}</span>
-        <ChevronDown className="w-4 h-4 text-slate-200" />
+
+        <span className="text-sm font-semibold text-slate-800 max-w-[120px] truncate">
+          {nickname}
+        </span>
+        <ChevronDown className="w-4 h-4 text-slate-500" />
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-52 bg-white/95 text-slate-900 rounded-2xl shadow-[0_18px_45px_rgba(15,23,42,0.32)] border border-white/60 overflow-hidden backdrop-blur-xl">
+        <div className="absolute right-0 mt-2 w-56 bg-white text-slate-900 rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50">
           <button
             type="button"
             onClick={() => {
               setOpen(false);
               navigate("/mypage/profile");
             }}
-            className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50"
+            className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50"
           >
             마이페이지
           </button>
@@ -251,7 +257,7 @@ function UserMenu(props: {
               setOpen(false);
               navigate("/mypage/wishlist");
             }}
-            className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50"
+            className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50"
           >
             위시리스트
           </button>
@@ -262,7 +268,7 @@ function UserMenu(props: {
               setOpen(false);
               navigate("/mypage/bidlist");
             }}
-            className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50"
+            className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50"
           >
             나의 경매 내역
           </button>
@@ -273,19 +279,20 @@ function UserMenu(props: {
               setOpen(false);
               navigate("/mypage/auctionlist");
             }}
-            className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50"
+            className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50"
           >
             나의 게시물
           </button>
 
           <div className="border-t border-slate-200" />
+
           <button
             type="button"
             onClick={() => {
               setOpen(false);
               onLogout();
             }}
-            className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
+            className="w-full text-left px-4 py-3 text-sm text-rose-600 hover:bg-rose-50 font-semibold"
           >
             로그아웃
           </button>
@@ -344,9 +351,8 @@ export default function AuthButtons() {
   };
 
   const handleNotificationClick = async (n: NotificationItem) => {
-    if (!n.read) {
-      await markAsRead(n.id);
-    }
+    if (!n.read) await markAsRead(n.id);
+
     if (n.category === "INQUIRY" || n.category === "CHAT") {
       openChatListPopup();
       return;
@@ -355,7 +361,6 @@ export default function AuthButtons() {
     if (n.category === "AUCTION" || n.category === "PRODUCT") {
       const productId = n.data?.productId;
       if (productId) {
-        // console.log(productId)
         navigate("/auction_detail/" + productId);
         return;
       }
@@ -368,40 +373,38 @@ export default function AuthButtons() {
 
   if (!isAuthenticated) {
     return (
-      <>
+      <div className="flex items-center gap-2">
         <button
           type="button"
-          className="text-gray-100 hover:text-white cursor-pointer"
+          className="h-9 px-3 rounded-full text-slate-700 hover:bg-slate-50 font-semibold transition"
           onClick={() => navigate("/login")}
         >
           로그인
         </button>
+
         <button
           type="button"
-          className="bg-[rgb(118,90,255)] text-white px-6 py-2 rounded-full hover:bg-[rgb(90,58,252)] transition-colors cursor-pointer"
+          className="h-9 px-4 rounded-full bg-violet-600 text-white hover:bg-violet-700 font-semibold shadow-sm transition"
           onClick={() => navigate("/register")}
         >
           회원가입
         </button>
-      </>
+      </div>
     );
   }
 
   const displayName = nickname || userEmail || "USER";
 
   return (
-    <>
+    <div className="flex items-center gap-1.5">
       <button
         type="button"
         onClick={openChatListPopup}
-        className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/30 text-white transition"
+        className="relative w-9 h-9 rounded-full grid place-items-center text-slate-700 hover:bg-black/5 active:scale-[0.98] transition"
+        aria-label="채팅"
       >
         <MessageCircle className="w-5 h-5" />
-        {unreadTotal > 0 && (
-          <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
-            {unreadTotal > 9 ? "9+" : unreadTotal}
-          </span>
-        )}
+        <IconBadge count={unreadTotal} />
       </button>
 
       <NotificationMenu
@@ -411,11 +414,13 @@ export default function AuthButtons() {
         onMarkAllRead={() => markAllRead()}
       />
 
+      <div className="w-px h-5 bg-black/5 mx-1" />
+
       <UserMenu
         nickname={displayName}
         profileUrl={profileImageUrl}
         onLogout={handleLogout}
       />
-    </>
+    </div>
   );
 }
