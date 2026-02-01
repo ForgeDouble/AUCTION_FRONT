@@ -400,24 +400,43 @@ export default function AuthButtons() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="h-9 px-3 rounded-full text-slate-700 hover:bg-slate-50 font-semibold transition"
-          onClick={() => navigate("/login")}
-        >
-          로그인
-        </button>
-        <button
-          type="button"
-          className="h-9 px-4 rounded-full bg-violet-600 text-white hover:bg-violet-700 font-semibold shadow-sm transition"
-          onClick={() => navigate("/register")}
-        >
-          회원가입
-        </button>
-      </div>
+      <>
+      <button
+        type="button"
+        onClick={() => navigate("/login")}
+        className="
+          inline-flex items-center justify-center
+          h-10 px-4 rounded-full
+          bg-transparent
+          text-[15px] font-semibold text-black/60
+          hover:bg-black/5 hover:text-black/90
+          active:scale-[0.98] transition
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10
+        "
+      >
+      로그인
+      </button>
+
+      <button
+        type="button"
+        onClick={() => navigate("/register")}
+        className="
+          inline-flex items-center justify-center
+          h-10 px-4 rounded-full
+          bg-violet-600/10
+          text-[15px] font-semibold text-violet-700
+          hover:bg-violet-600/15 hover:shadow-sm
+          active:scale-[0.98] transition
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300
+        "
+      >
+        회원가입
+      </button>
+
+      </>
     );
   }
+
 
   const displayName = nickname || userEmail || "USER";
 
