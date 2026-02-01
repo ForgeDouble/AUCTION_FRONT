@@ -1,12 +1,19 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE;
-
 import { useEffect, useRef, useState } from "react";
 import { Client } from "@stomp/stompjs";
 import type { IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  fetchNotifications,
+  fetchUnreadCount,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/api/notificationApi";
+import { categoryFromType } from "@/firebase/notificationRoute";
 
-export type NotificationCategory = | "ALL" | "AUCTION" | "INQUIRY" | "PRODUCT" | "CHAT";
+const API_BASE_URL = import.meta.env.VITE_API_BASE;
+
+export type NotificationCategory = "ALL" | "AUCTION" | "INQUIRY" | "PRODUCT" | "CHAT";
 
 export type NotificationItem = {
   id: string;
@@ -15,6 +22,8 @@ export type NotificationItem = {
   category: NotificationCategory;
   createdAt: string;
   read: boolean;
+  type?: string;
+  data?: Record<string, string>;
 };
 
 type UseNotificationsResult = {
@@ -27,20 +36,16 @@ type UseNotificationsResult = {
   markAllRead: () => Promise<void>;
 };
 
-
 function getAccessToken() {
   return localStorage.getItem("accessToken");
 }
 
-function jsonAuthHeaders() {
-  const token = getAccessToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (token) {
-    headers["Authorization"] = "Bearer " + token;
+function unwrapResult<T>(json: any): T {
+  if (json && typeof json === "object") {
+    if ("result" in json) return json.result as T;
+    if ("data" in json) return json.data as T;
   }
-  return headers;
+  return json as T;
 }
 
 export function useNotifications(): UseNotificationsResult {
@@ -63,90 +68,51 @@ export function useNotifications(): UseNotificationsResult {
     setError(undefined);
 
     try {
-      // 알림 목록
-      const listRes = await fetch(
-        `${API_BASE_URL}/notifications?size=20`,
-        {
-          method: "GET",
-          headers: jsonAuthHeaders(),
-          credentials: "include",
-        }
-      );
+      const listJsonRaw = await fetchNotifications(20);
+      const rawList = unwrapResult<any[]>(listJsonRaw) || [];
 
-      if (!listRes.ok) {
-        throw new Error(`알림 목록 조회 실패: ${listRes.status}`);
-      }
+      const mapped: NotificationItem[] = (rawList || []).map((n: any) => {
+        const type = n.type || n.notificationType || n.eventType;
+        const data = (n.data || n.payload || n.meta || null) as Record<string, string> | null;
 
-      const ct = listRes.headers.get("content-type") || "";
-      if (!ct.includes("application/json")) {
-        throw new Error(
-          "알림 목록 API 응답이 JSON 이 아닙니다."
-        );
-      }
+        const category: NotificationCategory =
+          (n.category as NotificationCategory) ||
+          categoryFromType(type) ||
+          "ALL";
 
-      const listJsonRaw = await listRes.json();
+        return {
+          id: String(n.id),
+          title: n.title || "",
+          body: n.body || "",
+          category,
+          createdAt: n.createdAt || "",
+          read: !!n.read,
+          type: type ? String(type) : undefined,
+          data: data || undefined,
+        };
+      });
 
-      const rawList = Array.isArray(listJsonRaw) ? listJsonRaw : (listJsonRaw.data ?? listJsonRaw.result ?? []);
+      const countJsonRaw = await fetchUnreadCount();
+      const unread = unwrapResult<number>(countJsonRaw) ?? 0;
 
-      const mapped: NotificationItem[] = (rawList || []).map((n: any) => ({
-        id: String(n.id),
-        title: n.title,
-        body: n.body,
-        category: n.category as NotificationCategory,
-        createdAt: n.createdAt,
-        read: !!n.read,
-      }));
-
-      // 미읽음 개수
-      const countRes = await fetch(
-        `${API_BASE_URL}/notifications/unread-count`,
-        {
-          method: "GET",
-          headers: jsonAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!countRes.ok) {
-        throw new Error(`미읽음 개수 조회 실패: ${countRes.status}`);
-      }
-
-      const ct2 = countRes.headers.get("content-type") || "";
-      if (!ct2.includes("application/json")) {
-        throw new Error("미읽음 개수 API 응답이 JSON 이 아닙니다.");
-      }
-
-      const countJsonRaw = await countRes.json();
-
-      const unread = typeof countJsonRaw === "number" ? countJsonRaw : (countJsonRaw.data ?? countJsonRaw.result ?? 0);
       setNotifications(mapped);
-      setUnreadCount(unread);
+      setUnreadCount(typeof unread === "number" ? unread : 0);
     } catch (e: any) {
       console.error(e);
       setError(e?.message || "알림 조회 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
-
   };
-  // D외부 처리용 맴핑
   const reload = () => {
     loadInitial();
   };
 
-  // 개별 읽음 처리
   const markAsRead = async (id: string) => {
     try {
-    const res = await fetch( `${API_BASE_URL}/notifications/${id}/read`, {
-      method: "POST",
-      headers: jsonAuthHeaders(), // ← Authorization 추가
-      credentials: "include",
-    });
-    if (!res.ok) return;
+    await markNotificationRead(id);
       setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === id ? { ...n, read: true } : n
-        )
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (e) {
@@ -154,26 +120,16 @@ export function useNotifications(): UseNotificationsResult {
     }
   };
 
-  // 전체 읽음 처리
   const markAllRead = async () => {
     try {
-    const res = await fetch( `${API_BASE_URL}/notifications/read-all`, {
-      method: "POST",
-      headers: jsonAuthHeaders(),
-      credentials: "include",
-    });
-    if (!res.ok) return;
-      setNotifications((prev) =>
-        prev.map((n) => ({
-          ...n,
-          read: true,
-        }))
-      );
+    await markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (e) {
       console.error(e);
     }
   };
+
   useEffect(() => {
     if (!isAuthenticated) {
       setNotifications([]);
@@ -185,73 +141,77 @@ export function useNotifications(): UseNotificationsResult {
 
   // STOMP 연결
   useEffect(() => {
-  if (!isAuthenticated || !userEmail) {
-    if (stompRef.current) {
-      stompRef.current.deactivate();
-      stompRef.current = null;
-    }
-    return;
-  }
-
-  const token = getAccessToken();
-
-  const client = new Client({
-    webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws`),
-    connectHeaders: token
-      ? { Authorization: `Bearer ${token}` }
-      : {},
-    debug: () => {},
-    reconnectDelay: 5000,
-  });
-
-  client.onConnect = () => {
-    const dest = `/topic/notification/${userEmail}`;
-    client.subscribe(dest, (frame: IMessage) => {
-      try {
-        const body = frame.body ? JSON.parse(frame.body) : null;
-        if (!body) return;
-
-        const item: NotificationItem = {
-          id: String(body.id),
-          title: body.title,
-          body: body.body,
-          category: body.category as NotificationCategory,
-          createdAt: body.createdAt,
-          read: !!body.read,
-        };
-
-        setNotifications((prev) => [item, ...prev].slice(0, 50));
-
-        if (!item.read) {
-          setUnreadCount((prev) => prev + 1);
-        }
-      } catch (e) {
-        console.error("notification parse error", e);
+    if (!isAuthenticated || !userEmail) {
+      if (stompRef.current) {
+        stompRef.current.deactivate();
+        stompRef.current = null;
       }
+      return;
+    }
+    const token = getAccessToken();
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws`),
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+      debug: () => {},
+      reconnectDelay: 5000,
     });
-  };
 
-  client.onStompError = (frame) => {
-    console.error("STOMP error", frame.headers["message"]);
-  };
+    client.onConnect = () => {
+      const dest = `/topic/notification/${userEmail}`;
+      client.subscribe(dest, (frame: IMessage) => {
+        try {
+          const body = frame.body ? JSON.parse(frame.body) : null;
+          if (!body) return;
 
-  client.activate();
-  stompRef.current = client;
+          const type = body.type || body.notificationType || body.eventType;
+          const data = (body.data || body.payload || body.meta || null) as Record<string, string> | null;
 
-  return () => {
-    client.deactivate();
-    stompRef.current = null;
-  };
+          const category: NotificationCategory =
+            (body.category as NotificationCategory) ||
+            categoryFromType(type) ||
+            "ALL";
+
+          const item: NotificationItem = {
+            id: String(body.id),
+            title: body.title || "",
+            body: body.body || "",
+            category,
+            createdAt: body.createdAt || new Date().toISOString(),
+            read: !!body.read,
+            type: type ? String(type) : undefined,
+            data: data || undefined,
+          };
+
+          setNotifications((prev) => [item, ...prev].slice(0, 50));
+          if (!item.read) setUnreadCount((prev) => prev + 1);
+        } catch (e) {
+          console.error("notification parse error", e);
+        }
+      });
+    };
+
+    client.onStompError = (frame) => {
+      console.error("STOMP error", frame.headers["message"]);
+    };
+
+    client.activate();
+    stompRef.current = client;
+
+    return () => {
+      client.deactivate();
+      stompRef.current = null;
+    };
 
   }, [isAuthenticated, userEmail]);
 
   return {
-  notifications,
-  unreadCount,
-  loading,
-  error,
-  reload,
-  markAsRead,
-  markAllRead,
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    reload,
+    markAsRead,
+    markAllRead,
   };
 }
