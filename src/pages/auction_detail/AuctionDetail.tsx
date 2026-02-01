@@ -809,9 +809,9 @@ const AuctionDetail = () => {
                   <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
                     <div className="text-sm font-extrabold text-slate-900">거래 안내</div>
                     <ul className="mt-2 text-sm text-slate-600 space-y-1">
+                      <li>• 입찰 후 취소는 불가합니다.</li>
                       <li>• 낙찰 후 취소는 불가합니다.</li>
-                      <li>• 상품 상태는 설명을 기준으로 합니다.</li>
-                      <li>• 안전 결제를 권장합니다.</li>
+                      <li>• 상품 상태는 상품설명을 기준으로 합니다.</li>
                     </ul>
                   </div>
                   <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
