@@ -5,7 +5,7 @@ import {
   type ParentCategoriesDto,
   type ProductCreateDto,
 } from "./SellProductDto";
-import CategorySelector from "@/components/fcm/category_selector/CategorySelector";
+import CategorySelector from "@/components/category_selector/CategorySelector";
 import { fetchCreateProduct, fetchParentCategories } from "./SellProductApi";
 import { useNavigate } from "react-router-dom";
 import { useModal } from "@/contexts/ModalContext";
