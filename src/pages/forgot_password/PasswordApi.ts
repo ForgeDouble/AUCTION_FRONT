@@ -51,7 +51,9 @@ export const fetchResetPassword = async (
   return response.json();
 };
 
-export const fetchValidateToken = async (token: string): Promise<void> => {
+export const fetchValidateToken = async (
+  token: string,
+): Promise<ApiResponse<null>> => {
   const response = await fetch(
     `http://localhost:8080/auth/validate_token?token=${token}`,
     {
@@ -71,4 +73,6 @@ export const fetchValidateToken = async (token: string): Promise<void> => {
       body.additionalInfo,
     );
   }
+
+  return response.json();
 };
