@@ -1,4 +1,5 @@
 import type { ApiResponse } from "@/api/registerapi";
+import { ApiError } from "@/errors/Errors";
 
 export const fetchForgotPassword = async (
   email: string,
@@ -12,7 +13,13 @@ export const fetchForgotPassword = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch findPassword: ${response.status}`);
+    const body = await response.json();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
@@ -32,8 +39,36 @@ export const fetchResetPassword = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch resetPassword: ${response.status}`);
+    const body = await response.json();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
+};
+
+export const fetchValidateToken = async (token: string): Promise<void> => {
+  const response = await fetch(
+    `http://localhost:8080/auth/validate_token?token=${token}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.json();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
+  }
 };
