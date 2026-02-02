@@ -32,20 +32,19 @@ const ResetPassword = () => {
       // 토큰이 유효하지 않거나 만료됨
       const result = handleApiError(error);
       console.error(result);
-      setTokenError("올바르지 않은 접속입니다.");
 
-      //  switch (result.type) {
-      //   case "MODAL":
-      //     setTokenError(result.message);
-      //     break;
+      switch (result.type) {
+        case "MODAL":
+          setTokenError(result.message);
+          break;
 
-      //   case "DIALOG":
-      //     setTokenError(result.message);
-      //     break;
+        case "DIALOG":
+          setTokenError(result.message);
+          break;
 
-      //   default:
-      //     setTokenError("메일 전송에 실패했습니다. 다시 시도해주세요.");
-      // }
+        default:
+          setTokenError("올바르지 않은 접속입니다.");
+      }
     } finally {
       setIsValidatingToken(false);
     }
@@ -92,8 +91,24 @@ const ResetPassword = () => {
         navigate("/login");
       }, 5000);
       console.log(data);
-    } catch (error) {
-      setPasswordError(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "MODAL":
+          setPasswordError(result.message);
+          break;
+
+        case "DIALOG":
+          setPasswordError(result.message);
+          break;
+
+        default:
+          setPasswordError(
+            "서버 내부에서 오류가 발생했습니다. 고객센터에 문의하세요.",
+          );
+      }
     } finally {
       setIsLoading(false);
     }
