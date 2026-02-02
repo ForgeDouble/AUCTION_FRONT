@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { fetchForgotPassword } from "./PasswordApi";
 import { useNavigate } from "react-router-dom";
+import { handleApiError } from "@/errors/HandleApiError";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState<string>("");
@@ -37,15 +38,23 @@ const ForgotPassword = () => {
       const data = await fetchForgotPassword(email);
       console.log(data);
 
-      // 성공
       setIsSubmitted(true);
-    } catch (error: any) {
-      console.error(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
 
-      // 실패
-      setApiError(
-        error.message || "메일 전송에 실패했습니다. 다시 시도해주세요.",
-      );
+      switch (result.type) {
+        case "MODAL":
+          setApiError(result.message);
+          break;
+
+        case "DIALOG":
+          setApiError(result.message);
+          break;
+
+        default:
+          setApiError("메일 전송에 실패했습니다. 다시 시도해주세요.");
+      }
     } finally {
       setIsLoading(false);
     }
