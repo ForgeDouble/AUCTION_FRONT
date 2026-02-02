@@ -433,6 +433,7 @@ const AuctionDetail = () => {
       stomp.subscribe(`/topic/auction/${productId}`, (message) => {
         if (!alive) return;
         const payload = JSON.parse(message.body);
+        console.log("[BID WS PAYLOAD]", payload);
         setBidLogs((prev) => [
           {
             ...payload,
@@ -1026,7 +1027,7 @@ const AuctionDetail = () => {
                       <div className="divide-y divide-slate-100">
                         {bidLogs.map((bid, index) => {
                           const isTop = index === 0 && isLive;
-                          const initial = (bid.userNickName || "?").slice(0, 1);
+                          const initial = (bid.profileImageUrl || "?").slice(0, 1);
 
                           return (
                             <div
@@ -1051,7 +1052,7 @@ const AuctionDetail = () => {
                                     }}
                                     title={bid.userNickName}
                                   >
-                                    {initial}
+                                    <BidAvatar url={bid.profileImageUrl} name={bid.userNickName} isTop={isTop} ACCENT={ACCENT} />
                                   </div>
 
                                   <div className="min-w-0">
@@ -1428,33 +1429,46 @@ function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanel
                   className="px-4 py-3 flex items-center justify-between gap-3"
                   style={{ backgroundColor: isTop ? ACCENT_SOFT : "white" }}
                 >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm font-extrabold text-slate-900 truncate">
-                        {bid.userNickName}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <BidAvatar
+                      url={bid.profileImageUrl}
+                      name={bid.userNickName}
+                      isTop={isTop}
+                      ACCENT={ACCENT}
+                    />
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="text-sm font-extrabold text-slate-900 truncate">
+                          {bid.userNickName}
+                        </div>
+
+                        {isTop && (
+                          <span
+                            className="px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0"
+                            style={{
+                              color: ACCENT,
+                              backgroundColor: ACCENT_SOFT,
+                              borderColor: "rgba(118,90,255,0.25)",
+                            }}
+                          >
+                            최고가
+                          </span>
+                        )}
                       </div>
-                      {isTop && (
-                        <span
-                          className="px-2 py-0.5 rounded-full text-[10px] font-extrabold border"
-                          style={{
-                            color: ACCENT,
-                            backgroundColor: ACCENT_SOFT,
-                            borderColor: "rgba(118,90,255,0.25)",
-                          }}
-                        >
-                          최고가
-                        </span>
-                      )}
+
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        {timeLabel}
+                      </div>
                     </div>
-                    <div className="text-[11px] text-slate-400 font-mono">{timeLabel}</div>
                   </div>
 
-                  <div className="text-right">
-                    <div className="font-extrabold tabular-nums text-slate-900">
+                  <div className="text-right shrink-0 min-w-[110px] self-start">
+                    <div className="font-extrabold tabular-nums text-slate-900 whitespace-nowrap">
                       ₩{Number(bid.bidAmount ?? 0).toLocaleString("ko-KR")}
                     </div>
                     {isTop && (
-                      <div className="text-[10px] font-extrabold" style={{ color: ACCENT }}>
+                      <div className="text-[10px] font-extrabold whitespace-nowrap" style={{ color: ACCENT }}>
                         highest
                       </div>
                     )}
@@ -1466,5 +1480,37 @@ function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanel
         </div>
       </div>
     </div>
+  );
+}
+
+function BidAvatar(props: { url?: string | null; name?: string | null; isTop?: boolean; ACCENT: string }) {
+  const { url, name, isTop, ACCENT } = props;
+  const initial = (name || "?").slice(0, 1);
+
+  return (
+    <div
+      className="w-9 h-9 rounded-2xl border overflow-hidden relative flex items-center justify-center text-[12px] font-extrabold"
+      style={{
+        borderColor: isTop ? "rgba(118,90,255,0.35)" : "rgba(148,163,184,0.35)",
+        backgroundColor: isTop ? "rgba(118,90,255,0.12)" : "white",
+        color: isTop ? ACCENT : "#334155",
+      }}
+      title={name || ""}
+    >
+      <span className="relative z-0">{initial}</span>
+
+      {!!url && (
+        <img
+          src={url}
+          alt={name || "user"}
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+      )}
+    </div>  
   );
 }
