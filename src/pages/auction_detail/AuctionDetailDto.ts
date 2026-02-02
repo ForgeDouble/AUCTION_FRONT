@@ -5,6 +5,7 @@ export interface BidLogDto {
   bidAmount: number;
   createdAt: string;
   isWinned: string;
+  createdAtDisplay?: string;
 }
 
 export interface ProductDto {

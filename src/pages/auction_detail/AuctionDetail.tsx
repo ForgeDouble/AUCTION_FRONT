@@ -184,7 +184,7 @@ const AuctionDetail = () => {
       const data = await fetchBidsFromRedis(Number(productId));
       const formattedLogs = data.result.map((bid: BidLogDto) => ({
         ...bid,
-        createdAt: dayjs(bid.createdAt).format("HH:mm:ss"),
+        createdAtDisplay: dayjs(bid.createdAt).format("HH:mm:ss"),
       }));
       setBidLogs(formattedLogs);
     } catch (error) {
@@ -197,7 +197,7 @@ const AuctionDetail = () => {
       const data = await fetchBidsFromDB(Number(productId));
       const formattedLogs = data.result.map((bid: BidLogDto) => ({
         ...bid,
-        createdAt: dayjs(bid.createdAt).format("YY.MM.DD HH:mm"),
+        createdAtDisplay: dayjs(bid.createdAt).format("YY.MM.DD HH:mm"),
       }));
       setBidLogs(formattedLogs);
     } catch (error) {
@@ -433,7 +433,13 @@ const AuctionDetail = () => {
       stomp.subscribe(`/topic/auction/${productId}`, (message) => {
         if (!alive) return;
         const payload = JSON.parse(message.body);
-        setBidLogs((prev) => [payload, ...prev]);
+        setBidLogs((prev) => [
+          {
+            ...payload,
+            createdAtDisplay: dayjs(payload.createdAt).format("HH:mm:ss"),
+          },
+            ...prev,
+        ]);
       });
 
       if (token) {
@@ -1068,7 +1074,7 @@ const AuctionDetail = () => {
                                       )}
                                     </div>
 
-                                    <div className="text-[10px] text-slate-400 font-mono">{bid.createdAt}</div>
+                                    <div className="text-[10px] text-slate-400 font-mono"> {bid.createdAtDisplay ?? bid.createdAt} </div>
                                   </div>
                                 </div>
 
@@ -1324,10 +1330,10 @@ function BidLineChart(props: { points: SeriesPoint[]; maxY: number; ACCENT: stri
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-3">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[140px]">
-      {[0, 0.5, 1].map((r, idx) => {
-      const y = padT + innerH * r;
-      return <line key={idx} x1={padL} x2={W - padR} y1={y} y2={y} stroke="rgba(148,163,184,0.30)" strokeWidth="1" />;
-      })}
+        {[0, 0.5, 1].map((r, idx) => {
+          const y = padT + innerH * r;
+          return <line key={idx} x1={padL} x2={W - padR} y1={y} y2={y} stroke="rgba(148,163,184,0.30)" strokeWidth="1" />;
+        })}
 
         <path d={d} fill="none" stroke={ACCENT} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
@@ -1340,7 +1346,7 @@ function BidLineChart(props: { points: SeriesPoint[]; maxY: number; ACCENT: stri
         <text x={W - padR} y={H - 10} fontSize="12" fill="rgba(100,116,139,0.9)" textAnchor="end">{last}</text>
 
         <text x={W - padR} y={14} fontSize="12" fill="rgba(100,116,139,0.9)" textAnchor="end">
-          max {safeMax}
+          {safeMax}건
         </text>
       </svg>
     </div>
@@ -1348,8 +1354,8 @@ function BidLineChart(props: { points: SeriesPoint[]; maxY: number; ACCENT: stri
 }
 
 function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanelProps) {
-  const rangeMs = isLive ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 라이브=최근 60분 / 종료=최근 24시간
-  const binMs = isLive ? 5 * 60 * 1000 : 30 * 60 * 1000; // 라이브=5분 단위 / 종료=30분 단위
+  const rangeMs = isLive ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  const binMs = isLive ? 5 * 60 * 1000 : 30 * 60 * 1000;
 
   const { points, maxY, peak } = useMemo(() => buildBidSeries(bidLogs, rangeMs, binMs), [bidLogs, rangeMs, binMs]);
 
@@ -1369,7 +1375,7 @@ function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanel
     <div className="p-6 md:p-8">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-base font-extrabold text-slate-900">입찰 상세</div>
+          <div className="text-base font-extrabold text-slate-900">실시간 입찰 상세</div>
             <div className="mt-1 text-xs text-slate-500">
               {isLive ? "최근 60분" : "최근 24시간"} · 피크:{" "}
               <span className="font-extrabold" style={{ color: ACCENT }}>
@@ -1401,7 +1407,7 @@ function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanel
           <div className="text-xs text-slate-500">{sorted.length}건</div>
         </div>
 
-        <div className="max-h-[420px] overflow-y-auto divide-y divide-slate-100">
+        <div className="max-h-[550px] overflow-y-auto divide-y divide-slate-100">
           {sorted.length === 0 ? (
             <div className="py-12 text-center text-slate-400">
               <div className="font-semibold text-sm">입찰 내역이 없습니다.</div>
@@ -1460,7 +1466,5 @@ function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanel
         </div>
       </div>
     </div>
-
-
   );
 }
