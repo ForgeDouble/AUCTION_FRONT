@@ -87,6 +87,34 @@ const AuctionDetail = () => {
       return String(raw).trim().toLowerCase();
   }, [authEmail]);
 
+  const [bidDetailOpen, setBidDetailOpen] = useState(false);
+
+  // ✅ 왼쪽 스크롤 컨테이너 + 상세 섹션 앵커
+  const leftScrollRef = useRef<HTMLDivElement | null>(null);
+  const bidDetailAnchorRef = useRef<HTMLDivElement | null>(null);
+
+  const openBidDetailAndScroll = () => {
+    setBidDetailOpen(true);
+
+    requestAnimationFrame(() => {
+      const container = leftScrollRef.current;
+      const anchor = bidDetailAnchorRef.current;
+      if (!anchor) return;
+
+      if (!container) {
+        anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      const cRect = container.getBoundingClientRect();
+      const aRect = anchor.getBoundingClientRect();
+      const nextTop = container.scrollTop + (aRect.top - cRect.top) - 16;
+
+      container.scrollTo({ top: nextTop, behavior: "smooth" });
+    });
+  };
+
+
   const sellerEmailNorm = useMemo(() => {
     return String(sellerInfo?.email ?? "").trim().toLowerCase();
   }, [sellerInfo?.email]);
@@ -417,7 +445,7 @@ const AuctionDetail = () => {
     },
     (error) => {
       if (!alive) return;
-      console.error("❌ 연결 실패:", error);
+      console.error("연결 실패:", error);
     }
   );
 
@@ -536,12 +564,6 @@ const AuctionDetail = () => {
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div
-              className="w-10 h-10 rounded-2xl text-white flex items-center justify-center"
-              style={{ backgroundColor: ACCENT }}
-            >
-              <Gavel className="w-5 h-5" />
-            </div>
             <div className="min-w-0">
               <div className="text-xs text-slate-500 font-medium">상품 상세</div>
               <div className="text-sm font-extrabold text-slate-900 truncate">
@@ -569,7 +591,10 @@ const AuctionDetail = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 lg:h-[calc(100vh-64px)] lg:overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:h-full">
           {/* LEFT */}
-          <div className="lg:col-span-8 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:pr-2 no-scrollbar">
+          <div
+            ref={leftScrollRef}
+            className="lg:col-span-8 lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:pr-2 no-scrollbar"
+          >
             <div className="rounded-[28px] border border-slate-100 bg-white overflow-hidden">
               {/* Header */}
               <div className="p-6 md:p-8">
@@ -763,7 +788,13 @@ const AuctionDetail = () => {
               </div>
 
               <div className="border-t border-slate-100" />
+              <div ref={bidDetailAnchorRef} />
 
+              {bidDetailOpen && (
+                <BidDetailPanel bidLogs={bidLogs} isLive={isLive} ACCENT={ACCENT} ACCENT_SOFT={ACCENT_SOFT} />
+              )}
+
+              {bidDetailOpen && <div className="border-t border-slate-100" />}
               {/* 상세 정보 */}
               <div className="p-6 md:p-8">
                 <div className="flex items-center justify-between">
@@ -962,7 +993,21 @@ const AuctionDetail = () => {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-slate-500">{bidLogs.length}건</div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-xs text-slate-500">{bidLogs.length}건</div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (bidDetailOpen) setBidDetailOpen(false);
+                          else openBidDetailAndScroll();
+                        }}
+                        className="text-xs font-extrabold text-slate-500 hover:text-slate-900 transition"
+                      >
+                        {bidDetailOpen ? "닫기" : "자세히 보기"}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-3 max-h-[420px] overflow-y-auto rounded-2xl border border-slate-100 bg-white">
@@ -1178,3 +1223,244 @@ const AuctionDetail = () => {
 };
 
 export default AuctionDetail;
+
+type BidDetailPanelProps = {
+  bidLogs: BidLogDto[];
+  isLive: boolean;
+  ACCENT: string;
+  ACCENT_SOFT: string;
+};
+
+function parseBidMs(createdAt?: string | null): number | null {
+  if (!createdAt) return null;
+
+  if (createdAt.includes("T")) {
+    const t = Date.parse(createdAt);
+    return Number.isFinite(t) ? t : null;
+  }
+
+  if (/^\d{2}:\d{2}:\d{2}$/.test(createdAt)) {
+    const today = dayjs().format("YYYY-MM-DD");
+    const t = dayjs(`${today} ${createdAt}`, "YYYY-MM-DD HH:mm:ss").valueOf();
+    return Number.isFinite(t) ? t : null;
+  }
+
+  if (/^\d{2}.\d{2}.\d{2}\s\d{2}:\d{2}$/.test(createdAt)) {
+    const t = dayjs(createdAt, "YY.MM.DD HH:mm").valueOf();
+    return Number.isFinite(t) ? t : null;
+  }
+
+  const t = dayjs(createdAt).valueOf();
+  return Number.isFinite(t) ? t : null;
+}
+
+type SeriesPoint = { xLabel: string; from: number; to: number; count: number };
+
+function buildBidSeries(bidLogs: BidLogDto[], rangeMs: number, binMs: number) {
+  const times = bidLogs
+    .map((b) => parseBidMs(b.createdAt))
+    .filter((t): t is number => typeof t === "number" && Number.isFinite(t))
+    .sort((a, b) => a - b);
+
+  if (times.length === 0) return { points: [] as SeriesPoint[], maxY: 0, peak: undefined as SeriesPoint | undefined };
+
+  const end = times[times.length - 1];
+  const start = end - rangeMs;
+
+  const bucketCount = Math.max(2, Math.floor((end - start) / binMs) + 1);
+
+  const points: SeriesPoint[] = Array.from({ length: bucketCount }).map((_, i) => {
+    const from = start + i * binMs;
+    const to = from + binMs;
+    let count = 0;
+    for (const t of times) if (t >= from && t < to) count++;
+    const xLabel = dayjs(from).format("HH:mm");
+    return { xLabel, from, to, count };
+  });
+
+  const maxY = Math.max(...points.map((p) => p.count), 0);
+  let peak: SeriesPoint | undefined = undefined;
+  for (const p of points) if (!peak || p.count > peak.count) peak = p;
+
+  return { points, maxY, peak };
+}
+
+function BidLineChart(props: { points: SeriesPoint[]; maxY: number; ACCENT: string }) {
+  const { points, maxY, ACCENT } = props;
+
+  if (points.length < 2) {
+    return (
+      <div className="h-[140px] rounded-2xl border border-slate-100 bg-white grid place-items-center text-xs text-slate-400">
+        차트를 표시할 데이터가 부족합니다.
+      </div>
+    );
+  }
+
+  const W = 640;
+  const H = 140;
+  const padL = 32;
+  const padR = 16;
+  const padT = 16;
+  const padB = 28;
+
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+
+  const n = points.length;
+  const safeMax = Math.max(1, maxY);
+
+  const xy = points.map((p, i) => {
+    const x = padL + (i / (n - 1)) * innerW;
+    const y = padT + innerH - (p.count / safeMax) * innerH;
+    return { x, y, p };
+  });
+
+  const d = xy.map((pt, i) => `${i === 0 ? "M" : "L"} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(" ");
+
+  const first = points[0]?.xLabel ?? "";
+  const mid = points[Math.floor((n - 1) / 2)]?.xLabel ?? "";
+  const last = points[n - 1]?.xLabel ?? "";
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white p-3">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[140px]">
+      {[0, 0.5, 1].map((r, idx) => {
+      const y = padT + innerH * r;
+      return <line key={idx} x1={padL} x2={W - padR} y1={y} y2={y} stroke="rgba(148,163,184,0.30)" strokeWidth="1" />;
+      })}
+
+        <path d={d} fill="none" stroke={ACCENT} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+        {xy.map((pt, idx) => (
+          <circle key={idx} cx={pt.x} cy={pt.y} r="4" fill={ACCENT} />
+        ))}
+
+        <text x={padL} y={H - 10} fontSize="12" fill="rgba(100,116,139,0.9)">{first}</text>
+        <text x={W / 2} y={H - 10} fontSize="12" fill="rgba(100,116,139,0.9)" textAnchor="middle">{mid}</text>
+        <text x={W - padR} y={H - 10} fontSize="12" fill="rgba(100,116,139,0.9)" textAnchor="end">{last}</text>
+
+        <text x={W - padR} y={14} fontSize="12" fill="rgba(100,116,139,0.9)" textAnchor="end">
+          max {safeMax}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanelProps) {
+  const rangeMs = isLive ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 라이브=최근 60분 / 종료=최근 24시간
+  const binMs = isLive ? 5 * 60 * 1000 : 30 * 60 * 1000; // 라이브=5분 단위 / 종료=30분 단위
+
+  const { points, maxY, peak } = useMemo(() => buildBidSeries(bidLogs, rangeMs, binMs), [bidLogs, rangeMs, binMs]);
+
+  const sorted = useMemo(() => {
+    return [...(bidLogs || [])]
+    .map((b) => ({ b, t: parseBidMs(b.createdAt) ?? 0 }))
+    .sort((a, c) => c.t - a.t)
+    .map((x) => x.b);
+  }, [bidLogs]);
+
+  const peakLabel =
+    peak && peak.count > 0
+    ? `${dayjs(peak.from).format("HH:mm")}~${dayjs(peak.to).format("HH:mm")} (${peak.count}건)`
+    : "데이터 없음";
+
+  return (
+    <div className="p-6 md:p-8">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-base font-extrabold text-slate-900">입찰 상세</div>
+            <div className="mt-1 text-xs text-slate-500">
+              {isLive ? "최근 60분" : "최근 24시간"} · 피크:{" "}
+              <span className="font-extrabold" style={{ color: ACCENT }}>
+                {peakLabel}
+              </span>
+            </div>
+          </div>
+
+          <span
+            className="px-3 py-1 rounded-full text-xs font-extrabold border"
+            style={{
+              color: isLive ? ACCENT : "#475569",
+              backgroundColor: isLive ? ACCENT_SOFT : "rgba(148,163,184,0.12)",
+              borderColor: isLive ? "rgba(118,90,255,0.25)" : "rgba(148,163,184,0.25)",
+            }}
+          >
+            {isLive ? "LIVE" : "CLOSED"}
+          </span>
+        </div>
+
+        <div className="mt-4">
+          <BidLineChart points={points} maxY={maxY} ACCENT={ACCENT} />
+          <div className="mt-2 text-[11px] text-slate-400">y축: 입찰 건수 · x축: 시간</div>
+        </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <div className="px-4 py-3 bg-slate-50/40 flex items-center justify-between">
+          <div className="text-sm font-extrabold text-slate-900">입찰 내역</div>
+          <div className="text-xs text-slate-500">{sorted.length}건</div>
+        </div>
+
+        <div className="max-h-[420px] overflow-y-auto divide-y divide-slate-100">
+          {sorted.length === 0 ? (
+            <div className="py-12 text-center text-slate-400">
+              <div className="font-semibold text-sm">입찰 내역이 없습니다.</div>
+              <div className="text-xs mt-1">입찰이 발생하면 여기에 표시됩니다.</div>
+            </div>
+          ) : (
+            sorted.map((bid, idx) => {
+              const t = parseBidMs(bid.createdAt);
+              const timeLabel = t
+                ? dayjs(t).format(isLive ? "HH:mm:ss" : "YY.MM.DD HH:mm")
+                : String(bid.createdAt ?? "");
+
+              const isTop = idx === 0 && isLive;
+
+              return (
+                <div
+                  key={idx}
+                  className="px-4 py-3 flex items-center justify-between gap-3"
+                  style={{ backgroundColor: isTop ? ACCENT_SOFT : "white" }}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-extrabold text-slate-900 truncate">
+                        {bid.userNickName}
+                      </div>
+                      {isTop && (
+                        <span
+                          className="px-2 py-0.5 rounded-full text-[10px] font-extrabold border"
+                          style={{
+                            color: ACCENT,
+                            backgroundColor: ACCENT_SOFT,
+                            borderColor: "rgba(118,90,255,0.25)",
+                          }}
+                        >
+                          최고가
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-mono">{timeLabel}</div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="font-extrabold tabular-nums text-slate-900">
+                      ₩{Number(bid.bidAmount ?? 0).toLocaleString("ko-KR")}
+                    </div>
+                    {isTop && (
+                      <div className="text-[10px] font-extrabold" style={{ color: ACCENT }}>
+                        highest
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+
+
+  );
+}
