@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { fetchResetPassword } from "./PasswordApi";
+import { fetchResetPassword, fetchValidateToken } from "./PasswordApi";
+import { handleApiError } from "@/errors/HandleApiError";
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -13,19 +14,51 @@ const ResetPassword = () => {
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [tokenError, setTokenError] = useState<string>("");
+  const [isValidatingToken, setIsValidatingToken] = useState<boolean>(true);
 
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const confirmInputRef = useRef<HTMLInputElement>(null);
 
   const navigate = useNavigate();
 
+  const validateToken = async (tokenValue: string) => {
+    try {
+      setIsValidatingToken(true);
+      // 백엔드에 토큰 검증 요청
+      await fetchValidateToken(tokenValue);
+      setToken(tokenValue);
+      setTokenError("");
+    } catch (error: unknown) {
+      // 토큰이 유효하지 않거나 만료됨
+      const result = handleApiError(error);
+      console.error(result);
+      setTokenError("올바르지 않은 접속입니다.");
+
+      //  switch (result.type) {
+      //   case "MODAL":
+      //     setTokenError(result.message);
+      //     break;
+
+      //   case "DIALOG":
+      //     setTokenError(result.message);
+      //     break;
+
+      //   default:
+      //     setTokenError("메일 전송에 실패했습니다. 다시 시도해주세요.");
+      // }
+    } finally {
+      setIsValidatingToken(false);
+    }
+  };
+
   useEffect(() => {
     const tokenFromUrl = searchParams.get("token");
     if (!tokenFromUrl) {
       setTokenError("유효하지 않은 링크입니다.");
-    } else {
-      setToken(tokenFromUrl);
+      setIsValidatingToken(false);
+      return;
     }
+    validateToken(tokenFromUrl);
   }, [searchParams]);
 
   const validatePassword = (password: string) => {
@@ -60,7 +93,7 @@ const ResetPassword = () => {
       }, 5000);
       console.log(data);
     } catch (error) {
-      setPasswordError(error.message);
+      setPasswordError(error);
     } finally {
       setIsLoading(false);
     }
@@ -91,6 +124,40 @@ const ResetPassword = () => {
     loadResetPassword();
   };
 
+  // 토큰 확인중
+  if (isValidatingToken) {
+    return (
+      <div className="min-h-screen flex items-start justify-center bg-gray-50 px-4 pt-70">
+        <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-2xl shadow-lg">
+          <div className="text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12">
+              <svg
+                className="animate-spin h-8 w-8 text-indigo-600"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            </div>
+            <p className="mt-4 text-sm text-gray-600">링크 확인 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   // 토큰이 없는 경우
   if (tokenError) {
     return (
