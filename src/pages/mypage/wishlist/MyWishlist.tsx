@@ -394,9 +394,9 @@ const MyWishlist = () => {
         "radial-gradient(1100px circle at 15% 0%, rgba(118,90,255,0.12), transparent 45%), radial-gradient(900px circle at 85% 15%, rgba(16,185,129,0.10), transparent 45%), linear-gradient(to bottom, rgba(250,250,250,1), rgba(248,249,252,1))",
       }}
     >
-      <br />
+      
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <br />
+      
         {/* Header */}
         <div className="rounded-[26px] bg-white/70 backdrop-blur-xl ring-1 ring-black/5 shadow-sm">
           <div className="p-7 md:p-9">
@@ -587,21 +587,15 @@ const MyWishlist = () => {
                               <PlaceholderImg />
                             )}
 
-                            <div className="absolute top-3 left-3">
-                              <TimePill
-                                status={product.status}
-                                auctionStartTime={product.auctionStartTime}
-                                auctionEndTime={product.auctionEndTime}
-                              />
-                            </div>
+                            <div className="absolute left-3 right-3 top-3 z-20 flex items-center justify-between gap-3"> <div className="min-h-8 flex items-center"> <TimePill status={product.status} auctionStartTime={product.auctionStartTime} auctionEndTime={product.auctionEndTime} /> </div>
 
-                            {(() => {
+                              {(() => {
                               const wid = product.wishlistId as number | undefined;
                               const isRemoving = wid ? !!removing[wid] : false;
 
                               return (
-                                <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
-                                  <div className={cn("px-3 py-1 rounded-full text-xs font-extrabold ring-1 shadow-sm", badge.chip)}>
+                                <div className="flex items-center ">
+                                  <div className={cn("h-8 px-3 rounded-full text-[11px] font-extrabold flex items-center ring-1 shadow-sm", badge.chip)}>
                                     {badge.text}
                                   </div>
 
@@ -617,9 +611,9 @@ const MyWishlist = () => {
                                       handleUnwish(wid);
                                     }}
                                     className={cn(
-                                      "w-10 h-10 rounded-full grid place-items-center ring-1 ring-black/5 backdrop-blur transition",
-                                      "bg-white/80 hover:bg-white active:scale-95",
-                                      (!wid || isRemoving) && "opacity-50 cursor-not-allowed"
+                                      "w-10 h-10 rounded-full grid place-items-center transition",
+                                      "bg-transparent hover:bg-black/5 active:bg-black/10 active:scale-95",
+                                      (!wid || isRemoving) && "opacity-40 cursor-not-allowed hover:bg-transparent active:scale-100"
                                     )}
                                   >
                                     <Heart
@@ -629,7 +623,11 @@ const MyWishlist = () => {
                                   </button>
                                 </div>
                               );
-                            })()}
+
+
+                              })()}
+
+                            </div>
 
                             {(product.status === "READY" ||
                               product.status === "NOTSELLED" ||
