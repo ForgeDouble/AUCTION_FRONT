@@ -24,7 +24,7 @@ import ModalProvider from "./contexts/ModalProvider";
 import ProtectedRoute from "./components/route/ProtectedRoute";
 import PublicRoute from "./components/route/PublicRoute";
 import Footer from "./components/Footer";
-
+import UserProfilePage from "@/pages/mypage/publicProfile/UserProfilePage";
 function App() {
   const location = useLocation();
   const state = location.state as { backgroundLocation?: Location } | null;
@@ -92,6 +92,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
                     <MyWishlist />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path= "/user/profile/:userId" 
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                    <UserProfilePage />
                   </ProtectedRoute>
                 }
               />
