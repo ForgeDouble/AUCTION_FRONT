@@ -13,7 +13,12 @@ export async function apiFetch<T>(
       throw new UnauthorizedError();
     }
 
-    throw new ApiError(res.status, body.code, body.message);
+    throw new ApiError(
+      res.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return res.json();
