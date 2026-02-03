@@ -391,9 +391,9 @@ const MyAuctionlist = () => {
           "radial-gradient(1100px circle at 15% 0%, rgba(118,90,255,0.12), transparent 45%), radial-gradient(900px circle at 85% 15%, rgba(16,185,129,0.10), transparent 45%), linear-gradient(to bottom, rgba(250,250,250,1), rgba(248,249,252,1))",
       }}
     >
-      <br />
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <br></br>
+
         {/* Header */}
         <div className="rounded-[26px] bg-white/70 backdrop-blur-xl ring-1 ring-black/5 shadow-sm">
           <div className="p-7 md:p-9">

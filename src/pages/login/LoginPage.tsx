@@ -5,8 +5,6 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { fetchLogin } from "./LoginApi";
 import { useAuth } from "../../hooks/useAuth";
 import type { loginRequest } from "./LoginDto";
-
-// ✅ FCM 추가
 import { requestFcmToken } from "@/firebase/firebase";
 import { registerDeviceToken } from "../../api/pushApi";
 
@@ -45,28 +43,25 @@ const LoginPage = () => {
 
       localStorage.setItem("accessToken", result.result.token);
       localStorage.setItem("userId", email);
-
       await checkAuth();
 
-      // ✅ 로그인 성공 후 FCM 토큰 등록 로직 삽입
       try {
-        const alreadyRegistered =
-          localStorage.getItem("fcm_registered") === "true";
-
         const fcmToken = await requestFcmToken();
+      if (fcmToken) {
+        const prevToken = localStorage.getItem("fcm_token");
+        const prevEmail = localStorage.getItem("fcm_email");
 
-        if (fcmToken) {
-          const prevToken = localStorage.getItem("fcm_token");
+        const shouldRegister = prevToken !== fcmToken || prevEmail !== email;
 
-          if (!alreadyRegistered || prevToken !== fcmToken) {
-            await registerDeviceToken(fcmToken);
-
-            localStorage.setItem("fcm_registered", "true");
-            localStorage.setItem("fcm_token", fcmToken);
-          }
-        } else {
-          console.warn("FCM 토큰 없음 (권한 거부 또는 오류)");
+        if (shouldRegister) {
+          await registerDeviceToken(fcmToken);
+          localStorage.setItem("fcm_registered", "true");
+          localStorage.setItem("fcm_token", fcmToken);
+          localStorage.setItem("fcm_email", email);
         }
+      } else {
+        console.warn("FCM 토큰 없음 (권한 거부 또는 오류)");
+      }
       } catch (fcmError) {
         console.error("로그인 후 FCM 등록 중 오류:", fcmError);
       }

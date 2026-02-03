@@ -15,36 +15,27 @@ const Navbar = () => {
       console.error("Missing AccessToken");
       return;
     }
-
     navigate("/sell_product");
   };
 
   return (
     <>
-      <nav className="bg-black/20 backdrop-blur-lg border-b border-white/10 fixed top-0 left-0 right-0 z-50">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/85 backdrop-blur-xl border-b border-slate-200/70 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2 cursor-pointer">
               <img
                 src={logoBid}
                 alt="BID"
-                style={{
-                  height: "65px",
-                  display: "block",
-                  float: "left",
-                  filter: "brightness(2.0)",
-                }}
-                onClick={() => {
-                  window.location.replace("/");
-                }}
+                className="h-[42px] select-none"
+                onClick={() => window.location.replace("/")}
               />
             </div>
 
-            {/* 중앙 메뉴 */}
             <div className="hidden md:flex items-center space-x-8">
               <button
                 type="button"
-                className="text-gray-100 hover:text-white transition-colors cursor-pointer"
+                className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
                 onClick={() => navigate("/auction_list")}
               >
                 경매 목록
@@ -52,7 +43,7 @@ const Navbar = () => {
 
               <button
                 type="button"
-                className="text-gray-100 hover:text-white transition-colors cursor-pointer"
+                className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
                 onClick={() => navigateSellProduct()}
               >
                 판매하기
@@ -60,19 +51,19 @@ const Navbar = () => {
 
               <button
                 type="button"
-                className="text-gray-100 hover:text-white transition-colors cursor-pointer"
+                className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
               >
                 고객센터
               </button>
             </div>
 
-            {/* 우측: 인증/채팅/알림/프로필 */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center">
               <AuthButtons />
             </div>
           </div>
         </div>
       </nav>
+      <div className="h-16" />
       <Outlet />
     </>
   );

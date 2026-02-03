@@ -448,7 +448,7 @@ const MyProfile = () => {
                 <MenuItem
                   icon={Gavel}
                   label="내 입찰 목록"
-                  onClick={() => navigate("/my_bid_list")}
+                  onClick={() => navigate("/mypage/bidlist")}
                   colorClass="bg-purple-50 text-purple-500"
                 />
               </div>
