@@ -51,22 +51,13 @@ async function ensureServiceWorker(): Promise<ServiceWorkerRegistration | null> 
     console.warn("[FCM] serviceWorker 를 지원하지 않는 환경입니다.");
     return null;
   }
-
-  const existing = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+  const existing = await navigator.serviceWorker.getRegistration();
   if (existing) {
-    console.log("[FCM] 기존 SW 등록 재사용:", existing);
     return existing;
   }
-
-  console.log("[FCM] SW 신규 등록 시도 (/firebase-messaging-sw.js)");
-
   const reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-
-  console.log("[FCM] SW 등록 완료:", reg);
-
   return reg;
 }
-
 
 // 토큰 요청 함수
 export async function requestFcmToken(): Promise<string | null> {
