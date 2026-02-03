@@ -1,3 +1,4 @@
+// src/pages/mypage/publicProfile/UserProfileApi.ts
 import type { ApiResponse } from "@/type/CommonType";
 
 const BASE =
