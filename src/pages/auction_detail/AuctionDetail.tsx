@@ -50,7 +50,11 @@ const AuctionDetail = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState<string>("");
   const [wishlistId, setWishlistId] = useState<number | null>(null);
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [timeLeft, setTimeLeft] = useState({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
 
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]);
   // const [stompClient, setStompClient] = useState<any>(null);
@@ -84,16 +88,17 @@ const AuctionDetail = () => {
   const { userEmail: authEmail, userId: authUserId } = useAuth();
 
   const myEmailNorm = useMemo(() => {
-    const fromAuth = String(authEmail ?? "").trim().toLowerCase();
+    const fromAuth = String(authEmail ?? "")
+      .trim()
+      .toLowerCase();
     if (fromAuth) return fromAuth;
-
 
     const raw =
       localStorage.getItem("userEmail") ||
       localStorage.getItem("email") ||
       localStorage.getItem("userId") ||
       "";
-      return String(raw).trim().toLowerCase();
+    return String(raw).trim().toLowerCase();
   }, [authEmail]);
 
   const [bidDetailOpen, setBidDetailOpen] = useState(false);
@@ -123,20 +128,24 @@ const AuctionDetail = () => {
     });
   };
 
-
   const sellerEmailNorm = useMemo(() => {
-    return String(sellerInfo?.email ?? "").trim().toLowerCase();
+    return String(sellerInfo?.email ?? "")
+      .trim()
+      .toLowerCase();
   }, [sellerInfo?.email]);
 
   const isSelfSeller = useMemo(() => {
     const myId = authUserId != null ? Number(authUserId) : null;
-    const sellerId = sellerInfo?.userId != null ? Number(sellerInfo.userId) : null;
+    const sellerId =
+      sellerInfo?.userId != null ? Number(sellerInfo.userId) : null;
 
     const sameId = myId != null && sellerId != null && myId === sellerId;
     const sameEmail =
-    myEmailNorm !== "" && sellerEmailNorm !== "" && myEmailNorm === sellerEmailNorm;
+      myEmailNorm !== "" &&
+      sellerEmailNorm !== "" &&
+      myEmailNorm === sellerEmailNorm;
 
-  return sameId || sameEmail;
+    return sameId || sameEmail;
   }, [authUserId, myEmailNorm, sellerEmailNorm, sellerInfo?.userId]);
 
   const canChatSeller = useMemo(() => {
@@ -228,7 +237,10 @@ const AuctionDetail = () => {
     if (productId == null) return;
     try {
       const data = await fetchSellerByProductId(productId);
-      const formattedData = { ...data.result, createdAt: formatDate(data.result.createdAt) };
+      const formattedData = {
+        ...data.result,
+        createdAt: formatDate(data.result.createdAt),
+      };
       setSellerInfo(formattedData);
     } catch (error) {
       console.error(error);
@@ -306,8 +318,8 @@ const AuctionDetail = () => {
     if (!productId) return;
 
     if (isSelfSeller) {
-    setWishlistId(null);
-    return;
+      setWishlistId(null);
+      return;
     }
 
     loadIsWishlisted(productId);
@@ -381,7 +393,8 @@ const AuctionDetail = () => {
 
   const validateBidAmount = (amountString: string): string | null => {
     const amount = parseInt(amountString.replace(/,/g, ""), 10);
-    if (!amountString || isNaN(amount) || amount <= 0) return BID_RESPONSE_MESSAGES.INVALID_INPUT_FORMAT;
+    if (!amountString || isNaN(amount) || amount <= 0)
+      return BID_RESPONSE_MESSAGES.INVALID_INPUT_FORMAT;
     if (amount % 1000 !== 0) return BID_RESPONSE_MESSAGES.QUANTITY_ERROR;
     return null;
   };
@@ -389,85 +402,31 @@ const AuctionDetail = () => {
   useEffect(() => {
     if (!product) return;
     if (product.status === "PROCESSING") loadBidsFromRedis();
-    else if (product.status === "SELLED" || product.status === "NOTSELLED") loadBidsFromDB();
+    else if (product.status === "SELLED" || product.status === "NOTSELLED")
+      loadBidsFromDB();
     else if (product.status === "READY") setBidLogs([]);
   }, [product]);
 
   useEffect(() => {
-  const isLive = product?.status === "PROCESSING";
-  if (!productId || !isLive) {
-    // 라이브가 아니면 혹시 남아있는 연결 정리
-    try {
-      if (stompRef.current) stompRef.current.disconnect(() => {});
-    } catch {}
-    stompRef.current = null;
+    const isLive = product?.status === "PROCESSING";
+    if (!productId || !isLive) {
+      // 라이브가 아니면 혹시 남아있는 연결 정리
+      try {
+        if (stompRef.current) stompRef.current.disconnect(() => {});
+      } catch {}
+      stompRef.current = null;
 
-    try {
-      if (socketRef.current) socketRef.current.close();
-    } catch {}
-    socketRef.current = null;
+      try {
+        if (socketRef.current) socketRef.current.close();
+      } catch {}
+      socketRef.current = null;
 
-    return;
-  }
-
-  let alive = true;
-
-  // effect 시작 시 기존 연결 정리(중복 방지)
-  try {
-    if (stompRef.current) stompRef.current.disconnect(() => {});
-  } catch {}
-  stompRef.current = null;
-
-  try {
-    if (socketRef.current) socketRef.current.close();
-  } catch {}
-  socketRef.current = null;
-
-  const token = localStorage.getItem("accessToken");
-  const endpoint = token ? "/ws" : "/ws-public";
-
-  const socket = new SockJS(`http://localhost:8080${endpoint}`);
-  socketRef.current = socket;
-
-  const stomp = Stomp.over(socket);
-  stompRef.current = stomp;
-
-  stomp.debug = () => {};
-
-  stomp.connect(
-    token ? { Authorization: `Bearer ${token}` } : {},
-    () => {
-      if (!alive) return;
-
-      stomp.subscribe(`/topic/auction/${productId}`, (message) => {
-        if (!alive) return;
-        const payload = JSON.parse(message.body);
-        console.log("[BID WS PAYLOAD]", payload);
-        setBidLogs((prev) => [
-          {
-            ...payload,
-            createdAtDisplay: dayjs(payload.createdAt).format("HH:mm:ss"),
-          },
-            ...prev,
-        ]);
-      });
-
-      if (token) {
-        stomp.subscribe("/user/queue/bid_response", (response) => {
-          if (!alive) return;
-          handleBidResponse(JSON.parse(response.body));
-        });
-      }
-    },
-    (error) => {
-      if (!alive) return;
-      console.error("연결 실패:", error);
+      return;
     }
-  );
 
-  return () => {
-    alive = false;
+    let alive = true;
 
+    // effect 시작 시 기존 연결 정리(중복 방지)
     try {
       if (stompRef.current) stompRef.current.disconnect(() => {});
     } catch {}
@@ -477,8 +436,63 @@ const AuctionDetail = () => {
       if (socketRef.current) socketRef.current.close();
     } catch {}
     socketRef.current = null;
-  };
-}, [product?.status, productId]);
+
+    const token = localStorage.getItem("accessToken");
+    const endpoint = token ? "/ws" : "/ws-public";
+
+    const socket = new SockJS(`http://localhost:8080${endpoint}`);
+    socketRef.current = socket;
+
+    const stomp = Stomp.over(socket);
+    stompRef.current = stomp;
+
+    stomp.debug = () => {};
+
+    stomp.connect(
+      token ? { Authorization: `Bearer ${token}` } : {},
+      () => {
+        if (!alive) return;
+
+        stomp.subscribe(`/topic/auction/${productId}`, (message) => {
+          if (!alive) return;
+          const payload = JSON.parse(message.body);
+          console.log("[BID WS PAYLOAD]", payload);
+          setBidLogs((prev) => [
+            {
+              ...payload,
+              createdAtDisplay: dayjs(payload.createdAt).format("HH:mm:ss"),
+            },
+            ...prev,
+          ]);
+        });
+
+        if (token) {
+          stomp.subscribe("/user/queue/bid_response", (response) => {
+            if (!alive) return;
+            handleBidResponse(JSON.parse(response.body));
+          });
+        }
+      },
+      (error) => {
+        if (!alive) return;
+        console.error("연결 실패:", error);
+      },
+    );
+
+    return () => {
+      alive = false;
+
+      try {
+        if (stompRef.current) stompRef.current.disconnect(() => {});
+      } catch {}
+      stompRef.current = null;
+
+      try {
+        if (socketRef.current) socketRef.current.close();
+      } catch {}
+      socketRef.current = null;
+    };
+  }, [product?.status, productId]);
 
   const sendBid = () => {
     if (product?.status !== "PROCESSING") {
@@ -512,7 +526,11 @@ const AuctionDetail = () => {
     const bid = { productId: productId, bidAmount: amount, isWinned: "N" };
 
     try {
-      stomp.send("/app/bid", { Authorization: `Bearer ${token}` }, JSON.stringify(bid));
+      stomp.send(
+        "/app/bid",
+        { Authorization: `Bearer ${token}` },
+        JSON.stringify(bid),
+      );
     } catch (error) {
       if (bidTimeoutRef.current) clearTimeout(bidTimeoutRef.current);
       setBidLoading(false);
@@ -520,7 +538,9 @@ const AuctionDetail = () => {
     }
   };
 
-  const images = product?.images ? [...product.images].sort((a, b) => a.position - b.position) : [];
+  const images = product?.images
+    ? [...product.images].sort((a, b) => a.position - b.position)
+    : [];
   const mainImageUrl = images[currentImageIndex]?.url || placeholderImg;
 
   const nextImage = () => {
@@ -540,7 +560,7 @@ const AuctionDetail = () => {
     window.open(
       `/chat?roomId=${encodeURIComponent(roomId)}`,
       `chat_${roomId}`,
-      `width=${w},height=${h},left=${left},top=${top},resizable=yes`
+      `width=${w},height=${h},left=${left},top=${top},resizable=yes`,
     );
   };
 
@@ -564,7 +584,10 @@ const AuctionDetail = () => {
     }
 
     try {
-      const roomId = await openRoom(token, { targetEmail: sellerInfo.email, adminChat: false });
+      const roomId = await openRoom(token, {
+        targetEmail: sellerInfo.email,
+        adminChat: false,
+      });
       if (roomId) openRoomWindow(roomId);
     } catch (e: any) {
       alert("채팅방 연결 실패");
@@ -573,7 +596,9 @@ const AuctionDetail = () => {
 
   const isLive = product?.status === "PROCESSING";
   const currentTopPrice =
-    bidLogs.length > 0 ? Number(bidLogs[0].bidAmount) : Number(product?.price || 0);
+    bidLogs.length > 0
+      ? Number(bidLogs[0].bidAmount)
+      : Number(product?.price || 0);
 
   return (
     <div className="min-h-screen bg-white pb-28 lg:h-screen lg:overflow-hidden lg:pb-0">
@@ -581,7 +606,9 @@ const AuctionDetail = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="min-w-0">
-              <div className="text-xs text-slate-500 font-medium">상품 상세</div>
+              <div className="text-xs text-slate-500 font-medium">
+                상품 상세
+              </div>
               <div className="text-sm font-extrabold text-slate-900 truncate">
                 {product?.productName || "경매 상세"}
               </div>
@@ -593,13 +620,19 @@ const AuctionDetail = () => {
               className="px-3 py-1 rounded-full text-xs font-extrabold border"
               style={{
                 color: isLive ? ACCENT : "#475569",
-                backgroundColor: isLive ? ACCENT_SOFT : "rgba(148,163,184,0.12)",
-                borderColor: isLive ? "rgba(118,90,255,0.25)" : "rgba(148,163,184,0.25)",
+                backgroundColor: isLive
+                  ? ACCENT_SOFT
+                  : "rgba(148,163,184,0.12)",
+                borderColor: isLive
+                  ? "rgba(118,90,255,0.25)"
+                  : "rgba(148,163,184,0.25)",
               }}
             >
               {isLive ? "LIVE" : "CLOSED"}
             </span>
-            <span className="hidden sm:inline text-xs text-slate-400">POT #{productId}</span>
+            <span className="hidden sm:inline text-xs text-slate-400">
+              POT #{productId}
+            </span>
           </div>
         </div>
       </div>
@@ -617,7 +650,9 @@ const AuctionDetail = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-slate-500 font-semibold">POT #{productId}</span>
+                      <span className="text-xs text-slate-500 font-semibold">
+                        POT #{productId}
+                      </span>
                       <span className="text-slate-300">•</span>
                       <span className="text-xs text-slate-500">
                         {isLive ? "경매 진행 중" : "경매 종료"}
@@ -632,7 +667,10 @@ const AuctionDetail = () => {
                             borderColor: "rgba(118,90,255,0.25)",
                           }}
                         >
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT }} />
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: ACCENT }}
+                          />
                           LIVE
                         </span>
                       )}
@@ -664,7 +702,9 @@ const AuctionDetail = () => {
                   </div>
 
                   <div className="hidden md:block text-right">
-                    <div className="text-xs text-slate-500 font-bold">현재 최고가</div>
+                    <div className="text-xs text-slate-500 font-bold">
+                      현재 최고가
+                    </div>
                     <div className="mt-1 text-2xl font-extrabold text-slate-900 tabular-nums">
                       ₩{formatNumber(String(currentTopPrice))}
                     </div>
@@ -708,7 +748,9 @@ const AuctionDetail = () => {
                     <div className="absolute inset-0 z-20 bg-white/70 backdrop-blur-[2px] flex items-center justify-center">
                       <div className="px-6 py-3 rounded-2xl bg-white border border-slate-200 flex items-center gap-2">
                         <Clock className="w-5 h-5 text-slate-900" />
-                        <span className="font-extrabold text-slate-900">경매 종료</span>
+                        <span className="font-extrabold text-slate-900">
+                          경매 종료
+                        </span>
                       </div>
                     </div>
                   )}
@@ -732,14 +774,31 @@ const AuctionDetail = () => {
                     <button
                       onClick={handleWishlistToggle}
                       disabled={!canWishlist}
-                      className={"p-2.5 rounded-full border transition active:scale-95" + (canWishlist ? "" : "opacity-50 cursor-not-allowed")}
+                      className={
+                        "p-2.5 rounded-full border transition active:scale-95" +
+                        (canWishlist ? "" : "opacity-50 cursor-not-allowed")
+                      }
                       style={{
-                        backgroundColor: !canWishlist ? "rgba(148,163,184,0.10)" : wishlistId ? "rgba(244,63,94,0.10)" : "white",
-                        color: !canWishlist ? "#94a3b8" : wishlistId ? "rgb(244,63,94)" : "#64748b",
-                        borderColor: !canWishlist ? "rgba(148,163,184,0.35)" : wishlistId ? "rgba(244,63,94,0.18)" : "rgba(148,163,184,0.35)",
+                        backgroundColor: !canWishlist
+                          ? "rgba(148,163,184,0.10)"
+                          : wishlistId
+                            ? "rgba(244,63,94,0.10)"
+                            : "white",
+                        color: !canWishlist
+                          ? "#94a3b8"
+                          : wishlistId
+                            ? "rgb(244,63,94)"
+                            : "#64748b",
+                        borderColor: !canWishlist
+                          ? "rgba(148,163,184,0.35)"
+                          : wishlistId
+                            ? "rgba(244,63,94,0.18)"
+                            : "rgba(148,163,184,0.35)",
                       }}
                     >
-                      <Heart className={`w-4 h-4 ${(wishlistId && canWishlist) ? "fill-current" : ""}`} />
+                      <Heart
+                        className={`w-4 h-4 ${wishlistId && canWishlist ? "fill-current" : ""}`}
+                      />
                     </button>
 
                     <div className="relative">
@@ -752,7 +811,10 @@ const AuctionDetail = () => {
                         className="p-2.5 rounded-full bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 transition active:scale-95"
                       >
                         {copied ? (
-                          <Check className="w-4 h-4" style={{ color: ACCENT }} />
+                          <Check
+                            className="w-4 h-4"
+                            style={{ color: ACCENT }}
+                          />
                         ) : (
                           <Share2 className="w-4 h-4" />
                         )}
@@ -787,7 +849,9 @@ const AuctionDetail = () => {
                               active ? "w-10" : "w-6 hover:w-8"
                             }`}
                             style={{
-                              backgroundColor: active ? ACCENT : "rgba(148,163,184,0.45)",
+                              backgroundColor: active
+                                ? ACCENT
+                                : "rgba(148,163,184,0.45)",
                             }}
                             aria-label={`이미지 ${idx + 1}로 이동`}
                             aria-current={active ? "true" : "false"}
@@ -807,7 +871,12 @@ const AuctionDetail = () => {
               <div ref={bidDetailAnchorRef} />
 
               {bidDetailOpen && (
-                <BidDetailPanel bidLogs={bidLogs} isLive={isLive} ACCENT={ACCENT} ACCENT_SOFT={ACCENT_SOFT} />
+                <BidDetailPanel
+                  bidLogs={bidLogs}
+                  isLive={isLive}
+                  ACCENT={ACCENT}
+                  ACCENT_SOFT={ACCENT_SOFT}
+                />
               )}
 
               {bidDetailOpen && <div className="border-t border-slate-100" />}
@@ -815,10 +884,15 @@ const AuctionDetail = () => {
               <div className="p-6 md:p-8">
                 <div className="flex items-center justify-between">
                   <h2 className="text-base md:text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5" style={{ color: ACCENT }} />
+                    <AlertCircle
+                      className="w-5 h-5"
+                      style={{ color: ACCENT }}
+                    />
                     상품 상세 정보
                   </h2>
-                  <div className="text-xs text-slate-400">설명 / 구성 / 상태</div>
+                  <div className="text-xs text-slate-400">
+                    설명 / 구성 / 상태
+                  </div>
                 </div>
 
                 <div className="mt-5 relative">
@@ -854,7 +928,9 @@ const AuctionDetail = () => {
 
                 <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
-                    <div className="text-sm font-extrabold text-slate-900">거래 안내</div>
+                    <div className="text-sm font-extrabold text-slate-900">
+                      거래 안내
+                    </div>
                     <ul className="mt-2 text-sm text-slate-600 space-y-1">
                       <li>• 입찰 후 취소는 불가합니다.</li>
                       <li>• 낙찰 후 취소는 불가합니다.</li>
@@ -862,7 +938,9 @@ const AuctionDetail = () => {
                     </ul>
                   </div>
                   <div className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
-                    <div className="text-sm font-extrabold text-slate-900">배송 / 수령</div>
+                    <div className="text-sm font-extrabold text-slate-900">
+                      배송 / 수령
+                    </div>
                     <ul className="mt-2 text-sm text-slate-600 space-y-1">
                       <li>• 판매자와 협의 후 진행됩니다.</li>
                       <li>• 파손/분실은 택배사 정책을 따릅니다.</li>
@@ -891,8 +969,12 @@ const AuctionDetail = () => {
                       className="px-3 py-1 rounded-full text-xs font-extrabold border"
                       style={{
                         color: isLive ? ACCENT : "#475569",
-                        backgroundColor: isLive ? ACCENT_SOFT : "rgba(148,163,184,0.12)",
-                        borderColor: isLive ? "rgba(118,90,255,0.25)" : "rgba(148,163,184,0.25)",
+                        backgroundColor: isLive
+                          ? ACCENT_SOFT
+                          : "rgba(148,163,184,0.12)",
+                        borderColor: isLive
+                          ? "rgba(118,90,255,0.25)"
+                          : "rgba(148,163,184,0.25)",
                       }}
                     >
                       {isLive ? "LIVE" : "CLOSED"}
@@ -901,10 +983,18 @@ const AuctionDetail = () => {
 
                   <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
                     <div className="flex items-center justify-between">
-                      <div className="text-xs font-extrabold text-slate-500">현재 최고가</div>
+                      <div className="text-xs font-extrabold text-slate-500">
+                        현재 최고가
+                      </div>
                       {isLive && (
-                        <div className="flex items-center gap-2 text-[11px] font-extrabold" style={{ color: ACCENT }}>
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT }} />
+                        <div
+                          className="flex items-center gap-2 text-[11px] font-extrabold"
+                          style={{ color: ACCENT }}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: ACCENT }}
+                          />
                           LIVE
                         </div>
                       )}
@@ -924,16 +1014,25 @@ const AuctionDetail = () => {
 
                   {isLive && (
                     <div className="mt-4 grid grid-cols-3 gap-2">
-                      {(["hours", "minutes", "seconds"] as const).map((unit) => (
-                        <div key={unit} className="rounded-2xl border border-slate-100 bg-white p-3 text-center">
-                          <div className="text-xl font-extrabold text-slate-900 tabular-nums">
-                            {timeLeft[unit].toString().padStart(2, "0")}
+                      {(["hours", "minutes", "seconds"] as const).map(
+                        (unit) => (
+                          <div
+                            key={unit}
+                            className="rounded-2xl border border-slate-100 bg-white p-3 text-center"
+                          >
+                            <div className="text-xl font-extrabold text-slate-900 tabular-nums">
+                              {timeLeft[unit].toString().padStart(2, "0")}
+                            </div>
+                            <div className="mt-1 text-[10px] font-extrabold text-slate-400 tracking-widest">
+                              {unit === "hours"
+                                ? "시간"
+                                : unit === "minutes"
+                                  ? "분"
+                                  : "초"}
+                            </div>
                           </div>
-                          <div className="mt-1 text-[10px] font-extrabold text-slate-400 tracking-widest">
-                            {unit === "hours" ? "시간" : unit === "minutes" ? "분" : "초"}
-                          </div>
-                        </div>
-                      ))}
+                        ),
+                      )}
                     </div>
                   )}
 
@@ -957,30 +1056,63 @@ const AuctionDetail = () => {
                       disabled={!isLive || bidLoading}
                       className="w-full py-4 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 transition active:scale-[0.99]"
                       style={{
-                        backgroundColor: isLive ? ACCENT : "rgba(148,163,184,0.20)",
+                        backgroundColor: isLive
+                          ? ACCENT
+                          : "rgba(148,163,184,0.20)",
                         color: isLive ? "white" : "#94a3b8",
                       }}
                     >
                       {bidLoading ? (
                         <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      ) : isLive ? (
+                        "입찰하기"
                       ) : (
-                        isLive ? "입찰하기" : "입찰 마감"
+                        "입찰 마감"
                       )}
                     </button>
 
                     <div className="mt-3 rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                      <button type="button" onClick={() => setBidPolicyOpen((v) => !v)} className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition" >
-                        <div className="flex items-center gap-2"> <AlertCircle className="w-4 h-4" style={{ color: ACCENT }} />
-                          <span className="text-sm font-extrabold text-slate-900">입찰 정책</span>
+                      <button
+                        type="button"
+                        onClick={() => setBidPolicyOpen((v) => !v)}
+                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition"
+                      >
+                        <div className="flex items-center gap-2">
+                          {" "}
+                          <AlertCircle
+                            className="w-4 h-4"
+                            style={{ color: ACCENT }}
+                          />
+                          <span className="text-sm font-extrabold text-slate-900">
+                            입찰 정책
+                          </span>
                         </div>
-                        <span className="text-xs font-extrabold" style={{ color: ACCENT }}>
+                        <span
+                          className="text-xs font-extrabold"
+                          style={{ color: ACCENT }}
+                        >
                           {bidPolicyOpen ? "접기" : "펼치기"}
                         </span>
                       </button>
-                      <div className="px-4 pb-4 text-xs text-slate-600 leading-relaxed" style={{ maxHeight: bidPolicyOpen ? 320 : 92, overflow: "hidden", transition: "max-height 220ms ease", }} >
-                        <ul className="space-y-1"> {BID_POLICIES.map((t, i) => ( <li key={i}>• {t}</li> ))} </ul>
+                      <div
+                        className="px-4 pb-4 text-xs text-slate-600 leading-relaxed"
+                        style={{
+                          maxHeight: bidPolicyOpen ? 320 : 92,
+                          overflow: "hidden",
+                          transition: "max-height 220ms ease",
+                        }}
+                      >
+                        <ul className="space-y-1">
+                          {" "}
+                          {BID_POLICIES.map((t, i) => (
+                            <li key={i}>• {t}</li>
+                          ))}{" "}
+                        </ul>
                         {!bidPolicyOpen && (
-                          <div className="mt-2 text-[11px]" style={{ color: ACCENT }}>
+                          <div
+                            className="mt-2 text-[11px]"
+                            style={{ color: ACCENT }}
+                          >
                             더 보기
                           </div>
                         )}
@@ -994,8 +1126,13 @@ const AuctionDetail = () => {
                 <div className="p-5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5" style={{ color: ACCENT }} />
-                      <div className="font-extrabold text-slate-900 text-sm">실시간 입찰 내역</div>
+                      <TrendingUp
+                        className="w-5 h-5"
+                        style={{ color: ACCENT }}
+                      />
+                      <div className="font-extrabold text-slate-900 text-sm">
+                        실시간 입찰 내역
+                      </div>
                       {isLive && (
                         <span
                           className="px-2 py-0.5 rounded-full text-[11px] font-extrabold border"
@@ -1011,7 +1148,9 @@ const AuctionDetail = () => {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <div className="text-xs text-slate-500">{bidLogs.length}건</div>
+                      <div className="text-xs text-slate-500">
+                        {bidLogs.length}건
+                      </div>
 
                       <button
                         type="button"
@@ -1029,14 +1168,21 @@ const AuctionDetail = () => {
                   <div className="mt-3 max-h-[420px] overflow-y-auto rounded-2xl border border-slate-100 bg-white">
                     {bidLogs.length === 0 ? (
                       <div className="py-12 text-center text-slate-400">
-                        <div className="font-semibold text-sm">아직 입찰 내역이 없습니다.</div>
-                        <div className="text-xs mt-1">첫 번째 입찰자가 되어보세요</div>
+                        <div className="font-semibold text-sm">
+                          아직 입찰 내역이 없습니다.
+                        </div>
+                        <div className="text-xs mt-1">
+                          첫 번째 입찰자가 되어보세요
+                        </div>
                       </div>
                     ) : (
                       <div className="divide-y divide-slate-100">
                         {bidLogs.map((bid, index) => {
                           const isTop = index === 0 && isLive;
-                          const initial = (bid.profileImageUrl || "?").slice(0, 1);
+                          const initial = (bid.profileImageUrl || "?").slice(
+                            0,
+                            1,
+                          );
 
                           return (
                             <div
@@ -1047,7 +1193,10 @@ const AuctionDetail = () => {
                               }}
                             >
                               {isTop && (
-                                <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: ACCENT }} />
+                                <div
+                                  className="absolute left-0 top-0 bottom-0 w-1"
+                                  style={{ backgroundColor: ACCENT }}
+                                />
                               )}
 
                               <div className="flex items-center justify-between gap-3">
@@ -1055,13 +1204,22 @@ const AuctionDetail = () => {
                                   <div
                                     className="w-9 h-9 rounded-2xl border flex items-center justify-center text-[12px] font-extrabold"
                                     style={{
-                                      borderColor: isTop ? "rgba(118,90,255,0.35)" : "rgba(148,163,184,0.35)",
-                                      backgroundColor: isTop ? "rgba(118,90,255,0.12)" : "white",
+                                      borderColor: isTop
+                                        ? "rgba(118,90,255,0.35)"
+                                        : "rgba(148,163,184,0.35)",
+                                      backgroundColor: isTop
+                                        ? "rgba(118,90,255,0.12)"
+                                        : "white",
                                       color: isTop ? ACCENT : "#334155",
                                     }}
                                     title={bid.userNickName}
                                   >
-                                    <BidAvatar url={bid.profileImageUrl} name={bid.userNickName} isTop={isTop} ACCENT={ACCENT} />
+                                    <BidAvatar
+                                      url={bid.profileImageUrl}
+                                      name={bid.userNickName}
+                                      isTop={isTop}
+                                      ACCENT={ACCENT}
+                                    />
                                   </div>
 
                                   <div className="min-w-0">
@@ -1076,7 +1234,8 @@ const AuctionDetail = () => {
                                           style={{
                                             color: ACCENT,
                                             backgroundColor: ACCENT_SOFT,
-                                            borderColor: "rgba(118,90,255,0.25)",
+                                            borderColor:
+                                              "rgba(118,90,255,0.25)",
                                           }}
                                         >
                                           최고가
@@ -1084,19 +1243,33 @@ const AuctionDetail = () => {
                                       )}
                                     </div>
 
-                                    <div className="text-[10px] text-slate-400 font-mono"> {bid.createdAtDisplay ?? bid.createdAt} </div>
+                                    <div className="text-[10px] text-slate-400 font-mono">
+                                      {" "}
+                                      {bid.createdAtDisplay ??
+                                        bid.createdAt}{" "}
+                                    </div>
                                   </div>
                                 </div>
 
                                 <div className="text-right">
-                                  <div className="font-extrabold tabular-nums" style={{ color: isTop ? ACCENT : "#0f172a" }}>
+                                  <div
+                                    className="font-extrabold tabular-nums"
+                                    style={{
+                                      color: isTop ? ACCENT : "#0f172a",
+                                    }}
+                                  >
                                     ₩{formatNumber(String(bid.bidAmount))}
                                   </div>
 
                                   {isTop && (
                                     <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-extrabold">
-                                      <ArrowUp className="w-3 h-3" style={{ color: ACCENT }} />
-                                      <span style={{ color: ACCENT }}>Highest</span>
+                                      <ArrowUp
+                                        className="w-3 h-3"
+                                        style={{ color: ACCENT }}
+                                      />
+                                      <span style={{ color: ACCENT }}>
+                                        Highest
+                                      </span>
                                     </div>
                                   )}
                                 </div>
@@ -1113,8 +1286,12 @@ const AuctionDetail = () => {
               <div className="rounded-[28px] border border-slate-100 bg-white p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-sm font-extrabold text-slate-900">판매자 정보</div>
-                    <div className="text-xs text-slate-500 mt-1">문의/거래는 채팅을 이용하세요</div>
+                    <div className="text-sm font-extrabold text-slate-900">
+                      판매자 정보
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      문의/거래는 채팅을 이용하세요
+                    </div>
                   </div>
 
                   <button
@@ -1131,60 +1308,93 @@ const AuctionDetail = () => {
                         ? "text-slate-400 hover:text-rose-600 cursor-pointer"
                         : "text-slate-300 cursor-not-allowed opacity-60")
                     }
-                    title={canReportSeller ? "신고" : "본인에게는 신고할 수 없습니다."}
+                    title={
+                      canReportSeller
+                        ? "신고"
+                        : "본인에게는 신고할 수 없습니다."
+                    }
                   >
                     <Siren className="w-3.5 h-3.5" />
                     신고
                   </button>
-
                 </div>
-                <div className="mt-5 flex items-center gap-4"> 
-                  <button type="button" onClick={goSellerProfile} className="w-14 h-14 rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center hover:ring-2 hover:ring-slate-900/5 transition" title="프로필 보기" >
-                    {sellerInfo?.profileImageUrl ? ( <img src={sellerInfo.profileImageUrl} alt="Seller" className="w-full h-full object-cover" /> ) : ( <User className="w-7 h-7 text-slate-300" /> )}
-                  </button>
-                  <div className="flex-1 min-w-0"> <div className="flex items-center gap-2 min-w-0">
-                    <button type="button" onClick={goSellerProfile} className="text-lg font-extrabold text-slate-900 truncate hover:underline" title="프로필 보기" > {sellerInfo?.nickname || "판매자"}</button>
+                <div className="mt-5 flex items-center gap-4">
                   <button
                     type="button"
                     onClick={goSellerProfile}
-                    className="px-2 py-0.5 rounded-full text-[11px] font-extrabold border hover:bg-slate-50 transition shrink-0"
-                    style={{
-                      color: ACCENT,
-                      borderColor: "rgba(118,90,255,0.25)",
-                      backgroundColor: ACCENT_SOFT,
-                    }}
+                    className="w-14 h-14 rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center hover:ring-2 hover:ring-slate-900/5 transition"
+                    title="프로필 보기"
                   >
-                    프로필
+                    {sellerInfo?.profileImageUrl ? (
+                      <img
+                        src={sellerInfo.profileImageUrl}
+                        alt="Seller"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-7 h-7 text-slate-300" />
+                    )}
                   </button>
+                  <div className="flex-1 min-w-0">
+                    {" "}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <button
+                        type="button"
+                        onClick={goSellerProfile}
+                        className="text-lg font-extrabold text-slate-900 truncate hover:underline"
+                        title="프로필 보기"
+                      >
+                        {" "}
+                        {sellerInfo?.nickname || "판매자"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={goSellerProfile}
+                        className="px-2 py-0.5 rounded-full text-[11px] font-extrabold border hover:bg-slate-50 transition shrink-0"
+                        style={{
+                          color: ACCENT,
+                          borderColor: "rgba(118,90,255,0.25)",
+                          backgroundColor: ACCENT_SOFT,
+                        }}
+                      >
+                        프로필
+                      </button>
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                      <span>판매성공 {sellerInfo?.selledBidCount || 0}회</span>
+                      <span className="text-slate-300">•</span>
+                      <span>가입일 {sellerInfo?.createdAt}</span>
+                    </div>
+                  </div>
                 </div>
-
-                <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                  <span>판매성공 {sellerInfo?.selledBidCount || 0}회</span>
-                  <span className="text-slate-300">•</span>
-                  <span>가입일 {sellerInfo?.createdAt}</span>
-                </div>
-
-                </div>
-              </div>
 
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <button
                     onClick={handleContactSeller}
                     disabled={!canChatSeller}
                     className={
-                    "py-3 rounded-2xl border font-extrabold text-sm transition flex items-center justify-center gap-2 " +
-                    (canChatSeller
-                    ? "bg-white border-slate-200 text-slate-900 hover:bg-slate-50"
-                    : "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-70")
+                      "py-3 rounded-2xl border font-extrabold text-sm transition flex items-center justify-center gap-2 " +
+                      (canChatSeller
+                        ? "bg-white border-slate-200 text-slate-900 hover:bg-slate-50"
+                        : "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-70")
                     }
-                    title={canChatSeller ? "1:1 문의" : "본인 상품에는 판매자 문의(채팅)가 불가합니다."}
+                    title={
+                      canChatSeller
+                        ? "1:1 문의"
+                        : "본인 상품에는 판매자 문의(채팅)가 불가합니다."
+                    }
                   >
                     <MessageCircle className="w-4 h-4" />
                     1:1 문의
                   </button>
 
-                  <div className="py-3 rounded-2xl text-white text-center" style={{ backgroundColor: ACCENT }}>
-                    <div className="text-[11px] text-white/70 font-extrabold">신뢰도</div>
+                  <div
+                    className="py-3 rounded-2xl text-white text-center"
+                    style={{ backgroundColor: ACCENT }}
+                  >
+                    <div className="text-[11px] text-white/70 font-extrabold">
+                      신뢰도
+                    </div>
                     <div className="text-sm font-extrabold">98%</div>
                   </div>
                 </div>
@@ -1207,7 +1417,9 @@ const AuctionDetail = () => {
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="min-w-0">
-              <div className="text-[11px] text-slate-500 font-extrabold">현재 최고가</div>
+              <div className="text-[11px] text-slate-500 font-extrabold">
+                현재 최고가
+              </div>
               <div className="text-sm font-extrabold text-slate-900 tabular-nums truncate">
                 ₩{formatNumber(String(currentTopPrice))}
               </div>
@@ -1287,21 +1499,28 @@ function buildBidSeries(bidLogs: BidLogDto[], rangeMs: number, binMs: number) {
     .filter((t): t is number => typeof t === "number" && Number.isFinite(t))
     .sort((a, b) => a - b);
 
-  if (times.length === 0) return { points: [] as SeriesPoint[], maxY: 0, peak: undefined as SeriesPoint | undefined };
+  if (times.length === 0)
+    return {
+      points: [] as SeriesPoint[],
+      maxY: 0,
+      peak: undefined as SeriesPoint | undefined,
+    };
 
   const end = times[times.length - 1];
   const start = end - rangeMs;
 
   const bucketCount = Math.max(2, Math.floor((end - start) / binMs) + 1);
 
-  const points: SeriesPoint[] = Array.from({ length: bucketCount }).map((_, i) => {
-    const from = start + i * binMs;
-    const to = from + binMs;
-    let count = 0;
-    for (const t of times) if (t >= from && t < to) count++;
-    const xLabel = dayjs(from).format("HH:mm");
-    return { xLabel, from, to, count };
-  });
+  const points: SeriesPoint[] = Array.from({ length: bucketCount }).map(
+    (_, i) => {
+      const from = start + i * binMs;
+      const to = from + binMs;
+      let count = 0;
+      for (const t of times) if (t >= from && t < to) count++;
+      const xLabel = dayjs(from).format("HH:mm");
+      return { xLabel, from, to, count };
+    },
+  );
 
   const maxY = Math.max(...points.map((p) => p.count), 0);
   let peak: SeriesPoint | undefined = undefined;
@@ -1310,7 +1529,11 @@ function buildBidSeries(bidLogs: BidLogDto[], rangeMs: number, binMs: number) {
   return { points, maxY, peak };
 }
 
-function BidLineChart(props: { points: SeriesPoint[]; maxY: number; ACCENT: string }) {
+function BidLineChart(props: {
+  points: SeriesPoint[];
+  maxY: number;
+  ACCENT: string;
+}) {
   const { points, maxY, ACCENT } = props;
 
   if (points.length < 2) {
@@ -1340,7 +1563,11 @@ function BidLineChart(props: { points: SeriesPoint[]; maxY: number; ACCENT: stri
     return { x, y, p };
   });
 
-  const d = xy.map((pt, i) => `${i === 0 ? "M" : "L"} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(" ");
+  const d = xy
+    .map(
+      (pt, i) => `${i === 0 ? "M" : "L"} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`,
+    )
+    .join(" ");
 
   const first = points[0]?.xLabel ?? "";
   const mid = points[Math.floor((n - 1) / 2)]?.xLabel ?? "";
@@ -1351,20 +1578,61 @@ function BidLineChart(props: { points: SeriesPoint[]; maxY: number; ACCENT: stri
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[140px]">
         {[0, 0.5, 1].map((r, idx) => {
           const y = padT + innerH * r;
-          return <line key={idx} x1={padL} x2={W - padR} y1={y} y2={y} stroke="rgba(148,163,184,0.30)" strokeWidth="1" />;
+          return (
+            <line
+              key={idx}
+              x1={padL}
+              x2={W - padR}
+              y1={y}
+              y2={y}
+              stroke="rgba(148,163,184,0.30)"
+              strokeWidth="1"
+            />
+          );
         })}
 
-        <path d={d} fill="none" stroke={ACCENT} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={d}
+          fill="none"
+          stroke={ACCENT}
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
 
         {xy.map((pt, idx) => (
           <circle key={idx} cx={pt.x} cy={pt.y} r="4" fill={ACCENT} />
         ))}
 
-        <text x={padL} y={H - 10} fontSize="12" fill="rgba(100,116,139,0.9)">{first}</text>
-        <text x={W / 2} y={H - 10} fontSize="12" fill="rgba(100,116,139,0.9)" textAnchor="middle">{mid}</text>
-        <text x={W - padR} y={H - 10} fontSize="12" fill="rgba(100,116,139,0.9)" textAnchor="end">{last}</text>
+        <text x={padL} y={H - 10} fontSize="12" fill="rgba(100,116,139,0.9)">
+          {first}
+        </text>
+        <text
+          x={W / 2}
+          y={H - 10}
+          fontSize="12"
+          fill="rgba(100,116,139,0.9)"
+          textAnchor="middle"
+        >
+          {mid}
+        </text>
+        <text
+          x={W - padR}
+          y={H - 10}
+          fontSize="12"
+          fill="rgba(100,116,139,0.9)"
+          textAnchor="end"
+        >
+          {last}
+        </text>
 
-        <text x={W - padR} y={14} fontSize="12" fill="rgba(100,116,139,0.9)" textAnchor="end">
+        <text
+          x={W - padR}
+          y={14}
+          fontSize="12"
+          fill="rgba(100,116,139,0.9)"
+          textAnchor="end"
+        >
           {safeMax}건
         </text>
       </svg>
@@ -1372,53 +1640,67 @@ function BidLineChart(props: { points: SeriesPoint[]; maxY: number; ACCENT: stri
   );
 }
 
-function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanelProps) {
+function BidDetailPanel({
+  bidLogs,
+  isLive,
+  ACCENT,
+  ACCENT_SOFT,
+}: BidDetailPanelProps) {
   const rangeMs = isLive ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
   const binMs = isLive ? 5 * 60 * 1000 : 30 * 60 * 1000;
 
-  const { points, maxY, peak } = useMemo(() => buildBidSeries(bidLogs, rangeMs, binMs), [bidLogs, rangeMs, binMs]);
+  const { points, maxY, peak } = useMemo(
+    () => buildBidSeries(bidLogs, rangeMs, binMs),
+    [bidLogs, rangeMs, binMs],
+  );
 
   const sorted = useMemo(() => {
     return [...(bidLogs || [])]
-    .map((b) => ({ b, t: parseBidMs(b.createdAt) ?? 0 }))
-    .sort((a, c) => c.t - a.t)
-    .map((x) => x.b);
+      .map((b) => ({ b, t: parseBidMs(b.createdAt) ?? 0 }))
+      .sort((a, c) => c.t - a.t)
+      .map((x) => x.b);
   }, [bidLogs]);
 
   const peakLabel =
     peak && peak.count > 0
-    ? `${dayjs(peak.from).format("HH:mm")}~${dayjs(peak.to).format("HH:mm")} (${peak.count}건)`
-    : "데이터 없음";
+      ? `${dayjs(peak.from).format("HH:mm")}~${dayjs(peak.to).format("HH:mm")} (${peak.count}건)`
+      : "데이터 없음";
 
   return (
     <div className="p-6 md:p-8">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-base font-extrabold text-slate-900">실시간 입찰 상세</div>
-            <div className="mt-1 text-xs text-slate-500">
-              {isLive ? "최근 60분" : "최근 24시간"} · 피크:{" "}
-              <span className="font-extrabold" style={{ color: ACCENT }}>
-                {peakLabel}
-              </span>
-            </div>
+          <div className="text-base font-extrabold text-slate-900">
+            실시간 입찰 상세
           </div>
-
-          <span
-            className="px-3 py-1 rounded-full text-xs font-extrabold border"
-            style={{
-              color: isLive ? ACCENT : "#475569",
-              backgroundColor: isLive ? ACCENT_SOFT : "rgba(148,163,184,0.12)",
-              borderColor: isLive ? "rgba(118,90,255,0.25)" : "rgba(148,163,184,0.25)",
-            }}
-          >
-            {isLive ? "LIVE" : "CLOSED"}
-          </span>
+          <div className="mt-1 text-xs text-slate-500">
+            {isLive ? "최근 60분" : "최근 24시간"} · 피크:{" "}
+            <span className="font-extrabold" style={{ color: ACCENT }}>
+              {peakLabel}
+            </span>
+          </div>
         </div>
 
-        <div className="mt-4">
-          <BidLineChart points={points} maxY={maxY} ACCENT={ACCENT} />
-          <div className="mt-2 text-[11px] text-slate-400">y축: 입찰 건수 · x축: 시간</div>
+        <span
+          className="px-3 py-1 rounded-full text-xs font-extrabold border"
+          style={{
+            color: isLive ? ACCENT : "#475569",
+            backgroundColor: isLive ? ACCENT_SOFT : "rgba(148,163,184,0.12)",
+            borderColor: isLive
+              ? "rgba(118,90,255,0.25)"
+              : "rgba(148,163,184,0.25)",
+          }}
+        >
+          {isLive ? "LIVE" : "CLOSED"}
+        </span>
+      </div>
+
+      <div className="mt-4">
+        <BidLineChart points={points} maxY={maxY} ACCENT={ACCENT} />
+        <div className="mt-2 text-[11px] text-slate-400">
+          y축: 입찰 건수 · x축: 시간
         </div>
+      </div>
 
       <div className="mt-4 rounded-2xl border border-slate-100 bg-white overflow-hidden">
         <div className="px-4 py-3 bg-slate-50/40 flex items-center justify-between">
@@ -1430,7 +1712,9 @@ function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanel
           {sorted.length === 0 ? (
             <div className="py-12 text-center text-slate-400">
               <div className="font-semibold text-sm">입찰 내역이 없습니다.</div>
-              <div className="text-xs mt-1">입찰이 발생하면 여기에 표시됩니다.</div>
+              <div className="text-xs mt-1">
+                입찰이 발생하면 여기에 표시됩니다.
+              </div>
             </div>
           ) : (
             sorted.map((bid, idx) => {
@@ -1486,7 +1770,10 @@ function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanel
                       ₩{Number(bid.bidAmount ?? 0).toLocaleString("ko-KR")}
                     </div>
                     {isTop && (
-                      <div className="text-[10px] font-extrabold whitespace-nowrap" style={{ color: ACCENT }}>
+                      <div
+                        className="text-[10px] font-extrabold whitespace-nowrap"
+                        style={{ color: ACCENT }}
+                      >
                         highest
                       </div>
                     )}
@@ -1501,7 +1788,12 @@ function BidDetailPanel({ bidLogs, isLive, ACCENT, ACCENT_SOFT }: BidDetailPanel
   );
 }
 
-function BidAvatar(props: { url?: string | null; name?: string | null; isTop?: boolean; ACCENT: string }) {
+function BidAvatar(props: {
+  url?: string | null;
+  name?: string | null;
+  isTop?: boolean;
+  ACCENT: string;
+}) {
   const { url, name, isTop, ACCENT } = props;
   const initial = (name || "?").slice(0, 1);
 
@@ -1529,6 +1821,6 @@ function BidAvatar(props: { url?: string | null; name?: string | null; isTop?: b
           }}
         />
       )}
-    </div>  
+    </div>
   );
 }
