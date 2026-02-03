@@ -435,7 +435,7 @@ const MyProfile = () => {
               <div className="space-y-1">
                 <MenuItem
                   icon={Calendar}
-                  label="내 경매 내역"
+                  label="내 상품 내역"
                   onClick={() => navigate("/mypage/auctionlist")}
                   colorClass="bg-blue-50 text-blue-500"
                 />

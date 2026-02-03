@@ -276,7 +276,29 @@ function UserMenu(props: {
             }}
             className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50"
           >
-            마이페이지
+            내 정보 수정
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              navigate("/mypage/auctionlist");
+            }}
+            className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50"
+          >
+            내 상품 관리
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              navigate("/");
+            }}
+            className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50"
+          >
+            내 상점 후기
           </button>
 
           <button
@@ -298,19 +320,10 @@ function UserMenu(props: {
             }}
             className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50"
           >
-            나의 경매 내역
+            내 입찰 보기
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              navigate("/mypage/auctionlist");
-            }}
-            className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50"
-          >
-            나의 게시물
-          </button>
+
 
           <div className="border-t border-slate-200" />
           <button
