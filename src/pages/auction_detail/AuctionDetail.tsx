@@ -5,6 +5,7 @@ import Stomp from "stompjs";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import ReportModal from "@/components/report/ReportModal";
 import { openRoom } from "@/api/chatApi";
+import { useNavigate } from "react-router-dom";
 import {
   Heart,
   Share2,
@@ -71,6 +72,14 @@ const AuctionDetail = () => {
 
   // 본인 상품 여부 등 로직 (필요시 복구)
   // const isSelfSeller = false;
+  const nav = useNavigate();
+  const goSellerProfile = () => {
+    if (!sellerInfo?.userId) {
+      showWarning("판매자 정보를 불러오지 못했습니다.");
+      return;
+    }
+    nav(`/user/profile/${sellerInfo.userId}`);
+  };
 
   const { userEmail: authEmail, userId: authUserId } = useAuth();
 
@@ -1129,25 +1138,34 @@ const AuctionDetail = () => {
                   </button>
 
                 </div>
-
-                <div className="mt-5 flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center">
-                    {sellerInfo?.profileImageUrl ? (
-                      <img src={sellerInfo.profileImageUrl} alt="Seller" className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-7 h-7 text-slate-300" />
-                    )}
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="text-lg font-extrabold text-slate-900">{sellerInfo?.nickname || "판매자"}</div>
-                    <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                      <span>판매성공 {sellerInfo?.selledBidCount || 0}회</span>
-                      <span className="text-slate-300">•</span>
-                      <span>가입일 {sellerInfo?.createdAt}</span>
-                    </div>
-                  </div>
+                <div className="mt-5 flex items-center gap-4"> 
+                  <button type="button" onClick={goSellerProfile} className="w-14 h-14 rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center hover:ring-2 hover:ring-slate-900/5 transition" title="프로필 보기" >
+                    {sellerInfo?.profileImageUrl ? ( <img src={sellerInfo.profileImageUrl} alt="Seller" className="w-full h-full object-cover" /> ) : ( <User className="w-7 h-7 text-slate-300" /> )}
+                  </button>
+                  <div className="flex-1 min-w-0"> <div className="flex items-center gap-2 min-w-0">
+                    <button type="button" onClick={goSellerProfile} className="text-lg font-extrabold text-slate-900 truncate hover:underline" title="프로필 보기" > {sellerInfo?.nickname || "판매자"}</button>
+                  <button
+                    type="button"
+                    onClick={goSellerProfile}
+                    className="px-2 py-0.5 rounded-full text-[11px] font-extrabold border hover:bg-slate-50 transition shrink-0"
+                    style={{
+                      color: ACCENT,
+                      borderColor: "rgba(118,90,255,0.25)",
+                      backgroundColor: ACCENT_SOFT,
+                    }}
+                  >
+                    프로필
+                  </button>
                 </div>
+
+                <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                  <span>판매성공 {sellerInfo?.selledBidCount || 0}회</span>
+                  <span className="text-slate-300">•</span>
+                  <span>가입일 {sellerInfo?.createdAt}</span>
+                </div>
+
+                </div>
+              </div>
 
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <button

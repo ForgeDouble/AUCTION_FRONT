@@ -104,6 +104,8 @@ export default function UserProfilePage() {
     "READY",
     "PROCESSING",
   ]);
+  const [searchKey, setSearchKey] = useState(0);
+
   const [sortBy, setSortBy] = useState<
     "NEWEST" | "ENDING_SOON" | "MOST_BIDS" | "HIGHEST_BID"
   >("NEWEST");
@@ -190,8 +192,9 @@ export default function UserProfilePage() {
   const applySearch = () => {
     if (section !== "PRODUCTS") return;
     setPage(0);
-    loadList();
+    setSearchKey((k) => k + 1);
   };
+
 
   const toggleStatus = (s: ProductRow["status"]) => {
     setPage(0);
@@ -411,7 +414,7 @@ export default function UserProfilePage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {rows.map((p) => (
-                  <ProductCard key={p.productId} product={p} onClick={() => nav(`/auction/${p.productId}`)} />
+                  <ProductCard key={p.productId} product={p} onClick={() => nav(`/auction_detail/${p.productId}`)} />
                 ))}
               </div>
             )}
