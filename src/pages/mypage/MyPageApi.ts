@@ -1,15 +1,17 @@
 // src/pages/.../MyPageApi.ts
+import { ApiError } from "@/errors/Errors";
 import type { ApiResponse } from "../../type/CommonType";
 import type {
   BidListDto,
   ProductListDto,
+  Status,
   UserDto,
   UserUpdateDto,
 } from "./MyPageDto";
 
-
 const BASE =
-  (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://localhost:8080";
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
+  "http://localhost:8080";
 
 async function throwApiError(response: Response, fallback: string) {
   const text = await response.text().catch(() => "");
@@ -26,7 +28,11 @@ async function throwApiError(response: Response, fallback: string) {
     if (code) throw new Error(`[${code}] ${msg}`);
     throw new Error(msg);
   } catch {
-    throw new Error(text ? `${fallback} (${response.status}) ${text}` : `${fallback} (${response.status})`);
+    throw new Error(
+      text
+        ? `${fallback} (${response.status}) ${text}`
+        : `${fallback} (${response.status})`,
+    );
   }
 }
 
@@ -40,7 +46,8 @@ export const fetchLoginUser = async (
   });
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
+    if (response.status === 401 || response.status === 403)
+      throw new Error("AUTH_REQUIRED");
     await throwApiError(response, "내 정보 조회 실패");
   }
 
@@ -51,14 +58,14 @@ export const fetchLoginUser = async (
 export type MyProductsQuery = {
   page?: number;
   size?: number;
-  search?: string;            // q 같은 이름으로 쓰고싶으면 프론트에서만 바꿔도 됨
-  statuses?: string[];        // ["READY","PROCESSING"...]
-  sortBy?: string;            // "NEWEST" | "ENDING_SOON" | "MOST_BIDS" | "HIGHEST_BID"
+  search?: string; // q 같은 이름으로 쓰고싶으면 프론트에서만 바꿔도 됨
+  statuses?: string[]; // ["READY","PROCESSING"...]
+  sortBy?: string; // "NEWEST" | "ENDING_SOON" | "MOST_BIDS" | "HIGHEST_BID"
 };
 
 export async function fetchProductsByUser(
   token: string,
-  query: MyProductsQuery = {}
+  query: MyProductsQuery = {},
 ) {
   const params = new URLSearchParams();
 
@@ -79,24 +86,24 @@ export async function fetchProductsByUser(
 
   const url = `${BASE}/product/myPageProductUser?${params.toString()}`;
 
-  const res = await fetch(url, {
+  const response = await fetch(url, {
     method: "GET",
     headers: {
       Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
     },
   });
 
-  const text = await res.text().catch(() => "");
-
-  if (!res.ok) {
-    throw new Error(`상품 목록 조회 실패 (${res.status}) ${text?.slice(0, 200) ?? ""}`);
+  if (!response.ok) {
+    const body = await response.json();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
-  try {
-    return text ? JSON.parse(text) : null;
-  } catch {
-    throw new Error(`상품 목록 조회 실패: JSON 파싱 실패 (${res.status}) ${text?.slice(0, 200) ?? ""}`);
-  }
+  return response.json();
 }
 
 /** 내 입찰 목록 */
@@ -104,17 +111,19 @@ export const fetchBidsByUser = async (
   token: string | null,
   page: number = 0,
   size: number = 10,
+  status: Status | null,
 ): Promise<
   ApiResponse<{
     content: BidListDto[];
     totalElements: number;
     totalPages: number;
     currentPage: number;
+    status: Status;
     size: number;
   }>
 > => {
   const response = await fetch(
-    `${BASE}/bid/allByUser?page=${page}&size=${size}`,
+    `${BASE}/bid/allByUser?page=${page}&size=${size}&status=${status}`,
     {
       method: "GET",
 
@@ -123,11 +132,11 @@ export const fetchBidsByUser = async (
         "Content-Type": "application/json",
       },
     },
-
   );
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
+    if (response.status === 401 || response.status === 403)
+      throw new Error("AUTH_REQUIRED");
     await throwApiError(response, "입찰 조회 실패");
   }
 
@@ -136,28 +145,38 @@ export const fetchBidsByUser = async (
 
 /** 내 찜 목록 */
 // MyPageApi.ts
-export const fetchProductsByWishlist = async (token: string | null, page = 0, size = 10) => {
-  const response = await fetch(`${BASE}/wishlist/products?page=${page}&size=${size}`, {
-    method: "GET",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+export const fetchProductsByWishlist = async (
+  token: string | null,
+  page = 0,
+  size = 10,
+) => {
+  const response = await fetch(
+    `${BASE}/wishlist/products?page=${page}&size=${size}`,
+    {
+      method: "GET",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    },
+  );
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
+    if (response.status === 401 || response.status === 403)
+      throw new Error("AUTH_REQUIRED");
     await throwApiError(response, "찜 목록 조회 실패");
   }
 
   return response.json();
 };
 
-
 export async function deleteWishlist(token: string, wishlistId: number) {
-  const res = await fetch(`${import.meta.env.VITE_API_BASE}/wishlist/delete/${wishlistId}`, {
-    method: "DELETE",
-    headers: {
-    Authorization: `Bearer ${token}`,
+  const res = await fetch(
+    `${import.meta.env.VITE_API_BASE}/wishlist/delete/${wishlistId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const msg = data?.message ?? "찜 해제 실패";
@@ -166,11 +185,9 @@ export async function deleteWishlist(token: string, wishlistId: number) {
   return data;
 }
 
-
-
 export const updateMyProfileBasic = async (
   token: string | null,
-  payload: { name?: string; address?: string; phone?: string }
+  payload: { name?: string; address?: string; phone?: string },
 ): Promise<ApiResponse<null>> => {
   const fd = new FormData();
   if (payload.name !== undefined) fd.append("name", payload.name);
@@ -183,9 +200,9 @@ export const updateMyProfileBasic = async (
     body: fd,
   });
 
-
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
+    if (response.status === 401 || response.status === 403)
+      throw new Error("AUTH_REQUIRED");
     await throwApiError(response, "기본정보 수정 실패");
   }
 
@@ -195,7 +212,7 @@ export const updateMyProfileBasic = async (
 /** 닉네임 수정  */
 export const updateMyNickname = async (
   token: string | null,
-  nickname: string
+  nickname: string,
 ): Promise<ApiResponse<null>> => {
   const response = await fetch(`${BASE}/user/nickname`, {
     method: "PUT",
@@ -207,7 +224,8 @@ export const updateMyNickname = async (
   });
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
+    if (response.status === 401 || response.status === 403)
+      throw new Error("AUTH_REQUIRED");
     await throwApiError(response, "닉네임 수정 실패");
   }
 
@@ -217,7 +235,7 @@ export const updateMyNickname = async (
 /* 프로필 이미지 업로드 */
 export const uploadMyProfileImage = async (
   token: string | null,
-  file: File
+  file: File,
 ): Promise<ApiResponse<{ url: string }>> => {
   const fd = new FormData();
   fd.append("file", file);
@@ -229,7 +247,8 @@ export const uploadMyProfileImage = async (
   });
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
+    if (response.status === 401 || response.status === 403)
+      throw new Error("AUTH_REQUIRED");
     await throwApiError(response, "프로필 이미지 업로드 실패");
   }
 
@@ -238,16 +257,16 @@ export const uploadMyProfileImage = async (
 
 /* 프로필 이미지 삭제 */
 export const deleteMyProfileImage = async (
-  token: string | null
+  token: string | null,
 ): Promise<ApiResponse<null>> => {
   const response = await fetch(`${BASE}/user/image/delete`, {
     method: "DELETE",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 
-
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error("AUTH_REQUIRED");
+    if (response.status === 401 || response.status === 403)
+      throw new Error("AUTH_REQUIRED");
     await throwApiError(response, "프로필 이미지 삭제 실패");
   }
 
