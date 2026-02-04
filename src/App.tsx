@@ -28,6 +28,7 @@ import Footer from "./components/Footer";
 import ForgotPassword from "./pages/forgot_password/ForgotPassword";
 import ResetPassword from "./pages/forgot_password/ResetPassword";
 import UserProfilePage from "@/pages/mypage/publicProfile/UserProfilePage";
+import ErrorPage from "./errors/ErrorPage";
 
 function App() {
   const location = useLocation();
@@ -35,10 +36,13 @@ function App() {
   const backgroundLocation = state?.backgroundLocation;
 
   // Footer를 숨길 경로들 정의
-  const hideFooterPaths = ["/chat-popup", "/chat-list", "/chat"];
+  const hideFooterPaths = ["/chat-popup", "/chat-list", "/chat", "*"];
   const shouldHideFooter =
     hideFooterPaths.includes(location.pathname) ||
-    location.pathname.startsWith("/admin");
+    location.pathname.startsWith("/admin") ||
+    !location.pathname.match(
+      /^\/(auction_detail|login|find_password|reset_password|auction_list|mypage|user|sell_product|register|\s*)$/,
+    );
 
   return (
     <ModalProvider>
@@ -174,6 +178,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="*" element={<ErrorPage type="404" />} />
           </Routes>
           {!shouldHideFooter && <Footer />}
 
