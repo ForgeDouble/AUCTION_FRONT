@@ -3,7 +3,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Bell, ChevronDown } from "lucide-react";
-import { useNotifications, type NotificationItem, type NotificationCategory } from "@/hooks/useNotifications";
+import {
+  useNotifications,
+  type NotificationItem,
+  type NotificationCategory,
+} from "@/hooks/useNotifications";
 
 function useClickOutside(
   ref: React.RefObject<HTMLDivElement | null>,
@@ -21,7 +25,8 @@ function useClickOutside(
 
 function formatRelativeTime(createdAt: string): string {
   if (!createdAt) return "";
-  if (createdAt.indexOf("전") >= 0 || createdAt.indexOf("방금") >= 0) return createdAt;
+  if (createdAt.indexOf("전") >= 0 || createdAt.indexOf("방금") >= 0)
+    return createdAt;
 
   const date = new Date(createdAt);
   if (isNaN(date.getTime())) return createdAt;
@@ -76,7 +81,9 @@ function NotificationMenu(props: {
   }, [tab]);
 
   const filtered =
-    tab === "ALL" ? notifications : notifications.filter((n) => n.category === tab);
+    tab === "ALL"
+      ? notifications
+      : notifications.filter((n) => n.category === tab);
 
   const handleToggle = () => setOpen((v) => !v);
 
@@ -111,7 +118,9 @@ function NotificationMenu(props: {
         <div className="absolute right-0 mt-3 w-[380px] rounded-2xl bg-white shadow-[0_18px_45px_rgba(0,0,0,0.10)] ring-1 ring-black/5 overflow-hidden z-[60]">
           <div className="px-4 py-3 bg-white border-b border-black/5 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-[13px] font-semibold text-black/90">알림</span>
+              <span className="text-[13px] font-semibold text-black/90">
+                알림
+              </span>
               {unreadCount > 0 && (
                 <span className="text-[11px] text-black/45">
                   새 알림 {unreadCount}개
@@ -183,7 +192,8 @@ function NotificationMenu(props: {
                       onClickItem(n);
                     }}
                     className={
-                      "w-full text-left px-3 py-2.5 rounded-xl transition " + itemCls
+                      "w-full text-left px-3 py-2.5 rounded-xl transition " +
+                      itemCls
                     }
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -229,7 +239,6 @@ function NotificationMenu(props: {
   );
 }
 
-
 function UserMenu(props: {
   nickname: string;
   profileUrl?: string | null;
@@ -241,8 +250,9 @@ function UserMenu(props: {
   const ref = useRef<HTMLDivElement | null>(null);
 
   useClickOutside(ref, () => setOpen(false));
-  
-  const firstLetter = !profileUrl && nickname ? nickname.charAt(0).toUpperCase() : "?";
+
+  const firstLetter =
+    !profileUrl && nickname ? nickname.charAt(0).toUpperCase() : "?";
 
   return (
     <div className="relative" ref={ref}>
@@ -254,9 +264,15 @@ function UserMenu(props: {
       >
         <div className="w-7 h-7 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center">
           {profileUrl ? (
-            <img src={profileUrl} alt="profile" className="w-full h-full object-cover" />
+            <img
+              src={profileUrl}
+              alt="profile"
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <span className="text-xs font-bold text-slate-700">{firstLetter}</span>
+            <span className="text-xs font-bold text-slate-700">
+              {firstLetter}
+            </span>
           )}
         </div>
 
@@ -341,9 +357,13 @@ export default function AuthButtons() {
     };
 
   const { unread } = useChat();
-  const { notifications, unreadCount, markAsRead, markAllRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllRead } =
+    useNotifications();
 
-  const unreadTotal = Object.values(unread || {}).reduce((a, b) => a + (b || 0), 0);
+  const unreadTotal = Object.values(unread || {}).reduce(
+    (a, b) => a + (b || 0),
+    0,
+  );
 
   const handleLogout = () => {
     logout();
@@ -401,10 +421,11 @@ export default function AuthButtons() {
   if (!isAuthenticated) {
     return (
       <>
-      <button
-        type="button"
-        onClick={() => navigate("/login")}
-        className="
+        <button
+          type="button"
+          onClick={() => navigate("/login")}
+          className="
+          cursor-pointer
           inline-flex items-center justify-center
           h-10 px-4 rounded-full
           bg-transparent
@@ -413,14 +434,15 @@ export default function AuthButtons() {
           active:scale-[0.98] transition
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10
         "
-      >
-      로그인
-      </button>
+        >
+          로그인
+        </button>
 
-      <button
-        type="button"
-        onClick={() => navigate("/register")}
-        className="
+        <button
+          type="button"
+          onClick={() => navigate("/register")}
+          className="
+          cursor-pointer
           inline-flex items-center justify-center
           h-10 px-4 rounded-full
           bg-violet-600/10
@@ -429,14 +451,12 @@ export default function AuthButtons() {
           active:scale-[0.98] transition
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300
         "
-      >
-        회원가입
-      </button>
-
+        >
+          회원가입
+        </button>
       </>
     );
   }
-
 
   const displayName = nickname || userEmail || "USER";
 
