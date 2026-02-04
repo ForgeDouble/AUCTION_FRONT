@@ -1,6 +1,7 @@
 export type ErrorCode =
   | "INTERNAL_SERVER_ERROR"
   | "INVALID_TOKEN"
+  | "INVALID_PS_TOKEN"
   | "NOT_ALLOWED"
   | "USER_NOT_FOUND"
   | "PRODUCT_NOT_FOUND"
@@ -18,4 +19,5 @@ export type ErrorHandlingResult =
   | { type: "MODAL"; message: string }
   | { type: "DIALOG"; message: string }
   | { type: "FIELD_ERROR"; field: string; message: string }
-  | { type: "IGNORE" };
+  | { type: "IGNORE" }
+  | { type: "AUTH"; message: string };
