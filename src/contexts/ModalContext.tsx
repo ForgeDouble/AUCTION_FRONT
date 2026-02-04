@@ -1,7 +1,9 @@
 import { createContext, useContext } from "react";
 
+type LoginModalMode = "navigation" | "confirm";
+
 interface ModalContextType {
-  showLogin: () => void;
+  showLogin: (mode?: LoginModalMode) => void;
   showError: (message?: string) => void;
   showWarning: (message: string) => void;
   showLoading: (message?: string) => void;
@@ -9,7 +11,7 @@ interface ModalContextType {
 }
 
 export const ModalContext = createContext<ModalContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export const useModal = () => {
