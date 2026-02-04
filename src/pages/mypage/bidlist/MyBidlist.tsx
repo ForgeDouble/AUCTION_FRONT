@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Clock, CheckCircle, XCircle } from "lucide-react";
 import { fetchBidsByUser } from "../MyPageApi";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { BidListDto, IsWinned, PageInfo } from "../MyPageDto";
+import type { BidListDto, IsWinned, PageInfo, Status } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
 import { useModal } from "@/contexts/ModalContext";
 
@@ -20,7 +20,7 @@ const MyBidlist = () => {
     size: 10,
   });
   const [loading, setLoading] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const navigate = useNavigate();
 
   const getStatusInfo = (status: string, isWinned: IsWinned) => {
@@ -28,56 +28,56 @@ const MyBidlist = () => {
       case "READY":
         return {
           badge: "대기중",
-          bgColor: "bg-blue-300",
+          bgColor: "bg-blue-100",
           textColor: "text-blue-600",
-          borderColor: "border-blue-500/30",
-          icon: <Clock className="h-5 w-5" />,
-          message: "경매 시작 대기 중",
+          borderColor: "border-blue-300",
+          icon: <Clock className="h-6 w-6" />,
+          message: "경매 시작 대기중입니다",
         };
       case "PROCESSING":
         return {
           badge: "진행중",
-          bgColor: "bg-yellow-300",
+          bgColor: "bg-yellow-100",
           textColor: "text-yellow-600",
-          borderColor: "border-yellow-500/30",
-          icon: <Clock className="h-5 w-5" />,
+          borderColor: "border-yellow-300",
+          icon: <Clock className="h-6 w-6" />,
           message: "현재 경매가 진행중입니다",
         };
       case "SELLED":
         if (isWinned === "Y") {
           return {
             badge: "낙찰",
-            bgColor: "bg-[rgb(204,195,252)]",
+            bgColor: "bg-[rgb(230,226,253)]",
             textColor: "text-[rgb(118,90,255)]",
-            borderColor: "border-[rgb(160,142,252)]",
-            icon: <CheckCircle className="h-5 w-5" />,
-            message: "축하합니다! 낙찰되었습니다",
+            borderColor: "border-[rgb(194,182,255)]",
+            icon: <CheckCircle className="h-6 w-6" />,
+            message: "경매가 낙찰되었습니다",
           };
         }
         return {
           badge: "낙찰실패",
-          bgColor: "bg-gray-300",
+          bgColor: "bg-gray-100",
           textColor: "text-gray-600",
-          borderColor: "border-gray-500/30",
-          icon: <XCircle className="h-5 w-5" />,
+          borderColor: "border-gray-300",
+          icon: <XCircle className="h-6 w-6" />,
           message: "낙찰에 실패했습니다",
         };
       case "NOTSELLED":
         return {
           badge: "유찰",
-          bgColor: "bg-gray-300",
+          bgColor: "bg-gray-100",
           textColor: "text-gray-600",
-          borderColor: "border-gray-500/30",
-          icon: <XCircle className="h-5 w-5" />,
+          borderColor: "border-gray-300",
+          icon: <XCircle className="h-6 w-6" />,
           message: "경매가 유찰되었습니다",
         };
       default:
         return {
           badge: "알 수 없음",
-          bgColor: "bg-gray-600/20",
+          bgColor: "bg-gray-100",
           textColor: "text-gray-600",
-          borderColor: "border-gray-500/30",
-          icon: <Clock className="h-5 w-5" />,
+          borderColor: "border-gray-300",
+          icon: <Clock className="h-6 w-6" />,
           message: "",
         };
     }
@@ -124,7 +124,7 @@ const MyBidlist = () => {
   const loadBidsByUser = async (
     page: number = 0,
     size: number = 10,
-    status: string | null = null,
+    status: Status | null = null,
   ) => {
     try {
       setLoading(true);
@@ -134,7 +134,7 @@ const MyBidlist = () => {
         console.error("Missing AccessToken");
         return;
       }
-      const data = await fetchBidsByUser(token, page, size, status); // status 파라미터 추가
+      const data = await fetchBidsByUser(token, page, size, status);
       setBids(data.result.content);
       setPageInfo({
         totalElements: data.result.totalElements,
@@ -151,7 +151,7 @@ const MyBidlist = () => {
     }
   };
 
-  const handleStatusFilter = (status: string | null) => {
+  const handleStatusFilter = (status: Status | null) => {
     setSelectedStatus(status);
     setCurrentPage(0);
     updateURLParams({ page: 0, status: status || "" });
@@ -170,7 +170,14 @@ const MyBidlist = () => {
 
   useEffect(() => {
     const pageParam = searchParams.get("page");
-    const statusParam = searchParams.get("status");
+    const raw = searchParams.get("status");
+    const statusParam: Status | null =
+      raw === "READY" ||
+      raw === "PROCESSING" ||
+      raw === "SELLED" ||
+      raw == "NOTSELLED"
+        ? raw
+        : null;
 
     const initialPage = pageParam ? parseInt(pageParam) : 0;
     const initialStatus = statusParam || null;
@@ -199,7 +206,7 @@ const MyBidlist = () => {
               <div className="flex gap-2 mb-6 flex-wrap">
                 <button
                   onClick={() => handleStatusFilter(null)}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
                     selectedStatus === null
                       ? "bg-[rgb(118,90,255)] text-white"
                       : "bg-white/5 border border-gray-400 text-gray-900 hover:bg-white/10"
@@ -209,7 +216,7 @@ const MyBidlist = () => {
                 </button>
                 <button
                   onClick={() => handleStatusFilter("PROCESSING")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
                     selectedStatus === "PROCESSING"
                       ? "bg-[rgb(118,90,255)] text-white"
                       : "bg-white/5 border border-gray-400 text-gray-900 hover:bg-white/10"
@@ -219,7 +226,7 @@ const MyBidlist = () => {
                 </button>
                 <button
                   onClick={() => handleStatusFilter("SELLED")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
                     selectedStatus === "SELLED"
                       ? "bg-[rgb(118,90,255)] text-white"
                       : "bg-white/5 border border-gray-400 text-gray-900 hover:bg-white/10"
@@ -229,7 +236,7 @@ const MyBidlist = () => {
                 </button>
                 <button
                   onClick={() => handleStatusFilter("NOTSELLED")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
                     selectedStatus === "NOTSELLED"
                       ? "bg-[rgb(118,90,255)] text-white"
                       : "bg-white/5 border border-gray-400 text-gray-900 hover:bg-white/10"
@@ -256,7 +263,7 @@ const MyBidlist = () => {
                       return (
                         <div
                           key={bid.bidId}
-                          className={`bg-white/5 rounded-xl p-5 border ${statusInfo.borderColor} hover: transition-all duration-300 hover:transform hover:scale-[1.02]`}
+                          className={`bg-white/5 rounded-xl p-5 border border-gray-200 hover: transition-all duration-300 hover:transform hover:scale-[1.02]`}
                         >
                           <div className="flex items-start justify-between gap-4">
                             {/* 왼쪽: 이미지 + 정보 */}
@@ -279,7 +286,7 @@ const MyBidlist = () => {
 
                                 {/* 상태 아이콘 오버레이 */}
                                 <div
-                                  className={`absolute -top-2 -right-2 ${statusInfo.bgColor} ${statusInfo.textColor} p-1.5 rounded-full border border-gray-300`}
+                                  className={`absolute -top-2 -right-2 ${statusInfo.bgColor} ${statusInfo.textColor} rounded-full`}
                                 >
                                   {statusInfo.icon}
                                 </div>
@@ -292,27 +299,20 @@ const MyBidlist = () => {
                                 </h3>
 
                                 <div className="flex items-center gap-3 mb-2">
-                                  <span className="text-gray-400 text-sm">
+                                  <span className="text-gray-600 text-sm">
                                     입찰가:
                                   </span>
-                                  <span className="text-xl font-bold text-[rgb(118,90,255)]">
+                                  <span className="text-xl font-bold text-gray-900">
                                     {formatPrice(bid.bidAmount)}
                                   </span>
                                 </div>
-
-                                {/* 상태 메시지 */}
-                                <p
-                                  className={`text-sm ${statusInfo.textColor} font-medium`}
-                                >
-                                  {statusInfo.message}
-                                </p>
                               </div>
                             </div>
 
                             {/* 오른쪽: 상태 뱃지 + 시간 */}
                             <div className="text-right flex-shrink-0">
                               <span
-                                className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${statusInfo.bgColor} ${statusInfo.textColor} mb-2`}
+                                className={`inline-block px-4 py-2 rounded-full text-sm font-bold border ${statusInfo.borderColor} ${statusInfo.bgColor} ${statusInfo.textColor} mb-2`}
                               >
                                 {statusInfo.badge}
                               </span>
@@ -323,34 +323,31 @@ const MyBidlist = () => {
 
                           {/* 추가 액션 버튼 (상태에 따라) */}
                           <div className="mt-4 pt-4 border-t border-white/10">
-                            {bid.status === "PROCESSING" &&
-                              bid.isWinned == "Y" && (
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm text-gray-400">
-                                    현재 최고 입찰가를 유지 중입니다
-                                  </span>
-                                  <button
-                                    onClick={() =>
-                                      handleNavigateToDetail(bid.productId)
-                                    }
-                                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
-                                  >
-                                    상세보기
-                                  </button>
-                                </div>
-                              )}
+                            {bid.status === "READY" && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">
+                                  {statusInfo.message}
+                                </span>
+                                {/* <button
+                                          onClick={() => handleNavigateToDetail(bid.productId)}
+                                          className="px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg text-sm font-semibold transition-colors cursor-pointer border border-yellow-300"
+                                        >
+                                          재입찰하기
+                                        </button> */}
+                              </div>
+                            )}
 
                             {bid.status === "PROCESSING" &&
                               bid.isWinned == "N" && (
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm text-yellow-600">
-                                    실시간으로 경매에 참여하세요
+                                  <span className="text-sm text-gray-600">
+                                    {statusInfo.message}
                                   </span>
                                   <button
                                     onClick={() =>
                                       handleNavigateToDetail(bid.productId)
                                     }
-                                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer border border-black/10"
+                                    className="px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-600 rounded-lg text-sm font-semibold transition-colors cursor-pointer border border-yellow-300"
                                   >
                                     재입찰하기
                                   </button>
@@ -359,14 +356,14 @@ const MyBidlist = () => {
 
                             {bid.status === "SELLED" && bid.isWinned == "Y" && (
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-[rgb(118,90,255)] font-semibold">
-                                  낙찰을 축하드립니다!
+                                <span className="text-sm text-gray-600 font-semibold">
+                                  {statusInfo.message}
                                 </span>
                                 <button
                                   onClick={() =>
                                     handleNavigateToPayment(bid.productId)
                                   }
-                                  className="px-4 py-2 bg-[rgb(118,90,255)] hover:bg-[rgb(88,60,233)] text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+                                  className={`px-4 py-2 bg ${statusInfo.bgColor} hover:bg-[rgb(214,206,255)] text ${statusInfo.textColor} rounded-lg text-sm font-semibold transition-colors cursor-pointer border ${statusInfo.borderColor}`}
                                 >
                                   결제하기
                                 </button>
@@ -378,13 +375,13 @@ const MyBidlist = () => {
                               bid.status === "NOTSELLED") && (
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600 font-semibold">
-                                  더 높은 입찰가가 존재하거나 유찰된 경매입니다
+                                  {statusInfo.message}
                                 </span>
                                 <button
                                   onClick={() =>
                                     handleNavigateToDetail(bid.productId)
                                   }
-                                  className="px-4 py-2 bg-black/10 hover:bg-black/20 text-gray-900 rounded-lg text-sm transition-colors cursor-pointer border border-black/10"
+                                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg text-sm transition-colors cursor-pointer border border-gray-300"
                                 >
                                   상세보기
                                 </button>
