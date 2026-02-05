@@ -294,7 +294,7 @@ function UserMenu(props: {
             type="button"
             onClick={() => {
               setOpen(false);
-              navigate("/");
+              navigate("/mypage/reviews");
             }}
             className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50"
           >
