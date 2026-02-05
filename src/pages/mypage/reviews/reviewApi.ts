@@ -71,7 +71,7 @@ export async function createReview(
 
 
 /** 공개 프로필 요약 */
-export async function fetchReviewSellerSummary(token: string, sellerId: number) {
+export async function fetchSellerReviewSummary(token: string, sellerId: number) {
     const res = await fetch(`${BASE}/review/seller/${sellerId}/summary`, {
         method: "GET",
         headers: authHeader(token),
@@ -84,7 +84,7 @@ export async function fetchReviewSellerSummary(token: string, sellerId: number) 
 }
 
 /** 공개 프로필 받은 리뷰 목록 */
-export async function fetchReviewsBySeller(token: string, sellerId: number, page = 0, size = 10) {
+export async function fetchSellerReviews(token: string, sellerId: number, page = 0, size = 10) {
     const url = `${BASE}/review/seller/${sellerId}?page=${page}&size=${size}`;
     const res = await fetch(url, {
         method: "GET",
@@ -97,7 +97,7 @@ export async function fetchReviewsBySeller(token: string, sellerId: number, page
     return (await res.json()) as ApiResponse<SpringPage<ReviewListDto>> | SpringPage<ReviewListDto>;
 }
 
-/** 마이페이지: 내가 작성한 리뷰 */
+/** 마이페이지: 내가 작성한 리뷰  0*/
 export async function fetchMyReviews(token: string, page = 0, size = 10) {
     const url = `${BASE}/review/me?page=${page}&size=${size}`;
     const res = await fetch(url, {
@@ -111,7 +111,7 @@ export async function fetchMyReviews(token: string, page = 0, size = 10) {
     return (await res.json()) as ApiResponse<SpringPage<ReviewListDto>> | SpringPage<ReviewListDto>;
 }
 
-/** 마이페이지 : 안 쓴 리뷰(낙찰 후 미작성) */
+/** 마이페이지 : 안 쓴 리뷰(낙찰 후 미작성) 0*/
 export async function fetchMyPendingReviews(token: string, page = 0, size = 10) {
     const url = `${BASE}/review/me/pending?page=${page}&size=${size}`;
     const res = await fetch(url, {

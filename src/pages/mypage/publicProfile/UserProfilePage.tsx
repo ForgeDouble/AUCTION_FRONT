@@ -1,3 +1,4 @@
+// src/pages/mypage/publicProfile/UserProfilePage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -24,6 +25,7 @@ import {
   fetchProductsByTargetUser,
   type PublicProfileDto,
 } from "./UserProfileApi";
+import PublicProfileReviews from "./PublicProfileReviews";
 
 // --- Types ---
 type ProductRow = {
@@ -443,7 +445,7 @@ export default function UserProfilePage() {
           </div>
         )}
 
-        {section === "REVIEWS" && (
+        {/* {section === "REVIEWS" && (
           <div className="animate-fade-in-up bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-sm">
             <div className="w-16 h-16 bg-violet-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <Star className="w-8 h-8 text-violet-500" fill="currentColor" />
@@ -454,7 +456,10 @@ export default function UserProfilePage() {
               조금만 기다려주세요!
             </p>
           </div>
-        )}
+        )} */}
+        {section === "REVIEWS" && (
+
+<div className="animate-fade-in-up"> <PublicProfileReviews token={token} sellerId={targetUserId} /> </div> )}
       </div>
 
       <ReportModal
