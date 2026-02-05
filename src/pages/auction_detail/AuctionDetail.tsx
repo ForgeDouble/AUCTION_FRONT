@@ -40,6 +40,7 @@ import dayjs from "dayjs";
 import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
 import { useNumberParam } from "@/hooks/useNumberParam";
 import { useModal } from "@/contexts/ModalContext";
+import ErrorPage from "@/errors/ErrorPage";
 
 const AuctionDetail = () => {
   const productId = useNumberParam("productId");
@@ -594,11 +595,71 @@ const AuctionDetail = () => {
     }
   };
 
+  // status에 따른 텍스트 및 스타일 설정
+  const getStatusInfo = (status: string | undefined) => {
+    switch (status) {
+      case "READY":
+        return {
+          label: "경매 준비 중",
+          color: "#64748b",
+          bgColor: "rgba(148,163,184,0.12)",
+          borderColor: "rgba(148,163,184,0.25)",
+        };
+      case "PROCESSING":
+        return {
+          label: "경매 진행 중",
+          color: ACCENT,
+          bgColor: ACCENT_SOFT,
+          borderColor: "rgba(118,90,255,0.25)",
+        };
+      case "SELLED":
+      case "NOTSELLED":
+        return {
+          label: "경매 종료",
+          color: "#475569",
+          bgColor: "rgba(148,163,184,0.12)",
+          borderColor: "rgba(148,163,184,0.25)",
+        };
+      default:
+        return {
+          label: "알 수 없음",
+          color: "#64748b",
+          bgColor: "rgba(148,163,184,0.12)",
+          borderColor: "rgba(148,163,184,0.25)",
+        };
+    }
+  };
+
+  const statusInfo = getStatusInfo(product?.status);
+
   const isLive = product?.status === "PROCESSING";
   const currentTopPrice =
     bidLogs.length > 0
       ? Number(bidLogs[0].bidAmount)
       : Number(product?.price || 0);
+
+  // 상품 또는 판매자 정보 로딩
+  if (!product || !sellerInfo) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // READY 상태 체크 (단, 본인 상품은 예외)
+  if (product.status === "READY" && !isSelfSeller) {
+    return (
+      <ErrorPage
+        type="404"
+        title="경매 준비 중"
+        message="아직 경매가 시작되지 않은 상품입니다. 경매 시작 시간을 확인해주세요."
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white pb-28 lg:h-screen lg:overflow-hidden lg:pb-0">
@@ -655,10 +716,10 @@ const AuctionDetail = () => {
                       </span>
                       <span className="text-slate-300">•</span>
                       <span className="text-xs text-slate-500">
-                        {isLive ? "경매 진행 중" : "경매 종료"}
+                        {statusInfo.label}
                       </span>
 
-                      {isLive && (
+                      {product?.status === "PROCESSING" && (
                         <span
                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold border"
                           style={{
@@ -680,7 +741,7 @@ const AuctionDetail = () => {
                       {product?.productName || "상품명을 불러오는 중..."}
                     </h1>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
                       <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200">
                         정품 보증
                       </span>
@@ -700,7 +761,6 @@ const AuctionDetail = () => {
                       </span>
                     </div>
                   </div>
-
                   <div className="hidden md:block text-right">
                     <div className="text-xs text-slate-500 font-bold">
                       현재 최고가
@@ -711,6 +771,50 @@ const AuctionDetail = () => {
                     <div className="mt-2 text-xs text-slate-500">
                       시작가 ₩{formatNumber(String(product?.price || 0))}
                     </div>
+
+                    {/* 준비중 + 본인 상품일 때 수정/삭제 버튼 */}
+                    {product?.status === "READY" && isSelfSeller && (
+                      <div className="mt-3 flex gap-2 justify-end">
+                        <button
+                          // onClick={handleEditProduct}
+                          className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                          수정
+                        </button>
+                        <button
+                          // onClick={handleDeleteProduct}
+                          className="px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                          삭제
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -749,7 +853,7 @@ const AuctionDetail = () => {
                       <div className="px-6 py-3 rounded-2xl bg-white border border-slate-200 flex items-center gap-2">
                         <Clock className="w-5 h-5 text-slate-900" />
                         <span className="font-extrabold text-slate-900">
-                          경매 종료
+                          {statusInfo.label}
                         </span>
                       </div>
                     </div>
@@ -961,7 +1065,7 @@ const AuctionDetail = () => {
                     <div>
                       {/* <div className="text-sm font-extrabold text-slate-900">입찰</div> */}
                       <div className="text-xs text-slate-500 mt-1">
-                        {isLive ? "" : "경매가 종료되었습니다."}
+                        {statusInfo.label}
                       </div>
                     </div>
 
