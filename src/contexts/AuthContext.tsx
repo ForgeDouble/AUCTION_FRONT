@@ -1,3 +1,4 @@
+// src/components/contexts/AuthContext/tsx
 import { createContext } from "react";
 
 export type Authority = "USER" | "ADMIN" | "INQUIRY" | string;
@@ -13,6 +14,11 @@ export interface AuthContextType {
   checkAuth: () => Promise<void>;
 
   logout: () => void;
+
+  updateProfile: (patch: {
+    nickname?: string | null;
+    profileImageUrl?: string | null;
+  }) => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -26,4 +32,6 @@ export const AuthContext = createContext<AuthContextType>({
   checkAuth: async () => {},
 
   logout: () => {},
+
+  updateProfile: () => {},
 });
