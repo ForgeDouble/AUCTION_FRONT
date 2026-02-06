@@ -1,16 +1,7 @@
+// pages/mypage/reviews/MyShopReviewsPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  ChevronLeft, 
-  Star, 
-  Edit3, 
-  ShoppingBag, 
-  User, 
-  Clock, 
-  Tag, 
-  MessageSquare,
-  ChevronRight
-} from "lucide-react";
+import { ChevronLeft, Star, Edit3, ShoppingBag, User, Clock, Tag, MessageSquare,ChevronRight, Store} from "lucide-react";
 import { fetchMyPendingReviews, fetchMyReviews } from "./reviewApi";
 import { 
   REVIEW_TAG_LABEL, 
@@ -104,7 +95,7 @@ export default function MyShopReviewsPage() {
   return (
     <div className="min-h-screen bg-[#F9FAFB] pb-20">
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <button
             onClick={() => nav(-1)}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition font-medium"
@@ -117,9 +108,10 @@ export default function MyShopReviewsPage() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         
-        <div className="mb-8">
+        <div className="relative mb-8 bg-white rounded-3xl border border-gray-100 p-6 overflow-hidden">
+          
           <h1 className="text-2xl font-extrabold text-gray-900">리뷰 관리</h1>
           <p className="text-gray-500 text-sm mt-1">
             낙찰받은 상품의 후기를 작성하거나, 내가 쓴 후기를 관리할 수 있습니다.
@@ -144,7 +136,7 @@ export default function MyShopReviewsPage() {
         <div className="animate-fade-in-up">
           {loading && (
              <div className="py-20 text-center">
-             <div className="animate-spin w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full mx-auto mb-4" />
+             <div className="animate-spin w-8 h-8 border-4 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full mx-auto mb-4" />
              <p className="text-gray-500 text-sm">정보를 불러오고 있습니다...</p>
            </div>
           )}
@@ -166,7 +158,12 @@ export default function MyShopReviewsPage() {
                     />
                   ) : (
                     pendingRows.map((r) => (
-                      <PendingReviewCard key={r.productId} data={r} onReview={() => {setWriteTarget(r); setWriteOpen(true);}} />
+                    <PendingReviewCard
+                    key={r.productId}
+                    data={r}
+                    onReview={() => { setWriteTarget(r); setWriteOpen(true); }}
+                    onViewProduct={() => nav(`/auction_detail/${r.productId}`)}
+                    />
                     ))
                   )}
 
@@ -238,7 +235,8 @@ function TabButton({ active, onClick, label, count }: { active: boolean; onClick
     <button
       onClick={onClick}
       className={`pb-3 px-1 text-sm font-bold relative transition-colors flex items-center gap-1.5 ${
-        active ? "text-violet-600" : "text-gray-400 hover:text-gray-600"
+        active ? "text-[rgb(118,90,255)]" : "text-gray-400 hover:text-gray-600"
+        
       }`}
     >
       <span>{label}</span>
@@ -254,7 +252,7 @@ function TabButton({ active, onClick, label, count }: { active: boolean; onClick
   );
 }
 
-function PendingReviewCard({ data, onReview }: { data: PendingReviewRowDto; onReview: () => void }) {
+function PendingReviewCard({ data, onReview, onViewProduct, }: { data: PendingReviewRowDto; onReview: () => void; onViewProduct: () => void;}) {
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
       <div className="flex-1 min-w-0">
@@ -268,14 +266,19 @@ function PendingReviewCard({ data, onReview }: { data: PendingReviewRowDto; onRe
           </span>
         </div>
         
-        <h3 className="font-bold text-gray-900 text-lg truncate group-hover:text-violet-600 transition-colors">
+        <button
+          type="button"
+          onClick={onViewProduct}
+          className="text-left font-bold text-gray-900 text-lg truncate hover:underline underline-offset-4 decoration-gray-300 hover:decoration-gray-900 transition-colors hover:text-[rgb(118,90,255)]"
+          title="상품 상세로 이동"
+        >
           {data.productName}
-        </h3>
+        </button>
         
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
           <div className="flex items-center gap-1">
-            <User className="w-3.5 h-3.5" />
-            <span>{data.sellerNick ?? "알 수 없음"}</span>
+            <Store className="w-3.5 h-3.5" />
+            <span><strong>{(data.sellerNick ?? "알 수 없음") + ""}</strong></span>님 상점
           </div>
           <div className="w-px h-3 bg-gray-200" />
           <div className="flex items-center gap-1">
@@ -287,7 +290,7 @@ function PendingReviewCard({ data, onReview }: { data: PendingReviewRowDto; onRe
 
       <button
         onClick={onReview}
-        className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 active:scale-95 transition-all shadow-sm hover:shadow-violet-200"
+        className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-bold hover:brightness-95 shadow-[0_10px_25px_-15px_rgba(118,90,255,0.45)] active:scale-95 transition-all shadow-sm hover:shadow-violet-200"
       >
         <Edit3 className="w-4 h-4" />
         리뷰 쓰기
