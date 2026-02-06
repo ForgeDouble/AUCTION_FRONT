@@ -576,9 +576,9 @@ function ReviewDetailModal(props: {
             {!loading && !err && data && (
               <>
                 <div className="flex items-center justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-2 bg-violet-50 px-3 py-2 rounded-2xl">
-                    <Star className="w-5 h-5 text-violet-600" fill="currentColor" />
-                    <span className="text-violet-700 font-extrabold">
+                  <div className="flex items-center gap-2 bg-[rgba(118,90,255,0.08)] px-3 py-2 rounded-2xl">
+                    <Star className="w-5 h-5 text-[rgb(118,90,255)]" fill="currentColor" />
+                    <span className="text-[rgb(118,90,255)] font-extrabold">
                       {Number(data.rating ?? 0).toFixed(1)}
                     </span>
                   </div>

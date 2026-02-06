@@ -61,7 +61,7 @@ function statusBadge(s: ProductRow["status"]) {
     case "READY":
       return { label: "대기", cls: "bg-gray-100 text-gray-600 ring-1 ring-gray-200" };
     case "PROCESSING":
-      return { label: "진행중", cls: "bg-violet-50 text-violet-700 ring-1 ring-violet-200" };
+      return { label: "진행중", cls: "bg-[rgba(118,90,255,0.08)] text-[rgb(118,90,255)] ring-1 ring-[rgba(118,90,255,0.25)]" };
     case "SELLED":
       return { label: "낙찰", cls: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200" };
     case "NOTSELLED":
@@ -72,8 +72,8 @@ function statusBadge(s: ProductRow["status"]) {
 }
 
 
-const BRAND_COLOR = "#7C3AED";
-const BRAND_BG_SOFT = "#F5F3FF";
+const BRAND_COLOR = "rgb(118,90,255)"
+const BRAND_BG_SOFT = "rgba(118,90,255,0.08)"
 
 type SectionKey = "PRODUCTS" | "REVIEWS";
 
@@ -248,7 +248,7 @@ export default function UserProfilePage() {
                 loadProfile();
                 if (section === "PRODUCTS") loadList();
               }}
-              className="p-2 text-gray-400 hover:text-violet-600 transition rounded-full hover:bg-violet-50"
+              className="p-2 text-gray-400 hover:text-[rgb(118,90,255)] transition rounded-full hover:bg-[rgba(118,90,255,0.08)]"
             >
               <RefreshCw className={`w-5 h-5 ${loadingProfile ? "animate-spin" : ""}`} />
             </button>
@@ -258,7 +258,7 @@ export default function UserProfilePage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="relative bg-white rounded-[2rem] p-10 md:min-h-[360px] shadow-sm border border-gray-100 overflow-hidden mb-8 group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-violet-100/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-violet-200/50 transition-colors duration-700" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[rgba(118,90,255,0.14)] rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-[rgba(118,90,255,0.20)] transition-colors duration-700" />
    
           {reportable && (
             <button
@@ -293,7 +293,7 @@ export default function UserProfilePage() {
                   </h1>
                   
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-50 text-violet-700 text-xs font-bold">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[rgba(118,90,255,0.08)] text-[rgb(118,90,255)] text-xs font-bold">
                       <Home className="w-4 h-4" /> 오픈 {openDays}일차 </span>
                       {/* <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold border border-gray-100"> ID #{targetUserId} </span> */}
                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold border border-gray-100"> 최근 활동 
@@ -314,7 +314,7 @@ export default function UserProfilePage() {
             <StatCard
               label="거래완료"
               value={profile?.tradeCount ?? 0}
-              icon={<Gavel className="w-5 h-5 text-violet-600" />}
+              icon={<Gavel className="w-5 h-5 text-[rgb(118,90,255)]" />}
             />
             <StatCard
               label="총 등록상품"
@@ -358,7 +358,7 @@ export default function UserProfilePage() {
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   placeholder="상품명을 검색해보세요"
-                  className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition shadow-sm"
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[rgba(118,90,255,0.25)] focus:border-[rgb(118,90,255)] transition shadow-sm"
                 />
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               </div>
@@ -374,7 +374,7 @@ export default function UserProfilePage() {
                     onClick={() => toggleStatus(s)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
                       statuses.includes(s)
-                        ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+                        ? "bg-[rgb(118,90,255)] text-white border-[rgb(118,90,255)] shadow-sm"
                         : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                     }`}
                   >
@@ -388,7 +388,7 @@ export default function UserProfilePage() {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500/20 cursor-pointer appearance-none hover:bg-gray-50 transition"
+                    className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[rgba(118,90,255,0.25)] cursor-pointer appearance-none hover:bg-gray-50 transition"
                   >
                     <option value="NEWEST">최신순</option>
                     <option value="ENDING_SOON">마감임박</option>
@@ -402,7 +402,7 @@ export default function UserProfilePage() {
 
             {loadingList ? (
               <div className="py-20 text-center">
-                <div className="animate-spin w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full mx-auto mb-4" />
+                <div className="animate-spin w-8 h-8 border-4 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full mx-auto mb-4" />
                 <p className="text-gray-500 text-sm">상품 정보를 불러오고 있습니다...</p>
               </div>
             ) : rows.length === 0 ? (
@@ -478,7 +478,7 @@ export default function UserProfilePage() {
 function StatCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow group">
-      <div className="w-12 h-12 rounded-xl bg-gray-50 group-hover:bg-violet-50 flex items-center justify-center transition-colors">
+      <div className="w-12 h-12 rounded-xl bg-gray-50 group-hover:bg-[rgba(118,90,255,0.08)] flex items-center justify-center transition-colors">
         {icon}
       </div>
       <div>
@@ -506,7 +506,7 @@ function TabButton({
     <button
       onClick={onClick}
       className={`pb-4 px-2 text-sm font-bold relative transition-colors ${
-        active ? "text-violet-600" : "text-gray-400 hover:text-gray-600"
+        active ? "text-[rgb(118,90,255)]" : "text-gray-400 hover:text-gray-600"
       }`}
     >
       <span className="flex items-center gap-1.5">
@@ -514,7 +514,7 @@ function TabButton({
         {count !== undefined && (
           <span
             className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-              active ? "bg-violet-100 text-violet-700" : "bg-gray-100 text-gray-500"
+              active ? "bg-[rgba(118,90,255,0.14)] text-[rgb(118,90,255)]" : "bg-gray-100 text-gray-500"
             }`}
           >
             {count}
@@ -522,7 +522,7 @@ function TabButton({
         )}
       </span>
       {active && (
-        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-violet-600 rounded-t-full" />
+        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[rgb(118,90,255)] rounded-t-full" />
       )}
     </button>
   );
@@ -557,7 +557,7 @@ function ProductCard({ product, onClick }: { product: ProductRow; onClick: () =>
 
       <div className="p-5 flex flex-col flex-1">
         <div className="flex-1">
-          <h3 className="text-[15px] font-bold text-gray-900 line-clamp-1 mb-1 group-hover:text-violet-600 transition-colors">
+          <h3 className="text-[15px] font-bold text-gray-900 line-clamp-1 mb-1 group-hover:text-[rgb(118,90,255)] transition-colors">
             {product.productName}
           </h3>
           <p className="text-xs text-gray-400 mb-4 line-clamp-2 min-h-[2.5em]">
@@ -574,7 +574,7 @@ function ProductCard({ product, onClick }: { product: ProductRow; onClick: () =>
           </div>
           <div className="text-right">
             <span className="text-[10px] font-medium text-gray-400 block mb-0.5">입찰수</span>
-             <span className="text-sm font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-md">
+             <span className="text-sm font-bold text-[rgb(118,90,255)] bg-[rgba(118,90,255,0.08)] px-2 py-0.5 rounded-md">
               {product.bidCount}건
             </span>
           </div>

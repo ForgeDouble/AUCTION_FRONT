@@ -124,7 +124,7 @@ export default function PublicProfileReviews(props: {
   if (loading) {
     return (
       <div className="py-20 text-center">
-        <div className="animate-spin w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full mx-auto mb-4" />
+        <div className="animate-spin w-8 h-8 border-4 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full mx-auto mb-4" />
         <p className="text-gray-500 text-sm">리뷰를 불러오고 있습니다...</p>
       </div>
     );
@@ -143,19 +143,19 @@ export default function PublicProfileReviews(props: {
   <div className="space-y-4">
   {/* Summary */}
   <div className="bg-white rounded-3xl border border-gray-100 p-6 flex items-center justify-between">
-  <div>
-  <div className="text-sm font-bold text-gray-900">받은 리뷰</div>
-  <div className="text-xs text-gray-500 mt-1">
-  총 {summary?.reviewCount ?? 0}개
-  </div>
-  </div>
-  <div className="flex items-center gap-2 bg-violet-50 px-3 py-2 rounded-2xl">
-  <Star className="w-4 h-4 text-violet-600" fill="currentColor" />
-  <span className="font-extrabold text-violet-700 text-sm">
-  {(summary?.avgRating ?? 0).toFixed(1)}
-  </span>
-  </div>
-  </div>
+    <div>
+      <div className="text-sm font-bold text-gray-900">받은 리뷰</div>
+        <div className="text-xs text-gray-500 mt-1">
+          총 {summary?.reviewCount ?? 0}개
+        </div>
+      </div>
+      <div className="flex items-center gap-2 bg-[rgba(118,90,255,0.08)] px-3 py-2 rounded-2xl">
+        <Star className="w-4 h-4 text-[rgb(118,90,255)]" fill="currentColor" />
+        <span className="font-extrabold text-[rgb(118,90,255)] text-sm">
+          {(summary?.avgRating ?? 0).toFixed(1)}
+        </span>
+      </div>
+    </div>
 
     {/* List */}
     {rows.length === 0 ? (
@@ -256,9 +256,9 @@ function ReviewCard({ r, onOpenDetail }: { r: ReviewListDto; onOpenDetail: () =>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 bg-violet-50 px-2 py-1 rounded-xl">
-                <Star className="w-4 h-4 text-violet-600" fill="currentColor" />
-                <span className="font-extrabold text-violet-700 text-sm">
+              <div className="flex items-center gap-1 bg-[rgba(118,90,255,0.08)] px-2 py-1 rounded-xl">
+                <Star className="w-4 h-4 text-[rgb(118,90,255)]" fill="currentColor" />
+                <span className="font-extrabold text-[rgb(118,90,255)] text-sm">
                   {Number(r.rating ?? 0).toFixed(1)}
                 </span>
               </div>
@@ -397,9 +397,9 @@ function ReviewDetailModal(props: {
             {!loading && !err && data && (
               <>
                 <div className="flex items-center justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-2 bg-violet-50 px-3 py-2 rounded-2xl">
-                    <Star className="w-5 h-5 text-violet-600" fill="currentColor" />
-                    <span className="text-violet-700 font-extrabold">
+                  <div className="flex items-center gap-2 bg-[rgba(118,90,255,0.08)] px-3 py-2 rounded-2xl">
+                    <Star className="w-5 h-5 text-[rgb(118,90,255)]" fill="currentColor" />
+                    <span className="text-[rgb(118,90,255)] font-extrabold">
                       {Number(data.rating ?? 0).toFixed(1)}
                     </span>
                   </div>
