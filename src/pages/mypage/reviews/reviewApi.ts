@@ -27,6 +27,7 @@ async function throwApiError(response: Response, fallback: string) {
 function authHeader(token: string) {
     return {
         Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
+        Accept: "application/json",
     };
 }
 
@@ -58,7 +59,10 @@ export async function createReview(
 
     const res = await fetch(`${BASE}/review/create`, {
         method: "POST",
-        headers: authHeader(token),
+        headers: {
+            ...authHeader(token),
+            Accept: "application/json",
+        },
         body: fd,
     });
 
@@ -71,16 +75,21 @@ export async function createReview(
 
 
 /** 공개 프로필 요약 */
-export async function fetchSellerReviewSummary(token: string, sellerId: number) {
-    const res = await fetch(`${BASE}/review/seller/${sellerId}/summary`, {
-        method: "GET",
-        headers: authHeader(token),
-    });
-    if (!res.ok) {
-        if (res.status === 401 || res.status === 403) throw new Error("AUTH_REQUIRED");
-        await throwApiError(res, "판매자 리뷰 요약 조회 실패");
-    }
-    return (await res.json()) as ApiResponse<ReviewSellerSummaryDto>;
+export async function fetchSellerReviewSummary(
+  token: string,
+  sellerId: number
+): Promise<ReviewSellerSummaryDto> {
+  const res = await fetch(`${BASE}/review/seller/${sellerId}/summary`, {
+    method: "GET",
+    headers: authHeader(token),
+  });
+
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) throw new Error("AUTH_REQUIRED");
+    await throwApiError(res, "판매자 리뷰 요약 조회 실패");
+  }
+
+  return (await res.json()) as ReviewSellerSummaryDto;
 }
 
 /** 공개 프로필 받은 리뷰 목록 */

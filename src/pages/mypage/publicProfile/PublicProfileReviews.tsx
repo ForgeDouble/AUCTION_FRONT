@@ -23,20 +23,20 @@ const [loading, setLoading] = useState(false);
 const [err, setErr] = useState<string | null>(null);
 
 const load = async () => {
-setErr(null);
-setLoading(true);
-try {
-const [p, s] = await Promise.all([
-fetchSellerReviews(token, sellerId, page, 10),
-fetchSellerReviewSummary(token, sellerId),
-]);
-setData(p);
-setSummary(s);
-} catch (e: any) {
-setErr(String(e?.message ?? e));
-} finally {
-setLoading(false);
-}
+  setErr(null);
+  setLoading(true);
+  try {
+    const [p, s] = await Promise.all([
+      fetchSellerReviews(token, sellerId, page, 10),
+      fetchSellerReviewSummary(token, sellerId),
+    ]);
+    setData(p);
+    setSummary(s);
+  } catch (e: any) {
+    setErr(String(e?.message ?? e));
+  } finally {
+    setLoading(false);
+  }
 };
 
 useEffect(() => {
