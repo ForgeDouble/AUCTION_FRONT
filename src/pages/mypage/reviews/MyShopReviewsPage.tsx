@@ -526,6 +526,10 @@ function ReviewDetailModal(props: {
     .slice()
     .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0));
 
+  const MAX_SLOTS = 12; // 6 x 2
+  const thumbs = images.slice(0, MAX_SLOTS);
+  const extra = Math.max(0, images.length - MAX_SLOTS);
+  const placeholders = Math.max(0, MAX_SLOTS - thumbs.length);
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
@@ -629,27 +633,34 @@ function ReviewDetailModal(props: {
                 )}
 
                 {images.length > 0 && (
-                  <>
-                    <div className="mb-2 font-extrabold text-gray-900">사진</div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {images.map((img: any, idx: number) => (
-                        <button
-                          key={img.id}
-                          type="button"
-                          onClick={() => onOpenLightbox(idx)}
-                          className="group relative rounded-2xl overflow-hidden border border-gray-100"
-                          aria-label="이미지 확대 보기"
-                        >
-                          <img
-                            src={img.url}
-                            className="w-full aspect-square object-cover group-hover:scale-[1.02] transition"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
-                        </button>
-                      ))}
-                    </div>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => onOpenLightbox(0)}
+                    className="text-xs font-bold text-[rgb(118,90,255)] hover:underline underline-offset-4"
+                  >
+                    전체 보기
+                  </button>
                 )}
+                <div className="grid grid-cols-6 grid-rows-2 gap-2 h-[240px]"> {thumbs.map((img: any, idx: number) => ( <button key={img.id} type="button" onClick={() => onOpenLightbox(idx)} className="relative rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 group" aria-label="이미지 확대 보기" > <img src={img.url} className="w-full h-full object-cover group-hover:scale-[1.02] transition" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
+
+                    {extra > 0 && idx === MAX_SLOTS - 1 && (
+                      <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+                        <div className="px-3 py-1.5 rounded-full bg-black/35 text-white text-xs font-extrabold">
+                          +{extra}
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                ))}
+
+                {Array.from({ length: placeholders }).map((_, i) => (
+                  <div
+                    key={`ph-${i}`}
+                    className="rounded-2xl border border-dashed border-gray-200 bg-gray-50"
+                  />
+                ))}
+                </div>
               </>
             )}
           </div>
