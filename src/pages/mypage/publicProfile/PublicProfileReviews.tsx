@@ -1,18 +1,23 @@
+// pages/mypage/publicProfile/PublicProfileReview.tsx
 import React, { useEffect, useState } from "react";
 import { Star, Tag } from "lucide-react";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import { fetchSellerReviews, fetchSellerReviewSummary } from "@/pages/mypage/reviews/reviewApi";
 import {
-REVIEW_TAG_LABEL,
-formatKST,
-type ReviewListDto,
-type ReviewSellerSummaryDto,
-type SpringPage,
+  REVIEW_TAG_LABEL,
+  formatKST,
+  type ReviewListDto,
+  type ReviewSellerSummaryDto,
+  type SpringPage,
+  type ReviewTag,
 } from "@/pages/mypage/reviews/reviewTypes";
 
+function isReviewTag(x: unknown): x is ReviewTag {
+  return typeof x === "string" && x in REVIEW_TAG_LABEL;
+}
 export default function PublicProfileReviews(props: {
-token: string;
-sellerId: number;
+  token: string;
+  sellerId: number;
 }) {
 const { token, sellerId } = props;
 
@@ -126,73 +131,78 @@ return (
 }
 
 function ReviewCard({ r }: { r: ReviewListDto }) {
-const thumb = r.firstImageUrl || null;
+  const thumb = r.firstImageUrl || null;
 
-return (
-<div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
-<div className="flex gap-4">
-{/* ✅ firstImageUrl 썸네일 */}
-<div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
-<img
-src={thumb ?? placeholderImg}
-alt="review thumb"
-className="w-full h-full object-cover"
-/>
-</div>
-
-    <div className="flex-1 min-w-0">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
-            {r.reviewerProfileImageUrl ? (
-              <img
-                src={r.reviewerProfileImageUrl}
-                alt="reviewer"
-                className="w-full h-full object-cover"
-              />
-            ) : null}
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-extrabold text-gray-900 truncate">
-              {r.reviewerNick}
-            </div>
-            <div className="text-[11px] text-gray-400">{formatKST(r.createdAt)}</div>
-          </div>
+  return (
+    <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex gap-4">
+      {/* ✅ firstImageUrl 썸네일 */}
+        <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
+          <img
+            src={thumb ?? placeholderImg}
+            alt="review thumb"
+            className="w-full h-full object-cover"
+          />
         </div>
 
-        <div className="flex items-center gap-1 bg-violet-50 px-2 py-1 rounded-xl">
-          <Star className="w-4 h-4 text-violet-600" fill="currentColor" />
-          <span className="font-extrabold text-violet-700 text-sm">
-            {Number(r.rating ?? 0).toFixed(1)}
-          </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
+                {r.reviewerProfileImageUrl ? (
+                  <img
+                    src={r.reviewerProfileImageUrl}
+                    alt="reviewer"
+                    className="w-full h-full object-cover"
+                  />
+                ) : null}
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-extrabold text-gray-900 truncate">
+                  {r.reviewerNick}
+                </div>
+                <div className="text-[11px] text-gray-400">{formatKST(r.createdAt)}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 bg-violet-50 px-2 py-1 rounded-xl">
+              <Star className="w-4 h-4 text-violet-600" fill="currentColor" />
+              <span className="font-extrabold text-violet-700 text-sm">
+                {Number(r.rating ?? 0).toFixed(1)}
+              </span>
+            </div>
+          </div>
+
+          {r.content ? (
+            <div className="mt-3 text-sm text-gray-700 bg-gray-50 rounded-2xl p-4 leading-relaxed">
+              {r.content}
+            </div>
+          ) : (
+            <div className="mt-3 text-sm text-gray-400">내용 없음</div>
+          )}
+
+          {r.tags?.length ? (
+            <div className="mt-3 flex flex-wrap gap-2.5">
+              {r.tags.slice(0, 8).map((t) => (
+                <span
+                  key={String(t)}
+                  className="
+                    inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                    bg-[rgba(118,90,255,0.08)] border border-[rgba(118,90,255,0.25)]
+                    text-xs font-semibold text-gray-800 shadow-sm
+                    hover:bg-[rgba(118,90,255,0.12)] hover:border-[rgba(118,90,255,0.35)]
+                    hover:shadow-md hover:-translate-y-0.3
+                    transition-all cursor-default select-none
+                  "
+                >
+                  <Tag className="w-3 h-3 text-[rgb(118,90,255)]" />
+                  {isReviewTag(t) ? REVIEW_TAG_LABEL[t] : String(t)}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
-
-      {r.content ? (
-        <div className="mt-3 text-sm text-gray-700 bg-gray-50 rounded-2xl p-4 leading-relaxed">
-          {r.content}
-        </div>
-      ) : (
-        <div className="mt-3 text-sm text-gray-400">내용 없음</div>
-      )}
-
-      {r.tags?.length ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {r.tags.slice(0, 8).map((t) => (
-            <span
-              key={t}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-600"
-            >
-              <Tag className="w-3 h-3 text-gray-400" />
-              {REVIEW_TAG_LABEL[t as any] ?? t}
-            </span>
-          ))}
-        </div>
-      ) : null}
     </div>
-  </div>
-</div>
-
-
-);
+  );
 }
