@@ -136,21 +136,17 @@ export async function fetchMyPendingReviews(token: string, page = 0, size = 10) 
 }
 
 /** 리뷰 상세 */
-export async function fetchReviewDetail(
-  token: string,
-  reviewId: number,
-  signal?: AbortSignal
-): Promise<ReviewDetailDto | ApiResponse<ReviewDetailDto>> {
-  const res = await fetch(`${BASE}/review/${reviewId}`, {
-    method: "GET",
-    headers: authHeader(token),
-    signal,
-  });
+export async function fetchReviewDetail(token: string, reviewId: number, signal?: AbortSignal) {
+    const res = await fetch(`${BASE}/review/${reviewId}`, {
+        method: "GET",
+        headers: authHeader(token),
+        signal,
+    });
 
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new Error("AUTH_REQUIRED");
-    await throwApiError(res, "리뷰 상세 조회 실패");
-  }
+    if (!res.ok) {
+        if (res.status === 401 || res.status === 403) throw new Error("AUTH_REQUIRED");
+        await throwApiError(res, "리뷰 상세 조회 실패");
+    }
 
-  return (await res.json()) as ReviewDetailDto | ApiResponse<ReviewDetailDto>;
+    return (await res.json());
 }

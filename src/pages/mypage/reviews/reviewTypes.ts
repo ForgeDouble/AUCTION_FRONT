@@ -43,6 +43,7 @@ export type ReviewDetailDto = {
 
     reviewerId: number;
     reviewerNick: string;
+    reviewerProfileImageUrl?: string | null;
 
     rating: number;
     tags: ReviewTag[];
