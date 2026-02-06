@@ -1,3 +1,4 @@
+//src/firebase/firebase.ts
 import { initializeApp } from "firebase/app";
 
 import {getMessaging, getToken, onMessage, isSupported, type MessagePayload } from "firebase/messaging";

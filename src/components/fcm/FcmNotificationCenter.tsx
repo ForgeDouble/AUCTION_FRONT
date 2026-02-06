@@ -1,3 +1,4 @@
+//src/components/FcmNotificationCenter.tsx
 import React, { useEffect, useState, useRef } from "react";
 import type { MessagePayload } from "firebase/messaging";
 import { subscribeForegroundMessage } from "@/firebase/firebase";

@@ -112,6 +112,23 @@ function formatBirthdayDisplay(birthdayStr: string | null): string {
   return `${md.yyyy}-${md.mm}-${md.dd}`;
 }
 
+// 알림 방지 기능 적용
+function notifSupported(): boolean {
+  return typeof window !== "undefined" && "Notification" in window;
+}
+
+async function ensureNotifPermission(): Promise<"granted" | "denied" | "default"> {
+  if (!notifSupported()) return "denied";
+  try {
+    if (Notification.permission === "granted") return "granted";
+    if (Notification.permission === "denied") return "denied";
+    const perm = await Notification.requestPermission();
+    return perm;
+  } catch {
+    return Notification.permission ?? "default";
+  }
+}
+
 const Toggle: React.FC<{
   value: boolean;
   onChange: (v: boolean) => void;
@@ -396,6 +413,30 @@ const AdminSettingsModal: React.FC<Props> = ({
     }
   };
 
+  const onToggleNotif = async (next: boolean) => {
+    // OFF -> ON 켤 때만 권한 체크/요청
+    if (next) {
+      if (!notifSupported()) {
+        alert("이 브라우저/환경에서는 알림 기능을 지원하지 않습니다.");
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        alert("브라우저 알림 권한이 차단되어 있어요. 브라우저 설정에서 알림을 허용한 뒤 다시 켜주세요.");
+        return;
+      }
+
+      if (Notification.permission === "default") {
+        const perm = await ensureNotifPermission();
+        if (perm !== "granted") {
+          alert("알림 권한이 허용되지 않아 알림을 켤 수 없습니다.");
+          return;
+        }
+      }
+    }
+    setNotifEnabled(next);
+  };
+
   return (
     <div className="fixed inset-0 z-[9999]">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
@@ -577,7 +618,13 @@ const AdminSettingsModal: React.FC<Props> = ({
                       <div className="text-[11px] text-gray-500">운영 화면에서 알림 배너/브라우저 알림 등에 활용</div>
                     </div>
 
-                    <Toggle value={notifEnabled} onChange={setNotifEnabled} labelOn="ON" labelOff="OFF" />
+                    <Toggle
+                      value={notifEnabled}
+                      onChange={(v) => { void onToggleNotif(v); }}
+                      labelOn="ON"
+                      labelOff="OFF"
+                      disabled={!notifSupported()}
+                    />
                   </div>
                 </div>
               </div>

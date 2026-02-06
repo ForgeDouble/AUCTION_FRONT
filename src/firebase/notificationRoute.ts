@@ -1,3 +1,4 @@
+//src/firebase/notificationRoute.ts
 import type { NotificationCategory } from "@/hooks/useNotifications";
 
 export type NotificationType =
