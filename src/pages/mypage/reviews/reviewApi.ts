@@ -1,3 +1,4 @@
+// pages/mypage/reviews/reviewApi.ts
 import type { ApiResponse } from "@/type/CommonType";
 import type {
 CanWriteReviewDto,
@@ -106,7 +107,7 @@ export async function fetchSellerReviews(token: string, sellerId: number, page =
     return (await res.json()) as ApiResponse<SpringPage<ReviewListDto>> | SpringPage<ReviewListDto>;
 }
 
-/** 마이페이지: 내가 작성한 리뷰  0*/
+/** 마이페이지: 내가 작성한 리뷰  */
 export async function fetchMyReviews(token: string, page = 0, size = 10) {
     const url = `${BASE}/review/me?page=${page}&size=${size}`;
     const res = await fetch(url, {
@@ -120,7 +121,7 @@ export async function fetchMyReviews(token: string, page = 0, size = 10) {
     return (await res.json()) as ApiResponse<SpringPage<ReviewListDto>> | SpringPage<ReviewListDto>;
 }
 
-/** 마이페이지 : 안 쓴 리뷰(낙찰 후 미작성) 0*/
+/** 마이페이지 : 안 쓴 리뷰(낙찰 후 미작성) */
 export async function fetchMyPendingReviews(token: string, page = 0, size = 10) {
     const url = `${BASE}/review/me/pending?page=${page}&size=${size}`;
     const res = await fetch(url, {
@@ -132,4 +133,24 @@ export async function fetchMyPendingReviews(token: string, page = 0, size = 10) 
         await throwApiError(res, "미작성 리뷰 목록 조회 실패");
     }
     return (await res.json()) as ApiResponse<SpringPage<PendingReviewRowDto>> | SpringPage<PendingReviewRowDto>;
+}
+
+/** 리뷰 상세 */
+export async function fetchReviewDetail(
+  token: string,
+  reviewId: number,
+  signal?: AbortSignal
+): Promise<ReviewDetailDto | ApiResponse<ReviewDetailDto>> {
+  const res = await fetch(`${BASE}/review/${reviewId}`, {
+    method: "GET",
+    headers: authHeader(token),
+    signal,
+  });
+
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) throw new Error("AUTH_REQUIRED");
+    await throwApiError(res, "리뷰 상세 조회 실패");
+  }
+
+  return (await res.json()) as ReviewDetailDto | ApiResponse<ReviewDetailDto>;
 }

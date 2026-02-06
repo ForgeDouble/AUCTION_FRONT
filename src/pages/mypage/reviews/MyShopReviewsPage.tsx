@@ -337,13 +337,13 @@ function WrittenReviewCard({ data, onViewProduct }: { data: ReviewListDto; onVie
       )}
 
       {data.tags && data.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5">
           {data.tags.slice(0, 8).map((t) => (
             <span
               key={t}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-gray-200 text-xs font-medium text-gray-600 shadow-sm"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[rgba(118,90,255,0.08)] border border-[rgba(118,90,255,0.25)] text-xs font-semibold text-gray-800 shadow-sm hover:bg-[rgba(118,90,255,0.12)] hover:border-[rgba(118,90,255,0.35)] transition"
             >
-              <Tag className="w-3 h-3 text-gray-400" />
+              <Tag className="w-3 h-3 text-[rgb(118,90,255)]" />
               {REVIEW_TAG_LABEL[t]}
             </span>
           ))}

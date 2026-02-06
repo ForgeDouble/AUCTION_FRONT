@@ -1,3 +1,4 @@
+// pages/mypage/reviews/reviewType.tsx
 import type { Status } from "../MyPageDto";
 
 export type ReviewTag =
