@@ -587,22 +587,40 @@ function ReviewDetailModal(props: {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mb-5">
-                  <button
-                    type="button"
-                    onClick={() => onGoProduct(data.productId)}
-                    className="px-4 py-2 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-bold hover:brightness-95 transition"
-                  >
-                    상품으로 이동
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5">
+                  <button 
+                    type="button" 
+                    onClick={() => onGoProduct(data.productId)} 
+                    className="
+                      w-full inline-flex items-center justify-center gap-2
+                      px-4 py-2.5 rounded-2xl
+                      bg-[rgb(118,90,255)] text-white text-sm font-extrabold shadow-[0_10px_25px_-15px_rgba(118,90,255,0.45)]
+                      hover:brightness-95 active:scale-[0.98]
+                      transition-all
+                      focus-visible:outline-none 
+                      focus-visible:ring-2 focus-visible:ring-[rgba(118,90,255,0.35)] focus-visible:ring-offset-2
+                    " 
+                  > 
+                    상품으로 이동 
                   </button>
 
                   <button
                     type="button"
                     onClick={() => onGoSeller(data.sellerId)}
-                    className="px-4 py-2 rounded-xl bg-gray-100 text-gray-800 text-sm font-bold hover:bg-gray-200 transition inline-flex items-center gap-2"
+                    className="
+                      w-full inline-flex items-center justify-center gap-2
+                      px-4 py-2.5 rounded-2xl
+                      bg-white border border-[rgba(118,90,255,0.35)]
+                      text-[rgb(118,90,255)] text-sm font-extrabold
+                      shadow-sm
+                      hover:bg-[rgba(118,90,255,0.08)] hover:border-[rgba(118,90,255,0.45)]
+                      active:scale-[0.98]
+                      transition-all
+                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(118,90,255,0.25)] focus-visible:ring-offset-2
+                    "
                   >
-                    <Store className="w-4 h-4" />
-                    {data.sellerNick}님 상점
+                    <Store className="w-4 h-4 text-[rgb(118,90,255)]" />
+                    <span className="min-w-0 truncate">{data.sellerNick}님 상점</span>
                   </button>
                 </div>
 
