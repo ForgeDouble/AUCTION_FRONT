@@ -405,6 +405,9 @@ function WrittenReviewCard({ data, onViewProduct, onOpenDetail, }: { data: Revie
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="text-xs text-gray-400 font-medium">
+            {formatKST(data.createdAt)}
+          </div>
           <button
             type="button"
             onClick={(e) => {
@@ -415,9 +418,6 @@ function WrittenReviewCard({ data, onViewProduct, onOpenDetail, }: { data: Revie
           >
             상세
           </button>
-          <div className="text-xs text-gray-400 font-medium">
-            {formatKST(data.createdAt)}
-          </div>
         </div>
       </div>
 
@@ -709,7 +709,7 @@ function Lightbox(props: {
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-3 right-3 w-10 h-10 rounded-xl bg-white/15 hover:bg-white/25 transition flex items-center justify-center"
+            className = "absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/45 hover:bg-black/60 border border-white/20 backdrop-blur transition flex items-center justify-center shadow-lg"
             aria-label="닫기"
           >
             <X className="w-6 h-6 text-white" />
@@ -720,7 +720,7 @@ function Lightbox(props: {
               <button
                 type="button"
                 onClick={prev}
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-2xl bg-white/15 hover:bg-white/25 transition flex items-center justify-center"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-2xl bg-black/45 hover:bg-black/60 border border-white/20 backdrop-blur transition flex items-center justify-center shadow-lg"
                 aria-label="이전 이미지"
               >
                 <ChevronLeft className="w-7 h-7 text-white" />
@@ -729,13 +729,13 @@ function Lightbox(props: {
               <button
                 type="button"
                 onClick={next}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-2xl bg-white/15 hover:bg-white/25 transition flex items-center justify-center"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-2xl bg-black/45 hover:bg-black/60 border border-white/20 backdrop-blur transition flex items-center justify-center shadow-lg"
                 aria-label="다음 이미지"
               >
                 <ChevronRight className="w-7 h-7 text-white" />
               </button>
 
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-white/15 text-white text-xs font-bold">
+              <div className = "absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/45 border border-white/20 backdrop-blur text-white text-xs font-bold shadow-lg">
                 {index + 1} / {urls.length}
               </div>
             </>
