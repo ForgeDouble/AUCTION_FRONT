@@ -3,16 +3,21 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Star, Edit3, ShoppingBag, Clock, Tag, MessageSquare, ChevronRight, Store, X } from "lucide-react";
 import { fetchMyPendingReviews, fetchMyReviews, fetchReviewDetail } from "./reviewApi";
-import { 
-  REVIEW_TAG_LABEL, 
-  formatKST, 
+import {
+  REVIEW_TAG_LABEL,
+  formatKST,
   unwrap,
-  type PendingReviewRowDto, 
-  type ReviewListDto, 
-  type SpringPage 
+  type PendingReviewRowDto,
+  type ReviewListDto,
+  type SpringPage,
+  type ReviewTag,
+  type ReviewDetailDto,
 } from "./reviewTypes";
 import ReviewWriteModal from "./ReviewWriteModal";
-import type { ReviewDetailDto } from "./reviewTypes";
+
+function isReviewTag(x: unknown): x is ReviewTag {
+  return typeof x === "string" && x in REVIEW_TAG_LABEL;
+}
 
 type TabKey = "PENDING" | "MINE";
 
@@ -132,7 +137,8 @@ export default function MyShopReviewsPage() {
       setDetailErr(null);
       try {
         const res = await fetchReviewDetail(token, detailId, ac.signal);
-        const dto = unwrap(res);
+        const dto = unwrap<ReviewDetailDto>(res);
+        // const dto = unwrap(res);
         setDetail(dto);
       } catch (e: any) {
         const msg = String(e?.message ?? e);
@@ -338,7 +344,9 @@ function TabButton({ active, onClick, label, count }: { active: boolean; onClick
           {count}
         </span>
       )} */}
-      {active && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-violet-600 rounded-t-full" />}
+      {active && (
+        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[rgb(118,90,255)] rounded-t-full" />
+      )}
     </button>
   );
 }
@@ -386,7 +394,7 @@ function PendingReviewCard({ data, onReview, onViewProduct, onViewSeller,}: { da
 
       <button
         onClick={onReview}
-        className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-bold hover:brightness-95 shadow-[0_10px_25px_-15px_rgba(118,90,255,0.45)] active:scale-95 transition-all shadow-sm hover:shadow-violet-200"
+        className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-bold hover:brightness-95 shadow-[0_10px_25px_-15px_rgba(118,90,255,0.45)] active:scale-95 transition-all shadow-sm hover:shadow-[0_10px_25px_-15px_rgba(118,90,255,0.35)]"
       >
         <Edit3 className="w-4 h-4" />
         리뷰 쓰기
@@ -401,7 +409,7 @@ function WrittenReviewCard({ data, onViewProduct, onOpenDetail, }: { data: Revie
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-1 bg-violet-50 px-2 py-1 rounded-lg">
           <Star className="w-4 h-4 text-violet-600" fill="currentColor" />
-          <span className="font-extrabold text-violet-700 text-sm">{Number(data.rating ?? 0).toFixed(1)}</span>
+          <span className="font-extrabold text-[rgb(118,90,255)] text-sm">{Number(data.rating ?? 0).toFixed(1)}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -444,7 +452,7 @@ function WrittenReviewCard({ data, onViewProduct, onOpenDetail, }: { data: Revie
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[rgba(118,90,255,0.08)] border border-[rgba(118,90,255,0.25)] text-xs font-semibold text-gray-800 shadow-sm hover:bg-[rgba(118,90,255,0.12)] hover:border-[rgba(118,90,255,0.35)] transition"
             >
               <Tag className="w-3 h-3 text-[rgb(118,90,255)]" />
-              {REVIEW_TAG_LABEL[t]}
+              {isReviewTag(t) ? REVIEW_TAG_LABEL[t] : String(t)}
             </span>
           ))}
         </div>
