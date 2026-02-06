@@ -111,8 +111,8 @@ export default function MyShopReviewsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         
         <div className="relative mb-8 bg-white rounded-3xl border border-gray-100 p-6 overflow-hidden">
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">리뷰 관리</h1>
           
-          <h1 className="text-2xl font-extrabold text-gray-900">리뷰 관리</h1>
           <p className="text-gray-500 text-sm mt-1">
             낙찰받은 상품의 후기를 작성하거나, 내가 쓴 후기를 관리할 수 있습니다.
           </p>
@@ -158,12 +158,17 @@ export default function MyShopReviewsPage() {
                     />
                   ) : (
                     pendingRows.map((r) => (
-                    <PendingReviewCard
-                    key={r.productId}
-                    data={r}
-                    onReview={() => { setWriteTarget(r); setWriteOpen(true); }}
-                    onViewProduct={() => nav(`/auction_detail/${r.productId}`)}
-                    />
+                      <PendingReviewCard
+                        key={r.productId}
+                        data={r}
+                        onReview={() => { setWriteTarget(r); setWriteOpen(true); }}
+                        onViewProduct={() => nav(`/auction_detail/${r.productId}`)}
+                        onViewSeller={() => {
+                          const sellerUserId = (r as any).sellerUserId ?? (r as any).sellerId;
+                          if (sellerUserId == null) return;
+                          nav(`/user/profile/${sellerUserId}`);
+                        }}
+                      />
                     ))
                   )}
 
@@ -252,7 +257,7 @@ function TabButton({ active, onClick, label, count }: { active: boolean; onClick
   );
 }
 
-function PendingReviewCard({ data, onReview, onViewProduct, }: { data: PendingReviewRowDto; onReview: () => void; onViewProduct: () => void;}) {
+function PendingReviewCard({ data, onReview, onViewProduct, onViewSeller,}: { data: PendingReviewRowDto; onReview: () => void; onViewProduct: () => void; onViewSeller: () => void;}) {
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
       <div className="flex-1 min-w-0">
@@ -276,10 +281,15 @@ function PendingReviewCard({ data, onReview, onViewProduct, }: { data: PendingRe
         </button>
         
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
-          <div className="flex items-center gap-1">
-            <Store className="w-3.5 h-3.5" />
-            <span><strong>{(data.sellerNick ?? "알 수 없음") + ""}</strong></span>님 상점
-          </div>
+          <button
+            type="button"
+            onClick={onViewSeller}
+            title="판매자 공용 프로필 보기"
+            className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[rgb(118,90,255)] hover:underline underline-offset-4 decoration-gray-300 transition"
+          >
+            <Store className="w-3.5 h-3.5" /> 
+            <span className="font-semibold text-gray-700"> {(data.sellerNick ?? "알 수 없음") + "님 상점"} </span>
+          </button>
           <div className="w-px h-3 bg-gray-200" />
           <div className="flex items-center gap-1">
             <span className="font-semibold text-gray-900">{Number(data.winnerBidAmount ?? 0).toLocaleString()}</span>
