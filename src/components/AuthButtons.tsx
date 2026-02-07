@@ -50,7 +50,7 @@ function IconBadge(props: { count: number }) {
   const { count } = props;
   if (count <= 0) return null;
   return (
-    <span className="absolute -top-1 -right-1 bg-violet-600 text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shadow-sm">
+    <span className="absolute -top-1 -right-1 bg-[rgb(118_90_255)] text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shadow-sm">
       {count > 9 ? "9+" : count}
     </span>
   );
@@ -437,10 +437,10 @@ export default function AuthButtons() {
           inline-flex items-center justify-center
           h-10 px-4 rounded-full
           bg-violet-600/10
-          text-[15px] font-semibold text-violet-700
+          text-[15px] font-semibold text-[rgb(118_90_255)]
           hover:bg-violet-600/15 hover:shadow-sm
           active:scale-[0.98] transition
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(118_90_255_/_0.25)]
         "
       >
         회원가입

@@ -180,7 +180,7 @@ export default function RegisterPage() {
   const inputBase =
     "w-full h-12 rounded-2xl border border-black/10 bg-white px-4 text-[15px] text-[#111827] " +
     "placeholder:text-gray-300 outline-none transition " +
-    "focus:border-[#6D28D9]/45 focus:ring-2 focus:ring-[#6D28D9]/12";
+    "focus:border-[rgb(118_90_255_/_0.45)] focus:ring-2 focus:ring-[rgb(118_90_255_/_0.12)]";
   const inputErr =
     "border-red-400 focus:border-red-400 focus:ring-red-200/60 bg-red-50/40";
   const errText = "mt-2 text-[12px] text-red-500 flex items-center gap-1";
@@ -189,7 +189,7 @@ export default function RegisterPage() {
   const primaryBtn =
     "w-full md:w-[360px] h-12 rounded-2xl font-extrabold text-[15px] transition flex items-center justify-center gap-2";
   const primaryOn =
-    "bg-[#6D28D9] text-white hover:bg-[#5B21B6] shadow-[0_10px_24px_rgba(109,40,217,0.18)] active:scale-[0.99]";
+    "bg-[rgb(118_90_255)] text-white hover:bg-[rgb(104_78_235)] " + "shadow-[0_10px_24px_rgb(118_90_255_/_0.18)] active:scale-[0.99]";
   const primaryOff = "bg-[#EEF0F6] text-gray-400 cursor-not-allowed";
 
   return (
@@ -209,7 +209,7 @@ export default function RegisterPage() {
 <br></br>
           <div className="mt-3 text-[13px] text-gray-500"> 이미 계정이 있으신가요?{" "} 
             
-            <Link to="/login" className="font-semibold text-[#6D28D9] hover:text-[#5B21B6]"> 로그인 </Link>
+            <Link to="/login" className="font-semibold text-[rgb(118_90_255)] hover:text-[rgb(104_78_235)]">로그인</Link>
           </div>
         </div>
 
@@ -220,7 +220,7 @@ export default function RegisterPage() {
 
             <div className="mt-6 h-1.5 rounded-full bg-[#EEF0F6] overflow-hidden">
               <div
-                className="h-full bg-[#6D28D9] rounded-full transition-[width] duration-300 ease-out"
+                className="h-full bg-[rgb(118_90_255)] rounded-full transition-[width] duration-300 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -292,7 +292,7 @@ export default function RegisterPage() {
                         className={
                           "flex-1 rounded-xl text-[14px] font-extrabold transition " +
                           (f.gender === g
-                            ? "bg-[#6D28D9] text-white shadow-sm"
+                            ? "bg-[rgb(118_90_255)] text-white shadow-sm"
                             : "text-gray-600 hover:bg-black/5")
                         }
                       >
@@ -417,7 +417,7 @@ export default function RegisterPage() {
                   type="checkbox"
                   checked={f.agree}
                   onChange={(e) => set("agree", e.target.checked)}
-                  className="mt-1 w-5 h-5 rounded-md border-black/20 text-[#6D28D9] focus:ring-[#6D28D9]/20"
+                  className="mt-1 w-5 h-5 rounded-md border-black/20 text-[rgb(118_90_255)] focus:ring-[rgb(118_90_255_/_0.20)]"
                 />
                 <div>
                   <div className="text-[13px] font-semibold text-[#111827]">
