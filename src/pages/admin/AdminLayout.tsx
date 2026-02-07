@@ -77,7 +77,8 @@ const SideItem: React.FC<{
   badge?: number;
   disabled?: boolean;
   disabledHint?: string;
-}> = ({ to, icon: Icon, label, badge, disabled, disabledHint }) => {
+  end?: boolean;
+}> = ({ to, icon: Icon, label, badge, disabled, disabledHint, end }) => {
   if (disabled) {
     return (
       <div
@@ -100,9 +101,10 @@ const SideItem: React.FC<{
   return (
     <NavLink
       to={to}
+       end={end}
       className={({ isActive }) =>
         "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm transition " +
-        (isActive ? "bg-[rgb(118_90_255)] text-white" : "text-gray-700 hover:bg-gray-100")
+        (isActive ? "bg-[rgb(118,90,255)] text-white" : "text-gray-700 hover:bg-gray-100")
       }
     >
       <span className="flex items-center gap-2 min-w-0">
@@ -202,7 +204,7 @@ const AdminLayout: React.FC = () => {
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200">
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[rgb(118_90_255)] flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-[rgb(118,90,255)] flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
 
@@ -301,7 +303,7 @@ const AdminLayout: React.FC = () => {
       <div className="max-w-[1600px] mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm h-fit">
           <div className="flex items-center gap-3 p-2 rounded-xl bg-gray-50 border border-gray-100">
-            <div className="w-10 h-10 rounded-xl bg-[rgb(118_90_255)] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-[rgb(118,90,255)] flex items-center justify-center">
               <UserCircle2 className="w-6 h-6 text-white" />
             </div>
             <div className="min-w-0">
@@ -312,7 +314,7 @@ const AdminLayout: React.FC = () => {
           </div>
 
           <div className="mt-3 space-y-1">
-            <SideItem to="/admin" icon={LayoutDashboard} label="개요" />
+            <SideItem to="/admin" icon={LayoutDashboard} label="개요" end />
             <SideItem to="/admin/auctions" icon={Gavel} label="경매 모니터링" />
             <SideItem
               to="/admin/reports"
@@ -351,9 +353,9 @@ const AdminLayout: React.FC = () => {
             </button>
           </div>
 
-          <div className="mt-3 p-3 rounded-xl bg-[rgb(248_247_255)] border border-[rgb(248_247_255)]">
-            <div className="text-xs font-semibold text-[rgb(77_58_166)]">운영 체크</div>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-[rgb(77_58_166)]">
+          <div className="mt-3 p-3 rounded-xl bg-[rgb(248,247,255)] border border-[rgb(248,247,255)]">
+            <div className="text-xs font-semibold text-[rgb(77,58,166)]">운영 체크</div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-[rgb(77,58,166)]">
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4" />
                 <span>실시간: {stats.realtimeUsers.toLocaleString()}</span>
