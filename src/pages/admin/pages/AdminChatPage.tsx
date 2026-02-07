@@ -61,6 +61,34 @@ function uniqById(list: AdminChatMessageRow[]) {
   return out;
 }
 
+function normalizeSender(raw: any, fallbackSenderId?: string) {
+  const obj = raw && typeof raw === "object" ? raw : null;
+
+  const email =
+  emailLike(obj?.email) ||
+  emailLike(obj?.senderEmail) ||
+  emailLike(obj?.userEmail) ||
+  emailLike(fallbackSenderId) ||
+  "";
+
+  if (!email) return null;
+
+  const nickname =
+    (obj?.nickname ?? obj?.nick ?? obj?.userNickname ?? obj?.name ?? null) as string | null;
+
+  const authority =
+    (obj?.authority ?? obj?.role ?? obj?.userAuthority ?? null) as any;
+
+  const profileImageUrl =
+    (obj?.profileImageUrl ??
+    obj?.profileUrl ??
+    obj?.purl ??
+    obj?.profile_image_url ??
+    null) as string | null;
+
+  return { email, nickname, authority, profileImageUrl };
+}
+
 function emailLike(x?: string | null) {
   const s = String(x ?? "").trim();
   return s.includes("@") ? s : "";
@@ -252,7 +280,7 @@ export default function AdminChatPage() {
     subRef.current = client.subscribe(`/topic/chat/room/${roomId}`, (frame) => {
       try {
         const data = JSON.parse(frame.body || "{}");
-
+        const sender = normalizeSender(data.sender, data.senderId);
         const msg: AdminChatMessageRow = {
           id: String(data.id ?? ""),
           roomId: String(data.roomId ?? roomId),
@@ -261,7 +289,7 @@ export default function AdminChatPage() {
           message: data.message != null ? String(data.message) : null,
           files: Array.isArray(data.files) ? data.files : [],
           createdAt: data.createdAt != null ? String(data.createdAt) : null,
-          sender: data.sender ?? null,
+          sender,
         };
 
         setMessages((prev) => {
@@ -304,7 +332,11 @@ export default function AdminChatPage() {
     await adminApi.enterChatRoom(roomId);
 
     const list = await adminApi.getRecentChatMessages(roomId, 60);
-    setMessages((prev) => ({ ...prev, [roomId]: uniqById(list) }));
+    const normalized = (list ?? []).map((m: any) => ({
+    ...m,
+    sender: normalizeSender(m?.sender, m?.senderId),
+    }));
+    setMessages((prev) => ({ ...prev, [roomId]: uniqById(normalized) }));
 
     setRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, unread: 0 } : r)));
 
@@ -820,7 +852,7 @@ const inputBase =
                               <div className="text-[12px] font-semibold text-gray-800">
                                 {displayName}
                               </div>
-                              {role ? (
+                              {/* {role ? (
                                 <span
                                   className={
                                     "text-[10px] px-2 py-0.5 rounded-full border " +
@@ -829,7 +861,7 @@ const inputBase =
                                 >
                                   {role}
                                 </span>
-                              ) : null}
+                              ) : null} */}
                             </div>
                           ) : null}
 
