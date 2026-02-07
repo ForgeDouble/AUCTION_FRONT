@@ -101,7 +101,7 @@ const AdminNoticesPage: React.FC = () => {
               className={
                 "min-w-[32px] px-2 py-1 rounded-lg border text-[12px] " +
                 (p === noticePage
-                  ? "border-violet-600 bg-violet-600 text-white"
+                  ? "border-[rgb(118_90_255)] bg-[rgb(118_90_255)] text-white"
                   : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50")
               }
             >
@@ -185,8 +185,8 @@ const AdminNoticesPage: React.FC = () => {
         <br></br>
         {noticeTotalPages > 1 ? Pager : null}
         {editingId !== null && editForm && (
-          <div className="mb-4 p-3 rounded-xl bg-violet-50 border border-violet-100">
-            <div className="text-sm font-semibold text-violet-900">공지 수정</div>
+          <div className="mb-4 p-3 rounded-xl bg-[rgb(118_90_255)]/10 border border-[rgb(118_90_255)]/20">
+            <div className="text-sm font-semibold text-[rgb(65_50_140)]">공지 수정</div>
 
             <div className="mt-3 grid grid-cols-1 gap-2">
               <div className="grid grid-cols-2 gap-2">
@@ -245,7 +245,7 @@ const AdminNoticesPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <button onClick={submitEdit} className="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm">
+                <button onClick={submitEdit} className="px-3 py-2 rounded-xl bg-[rgb(118_90_255)] hover:bg-[rgb(104_79_224)] text-white text-sm">
                   저장
                 </button>
                 <button onClick={cancelEdit} className="px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm">
@@ -267,7 +267,7 @@ const AdminNoticesPage: React.FC = () => {
                     </span>
 
                     {n.pinned ? (
-                      <span className="text-[11px] px-2 py-1 rounded-full bg-violet-600 text-white inline-flex items-center gap-1">
+                      <span className="text-[11px] px-2 py-1 rounded-full bg-[rgb(118_90_255)] text-white inline-flex items-center gap-1">
                         <Pin className="w-3 h-3" />
                         고정
                       </span>
@@ -380,7 +380,7 @@ const AdminNoticesPage: React.FC = () => {
             />
           </div>
 
-          <button onClick={submitCreate} className="w-full px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm">
+          <button onClick={submitCreate} className="w-full px-3 py-2 rounded-xl bg-[rgb(118_90_255)] hover:bg-[rgb(104_79_224)] text-white text-sm">
             등록
           </button>
         </div>
