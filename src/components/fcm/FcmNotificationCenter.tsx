@@ -17,6 +17,7 @@ type NotificationItem = {
 const MAX_STACK = 3;
 const AUTO_CLOSE_MS = 5000;
 
+// export function FcmNotificationCenter({ enabled = true }: { enabled?: boolean }) {
 export function FcmNotificationCenter() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const navigate = useNavigate();
@@ -33,56 +34,57 @@ export function FcmNotificationCenter() {
   }, [isChatRoute]);
 
   useEffect(() => {
-  let isMounted = true;
-  let unsubscribe: (() => void) | undefined;
+    // if (!enabled) return;
+    let isMounted = true;
+    let unsubscribe: (() => void) | undefined;
 
-  const init = async () => {
-    try {
-      const unsub = await subscribeForegroundMessage((payload: MessagePayload) => {
-        if (!isMounted) return;
+    const init = async () => {
+      try {
+        const unsub = await subscribeForegroundMessage((payload: MessagePayload) => {
+          if (!isMounted) return;
 
-        if (isChatRouteRef.current) {
-          return;
-        }
+          if (isChatRouteRef.current) {
+            return;
+          }
 
-        const data = (payload.data || {}) as Record<string, string>;
-        const type = data.type;
-        const baseTitle = payload.notification?.title || data.title || "AuctionHub 알림";
-        const baseBody = payload.notification?.body || data.body || "";
+          const data = (payload.data || {}) as Record<string, string>;
+          const type = data.type;
+          const baseTitle = payload.notification?.title || data.title || "AuctionHub 알림";
+          const baseBody = payload.notification?.body || data.body || "";
 
-        const item: NotificationItem = {
-          id: crypto.randomUUID(),
-          title: baseTitle,
-          body: baseBody,
-          type,
-          data,
-        };
+          const item: NotificationItem = {
+            id: crypto.randomUUID(),
+            title: baseTitle,
+            body: baseBody,
+            type,
+            data,
+          };
 
-        setItems((prev) => {
-          const next = [item, ...prev];
-          if (next.length > MAX_STACK) next.pop();
-          return next;
+          setItems((prev) => {
+            const next = [item, ...prev];
+            if (next.length > MAX_STACK) next.pop();
+            return next;
+          });
+
+          setTimeout(() => {
+            setItems((prev) => prev.filter((x) => x.id !== item.id));
+          }, AUTO_CLOSE_MS);
         });
 
-        setTimeout(() => {
-          setItems((prev) => prev.filter((x) => x.id !== item.id));
-        }, AUTO_CLOSE_MS);
-      });
+        unsubscribe = unsub;
+      } catch (e) {
+        console.error("[FcmCenter] init 오류:", e);
+      }
+    };
 
-      unsubscribe = unsub;
-    } catch (e) {
-      console.error("[FcmCenter] init 오류:", e);
-    }
-  };
+    init();
 
-  init();
-
-  return () => {
-    isMounted = false;
-    try {
-      if (unsubscribe) unsubscribe();
-    } catch (e) {}
-  };
+    return () => {
+      isMounted = false;
+      try {
+        if (unsubscribe) unsubscribe();
+      } catch (e) {}
+    };
   }, []);
 
   const handleClick = async (item: NotificationItem) => {

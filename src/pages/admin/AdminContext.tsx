@@ -25,6 +25,8 @@ import type {
 import { adminApi } from "./adminApi";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import { requestFcmToken } from "@/firebase/firebase";
+import { registerDeviceToken, unregisterDeviceToken } from "@/api/pushApi";
 
 // import { createMockAuctions, createMockReportGroups, createMockStats } from "./adminMockData";
 
@@ -375,6 +377,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setNotifEnabled = useCallback((v: boolean) => setNotifEnabledState(Boolean(v)), []);
   const setBirthdayOpen = useCallback((v: boolean) => setBirthdayOpenState(Boolean(v)), []);
+
+  const fcmTokenKey = useMemo(() => `admin_fcm_token_${profile.email}`, [profile.email]);
+  const lastRegisteredFcmRef = useRef<string | null>(null);
 
   // 닉네임 / 프로필 관련
   useEffect(() => {
@@ -791,6 +796,65 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   //   };
   // }, [rtTokenVersion]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) return;
+
+      const stored = localStorage.getItem(fcmTokenKey);
+
+      if (!notifEnabled) {
+        if (stored) {
+          try {
+            await unregisterDeviceToken(stored);
+          } catch (e) {
+            console.error("[Admin FCM] unregister 실패:", e);
+          }
+          localStorage.removeItem(fcmTokenKey);
+        }
+        lastRegisteredFcmRef.current = null;
+        return;
+      }
+
+      // ON: 토큰 요청 + 서버 register
+      const token = await requestFcmToken();
+      if (cancelled) return;
+
+      if (!token) {
+        console.warn("[Admin FCM] 토큰 발급 실패(권한/지원/설정 확인)");
+        return;
+      }
+
+      if (stored && stored !== token) {
+        try {
+          await unregisterDeviceToken(stored);
+        } catch (e) {
+          console.warn("[Admin FCM] old token unregister 실패(무시 가능):", e);
+        }
+      }
+
+      if (lastRegisteredFcmRef.current === token && stored === token) {
+        return;
+      }
+
+      try {
+        await registerDeviceToken(token);
+        localStorage.setItem(fcmTokenKey, token);
+        lastRegisteredFcmRef.current = token;
+        console.log("[Admin FCM] register 완료:", token.slice(0, 16));
+      } catch (e) {
+        console.error("[Admin FCM] register 실패:", e);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [notifEnabled, fcmTokenKey, rtTokenVersion]);
 
   const suspendAuction = (auctionId: string): void => {
     (async () => {

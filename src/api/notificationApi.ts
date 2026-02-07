@@ -7,7 +7,10 @@ function getAccessToken() {
 
 function jsonAuthHeaders() {
     const token = getAccessToken();
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const headers: Record<string, string> = {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+    };
     if (token) headers["Authorization"] = "Bearer " + token;
     return headers;
 }
