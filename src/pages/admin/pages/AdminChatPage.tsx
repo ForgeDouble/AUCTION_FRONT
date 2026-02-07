@@ -94,7 +94,7 @@ function getAuthority(m: AdminChatMessageRow) {
 }
 
 function roleChipClass(role: string) {
-  if (role === "ADMIN") return "bg-violet-50 text-violet-700 border-violet-200";
+  if (role === "ADMIN") return "bg-[rgb(118_90_255)]/10 text-[rgb(118_90_255)] border-[rgb(118_90_255)]/30";
   if (role === "INQUIRY") return "bg-sky-50 text-sky-700 border-sky-200";
   if (role === "USER") return "bg-gray-50 text-gray-700 border-gray-200";
   return "bg-gray-50 text-gray-600 border-gray-200";
@@ -132,7 +132,7 @@ function Avatar(props: { name: string; url?: string | null; mine?: boolean }) {
     <div
       className={
         "w-9 h-9 rounded-full flex items-center justify-center shrink-0 border " +
-        (mine ? "bg-violet-600 text-white border-violet-200" : "bg-gray-100 text-gray-700 border-gray-200")
+        (mine ? "bg-[rgb(118_90_255)] text-white border-[rgb(118_90_255)]/30" : "bg-gray-100 text-gray-700 border-gray-200")
       }
     >
       <span className="text-sm font-semibold">{initialFromName(name)}</span>
@@ -528,7 +528,7 @@ const inputBase =
     <div className="h-[calc(100vh-120px)]">
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-[rgb(118_90_255)] flex items-center justify-center">
             <MessagesSquare className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -553,7 +553,7 @@ const inputBase =
 
           <button
             onClick={() => setCreateOpen(true)}
-            className="px-3 py-2 rounded-xl bg-violet-600 text-white text-sm hover:bg-violet-700 flex items-center gap-2"
+            className="px-3 py-2 rounded-xl bg-[rgb(118_90_255)] text-white text-sm hover:bg-[rgb(104_79_224)] flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             그룹 생성
@@ -590,7 +590,7 @@ const inputBase =
                   onClick={() => void selectRoom(r.id)}
                   className={
                     "w-full text-left px-4 py-3 border-b border-gray-50 transition " +
-                    (active ? "bg-violet-50" : "bg-white hover:bg-gray-50")
+                    (active ? "bg-[rgb(118_90_255)]/10" : "bg-white hover:bg-gray-50")
                   }
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -837,7 +837,7 @@ const inputBase =
                             className={
                               "inline-block px-3 py-2 text-sm leading-relaxed shadow-sm " +
                               (mine
-                                ? "bg-violet-50 text-gray-900 border border-violet-200 ring-1 ring-violet-100 rounded-2xl rounded-br-md"
+                                ? "bg-[rgb(118_90_255)]/10 text-gray-900 border border-[rgb(118_90_255)]/30 ring-1 ring-[rgb(118_90_255)]/20 rounded-2xl rounded-br-md"
                                 : "bg-white text-gray-900 border border-gray-200 rounded-2xl rounded-bl-md")
                             }
                           >
@@ -917,7 +917,7 @@ const inputBase =
                 onClick={() => void send()}
                 disabled={!activeRoomId || uploading}
                 title="전송"
-                className="w-11 h-11 rounded-xl bg-gray-900 hover:bg-gray-800 text-white flex items-center justify-center disabled:opacity-60"
+                className="w-11 h-11 rounded-xl bg-[rgb(118_90_255)] hover:bg-[rgb(104_79_224)] text-white flex items-center justify-center disabled:opacity-60"
               >
                 {uploading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <SendHorizonal className="w-5 h-5" />}
               </button>
@@ -1110,7 +1110,7 @@ function InviteModal(props: { roomId: string; onClose: () => void; onInvited: ()
         <button
           onClick={() => void invite()}
           disabled={loading || !pick}
-          className="px-3 py-2 rounded-xl bg-violet-600 text-white text-sm hover:bg-violet-700 disabled:opacity-60"
+          className="px-3 py-2 rounded-xl bg-[rgb(118_90_255)] text-white text-sm hover:bg-[rgb(104_79_224)] disabled:opacity-60"
         >
           초대
         </button>
@@ -1210,7 +1210,7 @@ function CreateGroupModal(props: { onClose: () => void; onCreated: (roomId: stri
         <button
           onClick={() => void create()}
           disabled={loading}
-          className="px-3 py-2 rounded-xl bg-violet-600 text-white text-sm hover:bg-violet-700 disabled:opacity-60"
+          className="px-3 py-2 rounded-xl bg-[rgb(118_90_255)] text-white text-sm hover:bg-[rgb(104_79_224)] disabled:opacity-60"
         >
           생성
         </button>
