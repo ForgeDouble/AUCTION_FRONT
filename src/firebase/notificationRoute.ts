@@ -20,7 +20,7 @@ export function categoryFromType(type?: string): NotificationCategory {
     if (type.startsWith("INQUIRY_")) return "INQUIRY";
     if (type.startsWith("CHAT_")) return "CHAT";
     if (type.startsWith("PRODUCT_")) return "PRODUCT";
-    if (type === "ADMIN_PENDING_REPORTS") return "PRODUCT";
+    if (type === "ADMIN_PENDING_REPORTS") return "ALL";
     if (type === "USER_VIEW_ONLY") return "ALL";
     return "ALL";
 }
@@ -48,7 +48,7 @@ export function routeForNotification(type?: string, data?: NotificationData): st
     }
 
     if (type === "ADMIN_PENDING_REPORTS") {
-        return "/admin/report";
+        return "/admin/reports";
     }
 
     return null;
