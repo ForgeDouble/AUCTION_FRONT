@@ -345,33 +345,35 @@ export default function AdminChatPage() {
 
   const send = async () => {
     if (!activeRoomId) return;
-    const text = input.trim();
+
+    const raw = (input ?? "").replace(/\r\n/g, "\n");
+    const textTrim = raw.trim();
     const files = pickedFiles;
 
-    if (!text && files.length === 0) return;
+    if (!textTrim && files.length === 0) return;
     if (uploading) return;
 
+    // 파일 전송
     if (files.length > 0) {
       setUploading(true);
       try {
         const uploaded = await adminApi.uploadChatFiles(files);
-
         const pairs = uploaded.map((u, i) => ({ up: u, raw: files[i] }));
 
         const imageUploads = pairs
-          .filter(p => isImageFile(p.raw.type || p.up.fileName || p.up.fileUrl))
-          .map(p => p.up);
+          .filter((p) => isImageFile(p.raw.type || p.up.fileName || p.up.fileUrl))
+          .map((p) => p.up);
 
         const otherUploads = pairs
-          .filter(p => !isImageFile(p.raw.type || p.up.fileName || p.up.fileUrl))
-          .map(p => p.up);
+          .filter((p) => !isImageFile(p.raw.type || p.up.fileName || p.up.fileUrl))
+          .map((p) => p.up);
 
         // 이미지
         if (imageUploads.length > 0) {
           await adminApi.sendChatMessage({
             roomId: activeRoomId,
             messageType: "IMAGE",
-            message: text ? text : "",
+            message: raw,
             files: imageUploads,
           });
         }
@@ -381,7 +383,7 @@ export default function AdminChatPage() {
           await adminApi.sendChatMessage({
             roomId: activeRoomId,
             messageType: "FILE",
-            message: imageUploads.length > 0 ? "" : (text ? text : ""),
+            message: imageUploads.length > 0 ? "" : raw,
             files: otherUploads,
           });
         }
@@ -394,11 +396,12 @@ export default function AdminChatPage() {
       }
     }
 
+    // 텍스트 전송
     setInput("");
     await adminApi.sendChatMessage({
       roomId: activeRoomId,
       messageType: "TALK",
-      message: text,
+      message: raw,
     });
   };
 
@@ -626,10 +629,16 @@ const inputBase =
                   }
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div className="text-sm font-semibold text-gray-900 truncate">{r.roomName}</div>
-                      <div className="text-[12px] text-gray-500 truncate">{r.recentText ?? ""}</div>
+
+                      {String(r.roomName ?? "").trim() === "운영자 단체방" ? (
+                        <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full border bg-[rgb(118_90_255)]/10 text-[rgb(118_90_255)] border-[rgb(118_90_255)]/30">
+                        <strong>단체</strong>
+                        </span>
+                      ) : null}
                     </div>
+
                     <div className="text-right">
                       <div className="text-[11px] text-gray-400 whitespace-nowrap">
                         {kstTime(r.recentTime)}
@@ -784,13 +793,18 @@ const inputBase =
                   const displayName = getDisplayName(m);
                   const role = getAuthority(m);
 
-                  const text = (m.message ?? "").trim();
+                  // const text = (m.message ?? "").trim();
+                  const rawText = m.message ?? "";
+                  const hasText = rawText.trim().length > 0;
+
                   const files = Array.isArray(m.files) ? m.files : [];
 
                   const bubbleNode =
                     m.messageType === "IMAGE" ? (
                       <div className="space-y-2">
-                        {text ? <div>{text}</div> : null}
+                        {hasText ? (
+                          <div className="whitespace-pre-wrap break-words">{rawText}</div>
+                        ) : null}
                         <div className="flex flex-wrap gap-2">
                           {files.map((f, i) => (
                             <a
@@ -808,7 +822,7 @@ const inputBase =
                       </div>
                     ) : m.messageType === "FILE" ? (
                       <div className="space-y-2">
-                        {text ? <div>{text}</div> : null}
+                        {hasText ? <div className="whitespace-pre-wrap break-words">{rawText}</div> : null}
                         <div className="space-y-1">
                           {files.map((f, i) => (
                             <a
@@ -825,7 +839,7 @@ const inputBase =
                         </div>
                       </div>
                     ) : (
-                      <div>{text}</div>
+                      <div className="whitespace-pre-wrap break-words">{rawText}</div>
                     );
 
                   return (
