@@ -445,7 +445,7 @@ const AdminSettingsModal: React.FC<Props> = ({
         <div className="w-full max-w-[760px] bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-[rgb(118,90,255)] flex items-center justify-center">
                  <Settings className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -487,8 +487,8 @@ const AdminSettingsModal: React.FC<Props> = ({
                       <User2 className="w-9 h-9 text-gray-400" />
                     )}
 
-                    <span className="absolute bottom-2 right-2 w-8 h-8 rounded-xl bg-bg-transparent backdrop-blur border border-white/60 flex items-center justify-center shadow">
-                      <Camera className="w-4 h-4 text-violet-700" />
+                    <span className="absolute bottom-2 right-2 w-8 h-8 rounded-xl bg-transparent backdrop-blur border border-white/60 flex items-center justify-center shadow">
+                      <Camera className="w-4 h-4 text-[rgb(118,90,255)]" />
                     </span>
                   </button>
 
@@ -551,7 +551,7 @@ const AdminSettingsModal: React.FC<Props> = ({
                     <input
                       value={nickDraft}
                       onChange={(e) => setNickDraft(e.target.value)}
-                      className="h-10 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-violet-400"
+                      className="h-10 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-[rgb(118,90,255)] focus:ring-2 focus:ring-[rgba(118,90,255,0.20)]"
                       placeholder="새 닉네임"
                     />
                     <button
@@ -559,8 +559,8 @@ const AdminSettingsModal: React.FC<Props> = ({
                       onClick={() => void onSaveNickname()}
                       disabled={busyNick}
                       className={
-                        "h-10 px-4 min-w-[84px] rounded-xl bg-violet-600 text-white text-sm font-semibold flex items-center justify-center gap-2 whitespace-nowrap break-keep " +
-                        (busyNick ? "opacity-60 cursor-not-allowed" : "hover:bg-violet-700")
+                        "h-10 px-4 min-w-[84px] rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-semibold flex items-center justify-center gap-2 whitespace-nowrap break-keep " +
+                        (busyNick ? "opacity-60 cursor-not-allowed" : "hover:brightness-95")
                       }
                     >
                       <Save className={"w-4 h-4 " + (busyNick ? "animate-pulse" : "")} />
@@ -644,7 +644,7 @@ const AdminSettingsModal: React.FC<Props> = ({
               onClick={() => void onSaveAll()}
               disabled={busySave}
               className={
-                "h-10 px-4 rounded-xl bg-violet-600 text-white hover:bg-violet-700 text-sm font-semibold flex items-center gap-2 " +
+                "h-10 px-4 rounded-xl bg-[rgb(118,90,255)] text-white hover:brightness-95 text-sm font-semibold flex items-center gap-2 " +
                 (busySave ? "opacity-60 cursor-not-allowed" : "")
               }
             >
