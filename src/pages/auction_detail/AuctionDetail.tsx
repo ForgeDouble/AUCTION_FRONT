@@ -499,17 +499,32 @@ const AuctionDetail = () => {
   }, [product?.status, productId]);
 
   useEffect(() => {
-    const uid = sellerInfo?.userId;
-    if (!uid) return;
+    const uidRaw = sellerInfo?.userId;
+    if (uidRaw == null) {
+      setSeasonAwards(null);
+      return;
+    }
+
+    const uid = Number(uidRaw);
+    if (!Number.isFinite(uid)) {
+      setSeasonAwards(null);
+      return;
+    }
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setSeasonAwards(null);
+      return;
+    }
 
     let alive = true;
 
     (async () => {
       try {
-        const res = await fetchSeasonLatestForUser(Number(uid));
+        const dto = await fetchSeasonLatestForUser(token, uid);
       if (!alive) return;
-        setSeasonAwards(res.result ?? null);
-      } catch (e) {
+        setSeasonAwards(dto);
+      } catch {
         if (!alive) return;
         setSeasonAwards(null);
       }

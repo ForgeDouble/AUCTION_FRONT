@@ -14,7 +14,9 @@ import {
   type SpringPage,
   type ReviewTag,
 } from "@/pages/mypage/reviews/reviewTypes";
-
+import { fetchSeasonLatestForUser } from "@/components/season/seasonApi";
+import type { SeasonUserAwardsDto } from "@/components/season/seasonTypes";
+import SeasonAwardChips from "@/components/season/SeasonAwardChips";
 function isReviewTag(x: unknown): x is ReviewTag {
   return typeof x === "string" && x in REVIEW_TAG_LABEL;
 }
@@ -42,9 +44,20 @@ export default function PublicProfileReviews(props: {
   const [lbOpen, setLbOpen] = useState(false);
   const [lbIndex, setLbIndex] = useState(0);
 
+  const [seasonAwards, setSeasonAwards] = useState<SeasonUserAwardsDto | null>(null);
+  const [seasonErr, setSeasonErr] = useState<string | null>(null);
+  const [chipMax, setChipMax] = useState(calcMax());
   function openDetail(id: number) {
     setDetailId(id);
     setDetailOpen(true);
+  }
+
+  function calcMax() {
+    const w = window.innerWidth;
+    if (w < 480) return 3;
+    if (w < 768) return 5;
+    if (w < 1024) return 7;
+    return 10;
   }
 
   function closeDetail() {
@@ -69,20 +82,48 @@ export default function PublicProfileReviews(props: {
 
   const load = async () => {
     setErr(null);
+    setSeasonErr(null);
     setLoading(true);
+
     try {
-      const [p, s] = await Promise.all([
-        fetchSellerReviews(token, sellerId, page, 10),
-        fetchSellerReviewSummary(token, sellerId),
-      ]);
-      setData(p);
-      setSummary(s);
+    const results = await Promise.allSettled([
+    fetchSellerReviews(token, sellerId, page, 10),
+    fetchSellerReviewSummary(token, sellerId),
+    fetchSeasonLatestForUser(token, sellerId),
+    ]);
+
+    const pRes = results[0];
+    const sRes = results[1];
+    const seasonRes = results[2];
+
+    // 리뷰는 핵심이라 실패하면 그대로 에러 처리
+    if (pRes.status === "rejected") throw pRes.reason;
+    if (sRes.status === "rejected") throw sRes.reason;
+
+    setData(pRes.value);
+    setSummary(sRes.value);
+
+    // 시즌은 옵션: 실패해도 화면은 유지
+    if (seasonRes.status === "fulfilled") {
+      setSeasonAwards(seasonRes.value);
+    } else {
+      setSeasonAwards(null);
+      setSeasonErr(String(seasonRes.reason?.message ?? seasonRes.reason));
+    }
+
+
     } catch (e: any) {
       setErr(String(e?.message ?? e));
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const onResize = () => setChipMax(calcMax());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     if (!detailOpen || detailId == null) return;

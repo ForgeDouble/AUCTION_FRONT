@@ -26,6 +26,9 @@ import {
   type PublicProfileDto,
 } from "./UserProfileApi";
 import PublicProfileReviews from "./PublicProfileReviews";
+import { fetchSeasonLatestForUser } from "@/components/season/seasonApi";
+import type { SeasonUserAwardsDto } from "@/components/season/seasonTypes";
+import SeasonAwardChips from "@/components/season/SeasonAwardChips";
 
 // --- Types ---
 type ProductRow = {
@@ -124,6 +127,24 @@ export default function UserProfilePage() {
     return Math.max(0, days);
   }, [profile?.createdAt]);
 
+  const [seasonAwards, setSeasonAwards] = useState<SeasonUserAwardsDto | null>(null);
+  const [seasonLoading, setSeasonLoading] = useState(false);
+
+  function calcChipMax() {
+    const w = window.innerWidth;
+    if (w < 480) return 4;
+    if (w < 768) return 6;
+    if (w < 1024) return 8;
+    return 10;
+  }
+  const [chipMax, setChipMax] = useState(calcChipMax());
+
+  useEffect(() => {
+    const onResize = () => setChipMax(calcChipMax());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   // API Calls
   const loadProfile = async () => {
     if (!targetUserId) return;
@@ -150,6 +171,25 @@ export default function UserProfilePage() {
       setLoadingProfile(false);
     }
   };
+
+  useEffect(() => {
+    if (!token || !targetUserId) return;
+
+    let mounted = true;
+    (async () => {
+    setSeasonLoading(true);
+    try {
+      const dto = await fetchSeasonLatestForUser(token, targetUserId);
+    if (mounted) setSeasonAwards(dto);
+    } catch {
+      if (mounted) setSeasonAwards(null);
+    } finally {
+      if (mounted) setSeasonLoading(false);
+    }
+    })();
+
+    return () => { mounted = false; };
+  }, [token, targetUserId]);
 
   const loadList = async () => {
     if (!targetUserId) return;
@@ -303,10 +343,12 @@ export default function UserProfilePage() {
                 </div>
               </div>
 
-            <div className="mt-6 p-9 h-24 rounded-2xl bg-white border border-gray-100 text-sm text-gray-600 leading-relaxed max-w-2xl overflow-hidden">
-              {/* <span className="font-semibold text-gray-900 block mb-1">소개</span> */}
-              예정
-            </div>
+              <div className="mt-6 p-6 rounded-2xl bg-white border border-gray-100"> 
+                <div className="flex items-center justify-between"> 
+                  <div className="text-sm font-bold text-gray-900">최근 활동</div> 
+                  <div className="text-xs text-gray-400 font-semibold"> {seasonAwards?.ym ? `${seasonAwards.ym} 시즌` : "집계 예정"} </div> 
+                </div> 
+                <div className="mt-4"> {seasonLoading ? ( <div className="flex items-center gap-2 text-xs text-gray-400"> <div className="animate-spin w-4 h-4 border-2 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full" /> 시즌 정보를 불러오는 중... </div> ) : (seasonAwards && ((seasonAwards.titles?.length ?? 0) + (seasonAwards.badges?.length ?? 0) > 0)) ? ( <SeasonAwardChips data={seasonAwards} accent={BRAND_COLOR} accentSoft={BRAND_BG_SOFT} max={chipMax} /> ) : ( <div className="text-xs text-gray-500"> 아직 집계된 시즌 결과가 없습니다. </div> )} </div> </div>
             </div>
           </div>
 

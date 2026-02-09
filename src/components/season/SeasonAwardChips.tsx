@@ -1,3 +1,4 @@
+// src/components/season/SeasonAwardChip.tsx
 import React, { useMemo } from "react";
 import { Crown, BadgeCheck } from "lucide-react";
 import type { SeasonUserAwardsDto } from "@/components/season/seasonTypes";
