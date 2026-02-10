@@ -21,7 +21,6 @@ import {
   ArrowUp,
   Check,
   AlertCircle,
-  Gavel,
 } from "lucide-react";
 import {
   fetchBidsFromDB,
@@ -41,10 +40,14 @@ import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
 import { useNumberParam } from "@/hooks/useNumberParam";
 import { useModal } from "@/contexts/ModalContext";
 import ErrorPage from "@/errors/ErrorPage";
+import { handleApiError } from "@/errors/HandleApiError";
+import type { ErrorStatus } from "@/errors/ErrorDto";
+import { ApiError } from "@/errors/Errors";
 
 const AuctionDetail = () => {
   const productId = useNumberParam("productId");
   const { showWarning, showError, showLogin } = useModal();
+  const { logout } = useAuth();
 
   const [product, setProduct] = useState<ProductDto>();
   const [sellerInfo, setSellerInfo] = useState<SellerDto>();
@@ -74,6 +77,13 @@ const AuctionDetail = () => {
 
   // UI 전용: 상세 펼침/접기
   const [detailExpanded, setDetailExpanded] = useState(false);
+  /** 에러 페이지 state */
+  const [errorState, setErrorState] = useState<{
+    show: boolean;
+    type: ErrorStatus;
+    title?: string;
+    message?: string;
+  } | null>(null);
 
   // 본인 상품 여부 등 로직 (필요시 복구)
   // const isSelfSeller = false;
@@ -104,7 +114,7 @@ const AuctionDetail = () => {
 
   const [bidDetailOpen, setBidDetailOpen] = useState(false);
 
-  // ✅ 왼쪽 스크롤 컨테이너 + 상세 섹션 앵커
+  // 왼쪽 스크롤 컨테이너 + 상세 섹션 앵커
   const leftScrollRef = useRef<HTMLDivElement | null>(null);
   const bidDetailAnchorRef = useRef<HTMLDivElement | null>(null);
 
@@ -198,44 +208,129 @@ const AuctionDetail = () => {
     return () => clearInterval(timer);
   }, [product?.auctionEndTime]);
 
+  /** 레디스의 입찰 내역 조회 */
   const loadBidsFromRedis = async () => {
     try {
-      const data = await fetchBidsFromRedis(Number(productId));
+      if (!productId) {
+        setErrorState({
+          show: true,
+          type: "404",
+          title: "상품을 찾을 수 없습니다",
+          message: "상품 ID가 유효하지 않습니다.",
+        });
+        return;
+      }
+
+      const data = await fetchBidsFromRedis(productId);
       const formattedLogs = data.result.map((bid: BidLogDto) => ({
         ...bid,
         createdAtDisplay: dayjs(bid.createdAt).format("HH:mm:ss"),
       }));
       setBidLogs(formattedLogs);
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        default:
+          showError(
+            "입찰 내역을 불러 올 수 없습니다. 관리자에게 문의해주세요.",
+          );
+      }
     }
   };
 
+  /** 디비의 입찰내역 조회 */
   const loadBidsFromDB = async () => {
     try {
-      const data = await fetchBidsFromDB(Number(productId));
+      if (!productId) {
+        setErrorState({
+          show: true,
+          type: "404",
+          title: "상품을 찾을 수 없습니다",
+          message: "상품 ID가 유효하지 않습니다.",
+        });
+        return;
+      }
+
+      const data = await fetchBidsFromDB(productId);
       const formattedLogs = data.result.map((bid: BidLogDto) => ({
         ...bid,
         createdAtDisplay: dayjs(bid.createdAt).format("YY.MM.DD HH:mm"),
       }));
       setBidLogs(formattedLogs);
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        default:
+          showError(
+            "입찰 내역을 불러 올 수 없습니다. 관리자에게 문의해주세요.",
+          );
+      }
     }
   };
 
+  /** 상품 조회 */
   const loadProduct = async () => {
     try {
-      if (!productId) showError("서버 오류가 발생했습니다.다시 시도해주세요.");
+      if (!productId) {
+        setErrorState({
+          show: true,
+          type: "404",
+          title: "상품을 찾을 수 없습니다",
+          message: "상품 ID가 유효하지 않습니다.",
+        });
+        return;
+      }
       const data = await fetchProductById(productId);
       setProduct(data.result);
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "REDIRECT":
+          if (result.to === "/404")
+            setErrorState({
+              show: true,
+              type: "404",
+              title: "상품을 찾을 수 없습니다",
+              message: "상품 ID가 유효하지 않습니다.",
+            });
+
+          if (result.to === "/500")
+            setErrorState({
+              show: true,
+              type: "500",
+              title: "서버 내부에서 오류가 발생했습니다",
+              message: "관리자에게 문의해주세요.",
+            });
+          break;
+
+        default:
+          setErrorState({
+            show: true,
+            type: "500",
+            title: "서버 내부에서 오류가 발생했습니다",
+            message: "관리자에게 문의해주세요.",
+          });
+      }
     }
   };
 
+  /** 판매자 정보 조회 */
   const loadSellerInfo = async () => {
-    if (productId == null) return;
+    if (!productId) {
+      setErrorState({
+        show: true,
+        type: "404",
+        title: "상품을 찾을 수 없습니다",
+        message: "상품 ID가 유효하지 않습니다.",
+      });
+      return;
+    }
     try {
       const data = await fetchSellerByProductId(productId);
       const formattedData = {
@@ -243,33 +338,108 @@ const AuctionDetail = () => {
         createdAt: formatDate(data.result.createdAt),
       };
       setSellerInfo(formattedData);
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "REDIRECT":
+          if (result.to === "/500")
+            setErrorState({
+              show: true,
+              type: "500",
+              title: "서버 내부에서 오류가 발생했습니다",
+              message: "관리자에게 문의해주세요.",
+            });
+          break;
+
+        default:
+          setErrorState({
+            show: true,
+            type: "500",
+            title: "서버 내부에서 오류가 발생했습니다",
+            message: "관리자에게 문의해주세요.",
+          });
+      }
     }
   };
 
+  /** 위시리스트 생성 */
   const handleCreateWishlist = async (productId: number | null) => {
     try {
+      if (!productId) {
+        setErrorState({
+          show: true,
+          type: "404",
+          title: "상품을 찾을 수 없습니다",
+          message: "상품 ID가 유효하지 않습니다.",
+        });
+        return;
+      }
+
       const token = localStorage.getItem("accessToken");
-      if (token == null) throw Error("No Token");
-      if (productId === null) throw Error("No ProductId");
+      if (!token) {
+        showLogin();
+        return;
+      }
+
       await fetchCreateWishlist(token, productId);
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+        case "WARNING":
+          showWarning(result.message);
+          break;
+        default:
+          showError(
+            "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+          );
+      }
     }
   };
 
+  /** 해당 상품이 위스리스트에 속하는지 확인 */
   const loadIsWishlisted = async (productId: null | number) => {
     try {
       const token = localStorage.getItem("accessToken");
-      if (token == null) return;
+      if (!token) {
+        return;
+      }
       const data = await fetchIsWishlisted(token, productId);
       setWishlistId(data.result);
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+        case "REDIRECT":
+          if (result.to === "/404")
+            setErrorState({
+              show: true,
+              type: "404",
+              title: "상품을 찾을 수 없습니다",
+              message: "상품 ID가 유효하지 않습니다.",
+            });
+          break;
+        default:
+          showError(
+            "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+          );
+      }
     }
   };
 
+  /** 위시리스트 제거 */
   const handleDeleteWishlist = async (wishlistId: number) => {
     if (!canWishlist) {
       showWarning("본인 상품은 찜(위시리스트) 할 수 없습니다.");
@@ -277,13 +447,29 @@ const AuctionDetail = () => {
     }
     try {
       const token = localStorage.getItem("accessToken");
-      if (token == null) throw Error("No Token");
+      if (!token) {
+        showLogin();
+        return;
+      }
       await fetchDeleteWishlist(token, wishlistId);
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+        default:
+          showError(
+            "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+          );
+      }
     }
   };
 
+  /** 위시리스트 핸들 */
   const handleWishlistToggle = async () => {
     try {
       if (wishlistId) {
@@ -359,35 +545,36 @@ const AuctionDetail = () => {
     if (data.success) {
       setBidAmount("");
     } else {
-      switch (data.errorCode) {
-        case "NOT_ALLOWED":
-          showError(BID_RESPONSE_MESSAGES.NOT_ALLOWED);
+      const error = new ApiError(500, data.errorCode, data.message, data.data);
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
           break;
-        case "USER_NOT_FOUND":
-          showError(BID_RESPONSE_MESSAGES.USER_NOT_FOUND);
-          showLogin();
+        case "REDIRECT":
+          if (result.to === "/404")
+            setErrorState({
+              show: true,
+              type: "404",
+              title: "상품을 찾을 수 없습니다",
+              message: "상품 ID가 유효하지 않습니다.",
+            });
+          if (result.to === "/500")
+            setErrorState({
+              show: true,
+              type: "500",
+              title: "해당 상품에 접근할 권한이 없습니다",
+              message: "경매가 진행중인 상품이 아닙니다.",
+            });
           break;
-        case "PRODUCT_NOT_FOUND":
-          showError(BID_RESPONSE_MESSAGES.PRODUCT_NOT_FOUND);
+        case "WARNING":
+          showWarning(result.message);
           break;
-        case "SELLER_NOT_ALLOWED":
-          showWarning(BID_RESPONSE_MESSAGES.SELLER_NOT_ALLOWED);
-          break;
-        case "QUANTITY_ERROR":
-          showWarning(BID_RESPONSE_MESSAGES.QUANTITY_ERROR);
-          break;
-        case "LOW_PRICE":
-          showWarning(BID_RESPONSE_MESSAGES.LOW_PRICE);
-          break;
-        case "INVALID_INPUT_FORMAT":
-          showWarning(BID_RESPONSE_MESSAGES.INVALID_INPUT_FORMAT);
-          break;
-        case "BID_VALIDATION_ERROR":
-          showWarning(BID_RESPONSE_MESSAGES.BID_VALIDATION_ERROR);
-          break;
-        case "INTERNAL_ERROR":
-          showError(BID_RESPONSE_MESSAGES.INTERNAL_ERROR);
-          break;
+        default:
+          showError("입찰 처리 중 오류가 발생했습니다.");
       }
     }
   };
@@ -511,7 +698,7 @@ const AuctionDetail = () => {
       return;
     }
     const token = localStorage.getItem("accessToken");
-    if (token == null) {
+    if (!token) {
       showLogin();
       return;
     }
@@ -657,6 +844,17 @@ const AuctionDetail = () => {
         type="404"
         title="경매 준비 중"
         message="아직 경매가 시작되지 않은 상품입니다. 경매 시작 시간을 확인해주세요."
+      />
+    );
+  }
+
+  // productId에 이상이 있을 경우 오류 페이지 렌더링
+  if (errorState?.show) {
+    return (
+      <ErrorPage
+        type={errorState.type}
+        title={errorState.title}
+        message={errorState.message}
       />
     );
   }
