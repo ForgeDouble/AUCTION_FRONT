@@ -1,4 +1,3 @@
-// login/LoginPage.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -42,26 +41,26 @@ const LoginPage = () => {
       else localStorage.removeItem("saved_email");
 
       localStorage.setItem("accessToken", result.result.token);
-      localStorage.setItem("userId", email);
+      // localStorage.setItem("userId", email);
       await checkAuth();
 
       try {
         const fcmToken = await requestFcmToken();
-      if (fcmToken) {
-        const prevToken = localStorage.getItem("fcm_token");
-        const prevEmail = localStorage.getItem("fcm_email");
+        if (fcmToken) {
+          const prevToken = localStorage.getItem("fcm_token");
+          const prevEmail = localStorage.getItem("fcm_email");
 
-        const shouldRegister = prevToken !== fcmToken || prevEmail !== email;
+          const shouldRegister = prevToken !== fcmToken || prevEmail !== email;
 
-        if (shouldRegister) {
-          await registerDeviceToken(fcmToken);
-          localStorage.setItem("fcm_registered", "true");
-          localStorage.setItem("fcm_token", fcmToken);
-          localStorage.setItem("fcm_email", email);
+          if (shouldRegister) {
+            await registerDeviceToken(fcmToken);
+            localStorage.setItem("fcm_registered", "true");
+            localStorage.setItem("fcm_token", fcmToken);
+            localStorage.setItem("fcm_email", email);
+          }
+        } else {
+          console.warn("FCM 토큰 없음 (권한 거부 또는 오류)");
         }
-      } else {
-        console.warn("FCM 토큰 없음 (권한 거부 또는 오류)");
-      }
       } catch (fcmError) {
         console.error("로그인 후 FCM 등록 중 오류:", fcmError);
       }
