@@ -1,8 +1,10 @@
+// pages/mypage/profile/profileImageUploads.tsx
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { User, X } from "lucide-react";
 import { fetchDeleteImage, fetchUploadORReplaceImage } from "../MyPageApi";
 import { useModal } from "@/contexts/ModalContext";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ProfileImageUploadProps {
   profileImage: string | null;

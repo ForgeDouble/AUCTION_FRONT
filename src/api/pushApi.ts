@@ -1,3 +1,4 @@
+// src/api/pushApi.ts
 const API_BASE_URL = import.meta.env.VITE_API_BASE;
 
 
@@ -21,6 +22,7 @@ export async function registerDeviceToken(token: string) {
     const response = await fetch(`${API_BASE_URL}/push/register`, {
         method: "POST",
         headers: {
+            Accept: "application/json",
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
         },
@@ -55,6 +57,7 @@ export async function unregisterDeviceToken(fcmToken: string): Promise<void> {
     const response = await fetch(url, {
         method: "DELETE",
         headers: {
+            Accept: "application/json",
             Authorization: `Bearer ${accessToken}`,
         },
     });

@@ -9,7 +9,7 @@ function authorityBadge(role: Authority) {
   const map: Record<Authority, string> = {
     USER: "bg-gray-50 text-gray-700 border-gray-200",
     INQUIRY: "bg-blue-50 text-blue-700 border-blue-200",
-    ADMIN: "bg-violet-50 text-violet-700 border-violet-200",
+    ADMIN: "bg-[rgb(118_90_255)]/10 text-[rgb(118_90_255)] border-[rgb(118_90_255)]/20",
   };
   return map[role] ?? "bg-gray-50 text-gray-700 border-gray-200";
 }
@@ -204,12 +204,12 @@ export default function AdminUsersPage() {
   const pill = (active: boolean) =>
     "px-3 py-1.5 rounded-xl border text-sm break-keep whitespace-nowrap " +
     (active
-      ? "bg-violet-50 border-violet-200 text-violet-700"
+      ? "bg-[rgb(118_90_255)]/10 border-[rgb(118_90_255)]/20 text-[rgb(118_90_255)]"
       : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50");
 
   const inputBase =
     "mt-1 w-full px-3 py-2 rounded-xl border text-sm outline-none bg-white " +
-    "focus:ring-2 focus:ring-violet-200 placeholder:text-gray-300 text-gray-900 break-keep";
+    "focus:ring-2 focus:ring-[rgb(118_90_255)]/25 placeholder:text-gray-300 text-gray-900 break-keep";
 
   const inputErr = "border-red-300 focus:ring-red-100";
   const inputOk = "border-gray-200";
@@ -228,7 +228,7 @@ export default function AdminUsersPage() {
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-[rgb(118_90_255)] flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -421,8 +421,8 @@ export default function AdminUsersPage() {
               onClick={onSubmit}
               disabled={loading}
               className={
-                "px-4 py-2 rounded-xl text-sm font-semibold text-white bg-violet-600 break-keep " +
-                (loading ? "opacity-60 cursor-not-allowed" : "hover:bg-violet-700")
+                "px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[rgb(118_90_255)] break-keep " +
+                (loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[rgb(118_90_255)]/90")
               }
               title={canSubmit ? "생성" : "필수 입력값을 확인해 주세요"}
             >
@@ -451,7 +451,7 @@ export default function AdminUsersPage() {
             onChange={(e) => setQ(e.target.value)}
             className={
               "px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none break-keep " +
-              "focus:ring-2 focus:ring-violet-200 w-full sm:w-[360px] placeholder:text-gray-300"
+              "focus:ring-2 focus:ring-[rgb(118_90_255)]/25 w-full sm:w-[360px] placeholder:text-gray-300"
             }
             placeholder="검색 (이메일/이름/닉네임)"
           />

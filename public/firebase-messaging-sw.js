@@ -41,24 +41,25 @@ self.addEventListener("notificationclick", function (event) {
 
     notification.close();
 
-    // 문의하기: /chat?roomId=...
     const urlForInquiry = roomId ? "/chat?roomId=" + roomId : "/chat";
-
-    // 경매 상세: /auction_detail/:productId
     const urlForAuction = productId ? "/auction_detail/" + productId : "/";
+    const urlForAdminReports = "/admin/reports";
 
     var targetUrl;
     if (type === "INQUIRY_NEW_MESSAGE") {
         targetUrl = urlForInquiry;
-        } else if (type && type.indexOf("AUCTION_") === 0) {
-            targetUrl = urlForAuction;
-        } else {
-            targetUrl = "/";
-        }
+    } else if (type && type.indexOf("AUCTION_") === 0) {
+        targetUrl = urlForAuction;
+    } else if (type === "ADMIN_PENDING_REPORTS") {
+        targetUrl = urlForAdminReports;
+    } else {
+        targetUrl = "/";
+    }
 
-        event.waitUntil(
+    const absoluteUrl = self.location.origin + targetUrl;
+
+    event.waitUntil(
         self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clientList) {
-        // 이미 열린 탭이 있으면 거기로 포커스 + 메시지 전달
             for (var i = 0; i < clientList.length; i++) {
                 var client = clientList[i];
                 if (client.url && client.url.indexOf(self.location.origin) === 0) {
@@ -70,7 +71,7 @@ self.addEventListener("notificationclick", function (event) {
                     return;
                 }
             }
-            return self.clients.openWindow(targetUrl);
+            return self.clients.openWindow(absoluteUrl);
         })
     );
 });

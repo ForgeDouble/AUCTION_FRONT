@@ -318,6 +318,7 @@ const AdminOverviewPage: React.FC = () => {
                 valueLabelMode="all"
                 valueFormatter={fmtMillionKRW1}
               />
+              <div className="mt-1 text-right text-[11px] text-gray-400">단위: 백만원</div>
             </div>
           </div>
         </div>
@@ -335,6 +336,7 @@ const AdminOverviewPage: React.FC = () => {
           <SectionTitle title="최근 7일 경매 생성 / 종료 추이" right={<span className="text-[11px] text-gray-500"></span>} />
           <br />
           <SimpleMultiLineChart series={auctionTrendSeries} height={190} yLabel="count" />
+        
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">

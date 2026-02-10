@@ -56,7 +56,7 @@ function statusAccent(status: string) {
     case "NOTSELLED":
       return "bg-zinc-300";
     case "SELLED":
-      return "bg-violet-400";
+      return "bg-[rgb(118,90,255)]";
     default:
       return "bg-zinc-300";
   }
@@ -103,7 +103,7 @@ function getStatusBadge(status: string) {
     case "SELLED":
       return {
         text: "낙찰",
-        chip: "bg-violet-50 text-violet-700 ring-violet-100",
+        chip: "bg-[rgba(118,90,255,0.08)] text-[rgb(118,90,255)] ring-[rgba(118,90,255,0.25)]",
       };
     default:
       return {
@@ -725,9 +725,8 @@ const MyWishlist = () => {
                               <p
                                 className={cn(
                                   "mt-1 text-lg font-extrabold",
-
                                   product.status === "SELLED"
-                                    ? "text-violet-700"
+                                    ? "text-[rgb(118,90,255)]"
                                     : product.status === "NOTSELLED"
                                       ? "text-zinc-400"
                                       : "text-emerald-700",
@@ -784,7 +783,7 @@ const MyWishlist = () => {
 
                     const priceClass =
                       product.status === "SELLED"
-                        ? "text-violet-700"
+                        ? "text-[rgb(118,90,255)]"
                         : product.status === "NOTSELLED"
                           ? "text-zinc-400"
                           : product.status === "READY"
