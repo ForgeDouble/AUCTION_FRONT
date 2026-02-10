@@ -1,8 +1,10 @@
 import type { BidLogDto, ProductDto, SellerDto } from "./AuctionDetailDto";
 import type { ApiResponse } from "../../type/CommonType";
+import { ApiError, DataReadError, UnauthorizedError } from "@/errors/Errors";
 
+/** redis로부터 경매 내역 조회 (입찰이 진행 중인 경우) */
 export const fetchBidsFromRedis = async (
-  productId: number,
+  productId: number | null,
 ): Promise<ApiResponse<BidLogDto[]>> => {
   const response = await fetch(`http://localhost:8080/bid/redis/${productId}`, {
     method: "GET",
@@ -12,12 +14,45 @@ export const fetchBidsFromRedis = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    const body = await response.json();
+
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
 };
 
+/** DB로부터 경매 내역 조회 (입찰이 진행 중이지 않은 경우) */
+export const fetchBidsFromDB = async (
+  productId: number | null,
+): Promise<ApiResponse<BidLogDto[]>> => {
+  const response = await fetch(`http://localhost:8080/bid/all/${productId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.json();
+
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
+  }
+
+  return response.json();
+};
+
+/** 상품 조회 */
 export const fetchProductById = async (
   productId: number | null,
 ): Promise<ApiResponse<ProductDto>> => {
@@ -29,12 +64,21 @@ export const fetchProductById = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    const body = await response.json();
+
+    if (response.status === 500) throw new DataReadError();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
 };
 
+/* 판매자의 정보를 조회 */
 export const fetchSellerByProductId = async (
   productId: number | null,
 ): Promise<ApiResponse<SellerDto>> => {
@@ -49,29 +93,21 @@ export const fetchSellerByProductId = async (
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    const body = await response.json();
+
+    if (response.status === 500) throw new DataReadError();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
 };
 
-export const fetchBidsFromDB = async (
-  productId: number,
-): Promise<ApiResponse<BidLogDto[]>> => {
-  const response = await fetch(`http://localhost:8080/bid/all/${productId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
-  }
-
-  return response.json();
-};
-
+/** 위시리스트에 속한 경매인지 여부를 조회 */
 export const fetchIsWishlisted = async (
   token: string | null,
   productId: null | number,
@@ -88,7 +124,14 @@ export const fetchIsWishlisted = async (
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch Wishlist: ${response.status}`);
+    const body = await response.json();
+
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
