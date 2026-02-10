@@ -1,3 +1,5 @@
+import type { ErrorCode } from "@/errors/ErrorDto";
+
 export interface BidLogDto {
   userId: number;
   userNickName: string;
@@ -6,7 +8,7 @@ export interface BidLogDto {
   createdAt: string;
   isWinned: string;
   createdAtDisplay?: string;
-  profileImageUrl?: string | null
+  profileImageUrl?: string | null;
 }
 
 export interface ProductDto {
@@ -37,8 +39,8 @@ export interface SellerDto {
 
 export interface BidResponse {
   success: boolean;
-  message: string | null;
-  data: string | null;
-  errorCode: string;
+  message: string;
+  data?: string;
+  errorCode: ErrorCode;
   timestamp: number;
 }
