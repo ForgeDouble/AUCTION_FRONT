@@ -1,8 +1,9 @@
+import { ApiError, UnauthorizedError } from "@/errors/Errors";
 import type { ApiResponse } from "@/type/CommonType";
 
 export const fetchCreateWishlist = async (
   token: string | null,
-  prodcutId: number
+  prodcutId: number,
 ): Promise<ApiResponse<null>> => {
   const formData = new FormData();
   formData.append("productId", prodcutId.toString());
@@ -16,7 +17,15 @@ export const fetchCreateWishlist = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    const body = await response.json();
+
+    if (response.status === 401) throw new UnauthorizedError();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
@@ -24,7 +33,7 @@ export const fetchCreateWishlist = async (
 
 export const fetchDeleteWishlist = async (
   token: string | null,
-  wishlistId: number
+  wishlistId: number,
 ): Promise<ApiResponse<null>> => {
   const response = await fetch(
     `http://localhost:8080/wishlist/delete/${wishlistId}`,
@@ -33,11 +42,19 @@ export const fetchDeleteWishlist = async (
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    }
+    },
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    const body = await response.json();
+
+    if (response.status === 401) throw new UnauthorizedError();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();

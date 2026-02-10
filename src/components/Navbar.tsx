@@ -35,7 +35,7 @@ const Navbar = () => {
             <div className="hidden md:flex items-center space-x-8">
               <button
                 type="button"
-                className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
+                className="text-slate-600 hover:text-slate-900 transition-colors font-medium cursor-pointer"
                 onClick={() => navigate("/auction_list")}
               >
                 경매 목록
@@ -43,7 +43,7 @@ const Navbar = () => {
 
               <button
                 type="button"
-                className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
+                className="text-slate-600 hover:text-slate-900 transition-colors font-medium cursor-pointer"
                 onClick={() => navigateSellProduct()}
               >
                 판매하기
@@ -51,7 +51,7 @@ const Navbar = () => {
 
               <button
                 type="button"
-                className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
+                className="text-slate-600 hover:text-slate-900 transition-colors font-medium cursor-pointer"
               >
                 고객센터
               </button>

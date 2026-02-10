@@ -7,7 +7,7 @@ import LoginPage from "./pages/login/LoginPage";
 import AuctionListPage from "./pages/auction_list/AuctionListPage";
 import { AuthProvider } from "./contexts/AuthProvider";
 
-import SellProductPage from "./pages/sell_product_page/SellProductPage";
+import SellProductPage from "./pages/sell_edit_product/SellProductPage";
 import RegisterPage from "./pages/register/Register";
 import { ChatProvider } from "./contexts/ChatProvider";
 import ChatListPopup from "./pages/chat/ChatListPopup";
@@ -29,6 +29,9 @@ import ForgotPassword from "./pages/forgot_password/ForgotPassword";
 import ResetPassword from "./pages/forgot_password/ResetPassword";
 import UserProfilePage from "@/pages/mypage/publicProfile/UserProfilePage";
 import MyShopReviewsPage from "@/pages/mypage/reviews/MyShopReviewsPage";
+import ErrorPage from "./errors/ErrorPage";
+import EditProductPage from "./pages/sell_edit_product/EditProductPage";
+
 
 function App() {
   const location = useLocation();
@@ -36,10 +39,13 @@ function App() {
   const backgroundLocation = state?.backgroundLocation;
 
   // Footer를 숨길 경로들 정의
-  const hideFooterPaths = ["/chat-popup", "/chat-list", "/chat"];
+  const hideFooterPaths = ["/chat-popup", "/chat-list", "/chat", "*"];
   const shouldHideFooter =
     hideFooterPaths.includes(location.pathname) ||
-    location.pathname.startsWith("/admin");
+    location.pathname.startsWith("/admin") ||
+    !location.pathname.match(
+      /^\/(auction_detail|login|find_password|reset_password|auction_list|mypage|user|sell_product|register|\s*)$/,
+    );
 
   return (
     <ModalProvider>
@@ -158,6 +164,15 @@ function App() {
               />
 
               <Route
+                path="/edit_product/:productId"
+                element={
+                  <ProtectedRoute allowedRoles={["USER"]}>
+                    <EditProductPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
                 path="/register"
                 element={
                   <PublicRoute redirectTo="/">
@@ -183,6 +198,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="*" element={<ErrorPage type="404" />} />
           </Routes>
           {!shouldHideFooter && <Footer />}
 

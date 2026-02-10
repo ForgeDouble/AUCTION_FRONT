@@ -3,11 +3,17 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 
+type ModalMode = "navigation" | "confirm";
+
 interface LoginModalProps {
   onClose?: () => void;
+  mode?: ModalMode;
 }
 
-export default function LoginModal({ onClose }: LoginModalProps) {
+export default function LoginModal({
+  onClose,
+  mode = "navigation",
+}: LoginModalProps) {
   const navigate = useNavigate();
 
   const handleClose = () => {
@@ -27,8 +33,12 @@ export default function LoginModal({ onClose }: LoginModalProps) {
     <div
       className="fixed inset-0 flex items-center justify-center p-4 z-50"
       style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
+      onClick={handleClose}
     >
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative">
+      <div
+        className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* X 버튼 */}
         <button
           onClick={handleClose}
@@ -42,24 +52,35 @@ export default function LoginModal({ onClose }: LoginModalProps) {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             로그인이 필요합니다
           </h2>
-          <p className="text-gray-600">이 기능을 사용하려면 로그인해주세요</p>
+          <p className="text-gray-600">
+            이 기능을 사용하려면 로그인을 하셔야합니다
+          </p>
         </div>
 
-        {/* 버튼들 */}
-        <div className="flex gap-3">
+        {/* 버튼들 - 조건부 렌더링 */}
+        {mode === "navigation" ? (
+          <div className="flex gap-3">
+            <button
+              onClick={() => navigate(`/register`)}
+              className="flex-1 py-3 bg-white text-blue-600 font-semibold border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
+            >
+              회원가입
+            </button>
+            <button
+              onClick={() => navigate(`/login`)}
+              className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+            >
+              로그인
+            </button>
+          </div>
+        ) : (
           <button
-            onClick={() => navigate(`/register`)}
-            className="flex-1 py-3 bg-white text-blue-600 font-semibold border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
+            onClick={handleClose}
+            className="w-auto px-8 mx-auto block py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
           >
-            회원가입
+            확인
           </button>
-          <button
-            onClick={() => navigate(`/login`)}
-            className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
-          >
-            로그인
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );

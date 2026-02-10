@@ -14,6 +14,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PageInfo, ProductListDto } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
 import { useModal } from "@/contexts/ModalContext";
+import { handleApiError } from "@/errors/HandleApiError";
+import { useAuth } from "@/hooks/useAuth";
 
 type StatusFilter = "ALL" | "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";
 type SortKey = "NEWEST" | "ENDING_SOON" | "HIGHEST_BID" | "MOST_BIDS";
@@ -97,7 +99,7 @@ function toApiSort(sort: SortKey) {
 function updateURLParams(
   searchParams: URLSearchParams,
   setSearchParams: (p: URLSearchParams) => void,
-  params: Record<string, string | number | null | undefined>
+  params: Record<string, string | number | null | undefined>,
 ) {
   const next = new URLSearchParams(searchParams);
   Object.entries(params).forEach(([key, value]) => {
@@ -130,7 +132,10 @@ function getStatusBadge(status: string) {
         chip: "bg-violet-50 text-violet-700 ring-violet-100",
       };
     default:
-      return { text: "알 수 없음", chip: "bg-zinc-50 text-zinc-600 ring-zinc-100" };
+      return {
+        text: "알 수 없음",
+        chip: "bg-zinc-50 text-zinc-600 ring-zinc-100",
+      };
   }
 }
 
@@ -187,7 +192,7 @@ function TimePill({
           "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold ring-1",
           urgent
             ? "bg-rose-50 text-rose-700 ring-rose-100"
-            : "bg-emerald-50 text-emerald-700 ring-emerald-100"
+            : "bg-emerald-50 text-emerald-700 ring-emerald-100",
         )}
       >
         <Clock className="w-3.5 h-3.5" />
@@ -221,24 +226,26 @@ function ViewToggle({
         onClick={() => onChange("grid")}
         className={cn(
           "inline-flex items-center gap-2 px-3 h-9 rounded-xl text-sm font-extrabold transition",
-          mode === "grid" ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-white"
+          mode === "grid"
+            ? "bg-zinc-900 text-white"
+            : "text-zinc-700 hover:bg-white",
         )}
         title="그리드"
       >
         <LayoutGrid className="w-4 h-4" />
-        
       </button>
       <button
         type="button"
         onClick={() => onChange("list")}
         className={cn(
           "inline-flex items-center gap-2 px-3 h-9 rounded-xl text-sm font-extrabold transition",
-          mode === "list" ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-white"
+          mode === "list"
+            ? "bg-zinc-900 text-white"
+            : "text-zinc-700 hover:bg-white",
         )}
         title="리스트"
       >
         <ListIcon className="w-4 h-4" />
-         
       </button>
     </div>
   );
@@ -246,6 +253,7 @@ function ViewToggle({
 
 const MyAuctionlist = () => {
   const { showLogin, showError } = useModal();
+  const { logout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -262,25 +270,40 @@ const MyAuctionlist = () => {
   const appliedPage = safeNumber(searchParams.get("page"), 0);
 
   const appliedSizeRaw = safeNumber(searchParams.get("size"), 10);
-  const appliedSize = SIZE_OPTIONS.includes(appliedSizeRaw) ? appliedSizeRaw : 10;
+  const appliedSize = SIZE_OPTIONS.includes(appliedSizeRaw)
+    ? appliedSizeRaw
+    : 10;
 
   const statusRaw = searchParams.get("status");
-  const appliedStatus: StatusFilter = isValidStatus(statusRaw) ? statusRaw : "ALL";
+  const appliedStatus: StatusFilter = isValidStatus(statusRaw)
+    ? statusRaw
+    : "ALL";
 
   const sortRaw = searchParams.get("sortBy") ?? searchParams.get("sort");
   const appliedSort: SortKey = isValidSort(sortRaw) ? sortRaw : "NEWEST";
 
-  const appliedSearch = (searchParams.get("search") ?? searchParams.get("q") ?? "").trim();
+  const appliedSearch = (
+    searchParams.get("search") ??
+    searchParams.get("q") ??
+    ""
+  ).trim();
 
   // view: 기본 grid, list만 URL에 남김
-  const appliedView: ViewMode = searchParams.get("view") === "list" ? "list" : "grid";
+  const appliedView: ViewMode =
+    searchParams.get("view") === "list" ? "list" : "grid";
 
   // 검색 입력은 엔터/버튼으로만 반영
   const [qInput, setQInput] = useState(appliedSearch);
   useEffect(() => setQInput(appliedSearch), [appliedSearch]);
 
   const loadProductsByUser = useCallback(
-    async (page: number, size: number, status: StatusFilter, sort: SortKey, search: string) => {
+    async (
+      page: number,
+      size: number,
+      status: StatusFilter,
+      sort: SortKey,
+      search: string,
+    ) => {
       try {
         setLoading(true);
 
@@ -313,27 +336,43 @@ const MyAuctionlist = () => {
           currentPage: page,
           size: Number(res?.size) || size,
         });
-      } catch (e: any) {
-        console.error(e);
-        if (e?.message === "AUTH_REQUIRED") showLogin();
-        else showError(e?.message ?? "상품 목록 조회 중 오류가 발생했습니다.");
+      } catch (error: unknown) {
+        const result = handleApiError(error);
+        console.log(error);
+        console.error(result);
+
+        switch (result.type) {
+          case "AUTH":
+            showLogin("confirm");
+            logout();
+            break;
+          default:
+            showError();
+        }
       } finally {
         setLoading(false);
       }
     },
-    [showLogin, showError]
+    [showLogin, showError],
   );
 
   useEffect(() => {
-    loadProductsByUser(appliedPage, appliedSize, appliedStatus, appliedSort, appliedSearch);
+    loadProductsByUser(
+      appliedPage,
+      appliedSize,
+      appliedStatus,
+      appliedSort,
+      appliedSearch,
+    );
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [appliedPage, appliedSize, appliedStatus, appliedSort, appliedSearch, loadProductsByUser]);
+  }, [appliedPage, appliedSize, appliedStatus, appliedSort, appliedSearch]);
 
   // 백엔드가 필터를 이미 적용해주면 그대로, 아니라면 UI에서도 최소 필터만 한번 더
   const visibleProducts = useMemo(() => {
     let list = [...(products || [])];
 
-    if (appliedStatus !== "ALL") list = list.filter((p: any) => p.status === appliedStatus);
+    if (appliedStatus !== "ALL")
+      list = list.filter((p: any) => p.status === appliedStatus);
 
     if (appliedSearch.length > 0) {
       const q = appliedSearch.toLowerCase();
@@ -349,7 +388,8 @@ const MyAuctionlist = () => {
 
   const handlePageChange = (newPage: number) => {
     if (loading) return;
-    if (Number.isNaN(newPage) || newPage < 0 || newPage >= pageInfo.totalPages) return;
+    if (Number.isNaN(newPage) || newPage < 0 || newPage >= pageInfo.totalPages)
+      return;
     updateURLParams(searchParams, setSearchParams, { page: newPage });
   };
 
@@ -375,7 +415,10 @@ const MyAuctionlist = () => {
   };
 
   const hasActiveFilter =
-    appliedStatus !== "ALL" || appliedSort !== "NEWEST" || !!appliedSearch || appliedSize !== 10;
+    appliedStatus !== "ALL" ||
+    appliedSort !== "NEWEST" ||
+    !!appliedSearch ||
+    appliedSize !== 10;
 
   const onChangeView = (m: ViewMode) => {
     updateURLParams(searchParams, setSearchParams, {
@@ -391,9 +434,7 @@ const MyAuctionlist = () => {
           "radial-gradient(1100px circle at 15% 0%, rgba(118,90,255,0.12), transparent 45%), radial-gradient(900px circle at 85% 15%, rgba(16,185,129,0.10), transparent 45%), linear-gradient(to bottom, rgba(250,250,250,1), rgba(248,249,252,1))",
       }}
     >
-
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-
         {/* Header */}
         <div className="rounded-[26px] bg-white/70 backdrop-blur-xl ring-1 ring-black/5 shadow-sm">
           <div className="p-7 md:p-9">
@@ -406,20 +447,23 @@ const MyAuctionlist = () => {
                 <p className="mt-2 text-sm text-zinc-500">
                   총 {pageInfo.totalElements}개
                   <span className="ml-2 text-zinc-400">
-                    (현재 페이지 {products.length}개 · 표시 {visibleProducts.length}개)
+                    (현재 페이지 {products.length}개 · 표시{" "}
+                    {visibleProducts.length}개)
                   </span>
                 </p>
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {appliedStatus !== "ALL" && (
                     <TinyChip>
-                      {STATUS_OPTIONS.find((x) => x.value === appliedStatus)?.label ?? appliedStatus}
+                      {STATUS_OPTIONS.find((x) => x.value === appliedStatus)
+                        ?.label ?? appliedStatus}
                     </TinyChip>
                   )}
                   {appliedSearch && <TinyChip>검색: {appliedSearch}</TinyChip>}
                   {appliedSort !== "NEWEST" && (
                     <TinyChip>
-                      {SORT_OPTIONS.find((x) => x.value === appliedSort)?.label ?? appliedSort}
+                      {SORT_OPTIONS.find((x) => x.value === appliedSort)
+                        ?.label ?? appliedSort}
                     </TinyChip>
                   )}
                   {appliedSize !== 10 && <TinyChip>{appliedSize}개씩</TinyChip>}
@@ -496,7 +540,10 @@ const MyAuctionlist = () => {
                   value={appliedSize}
                   onChange={(e) => {
                     const v = Number(e.target.value);
-                    updateURLParams(searchParams, setSearchParams, { size: v, page: 0 });
+                    updateURLParams(searchParams, setSearchParams, {
+                      size: v,
+                      page: 0,
+                    });
                   }}
                   className="h-11 w-24 px-3 rounded-2xl bg-white/70 border border-black/5 text-sm text-zinc-800 outline-none focus:ring-2 focus:ring-[#765AFF]/20 focus:border-[#765AFF]/30"
                   title="개수"
@@ -518,7 +565,7 @@ const MyAuctionlist = () => {
                     "inline-flex items-center justify-center h-11 w-11 rounded-2xl border transition",
                     hasActiveFilter
                       ? "bg-white/70 border-black/5 text-zinc-700 hover:bg-white"
-                      : "bg-zinc-100/60 border-transparent text-zinc-400 cursor-not-allowed"
+                      : "bg-zinc-100/60 border-transparent text-zinc-400 cursor-not-allowed",
                   )}
                   title="초기화"
                 >
@@ -551,8 +598,12 @@ const MyAuctionlist = () => {
               <div className="mx-auto w-14 h-14 rounded-3xl bg-white/80 ring-1 ring-black/5 grid place-items-center">
                 <Search className="w-6 h-6 text-zinc-400" />
               </div>
-              <p className="mt-5 text-zinc-900 font-extrabold text-xl">조건에 맞는 경매가 없습니다</p>
-              <p className="mt-2 text-sm text-zinc-500">검색어 또는 상태/정렬을 바꿔보세요.</p>
+              <p className="mt-5 text-zinc-900 font-extrabold text-xl">
+                조건에 맞는 경매가 없습니다
+              </p>
+              <p className="mt-2 text-sm text-zinc-500">
+                검색어 또는 상태/정렬을 바꿔보세요.
+              </p>
               <button
                 type="button"
                 onClick={resetFilters}
@@ -576,12 +627,15 @@ const MyAuctionlist = () => {
                         key={product.productId}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (isClickable) navigate(`/auction_detail/${product.productId}`);
+                          if (isClickable)
+                            navigate(`/auction_detail/${product.productId}`);
                         }}
                         className={cn(
                           "group rounded-3xl bg-white/70 backdrop-blur ring-1 ring-black/5 shadow-sm transition",
                           "hover:shadow-md hover:-translate-y-[1px]",
-                          isClickable ? "cursor-pointer" : "opacity-90 cursor-not-allowed"
+                          isClickable
+                            ? "cursor-pointer"
+                            : "opacity-90 cursor-not-allowed",
                         )}
                       >
                         <div className="p-4">
@@ -607,7 +661,7 @@ const MyAuctionlist = () => {
                             <div
                               className={cn(
                                 "absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-extrabold ring-1 shadow-sm",
-                                badge.chip
+                                badge.chip,
                               )}
                             >
                               {badge.text}
@@ -621,12 +675,16 @@ const MyAuctionlist = () => {
                                   {product.status === "READY" ? (
                                     <>
                                       <Clock className="h-8 w-8 text-white mx-auto mb-2" />
-                                      <span className="text-white text-lg font-extrabold">준비중</span>
+                                      <span className="text-white text-lg font-extrabold">
+                                        준비중
+                                      </span>
                                     </>
                                   ) : (
                                     <>
                                       <Eye className="h-8 w-8 text-white mx-auto mb-2" />
-                                      <span className="text-white text-lg font-extrabold">{badge.text}</span>
+                                      <span className="text-white text-lg font-extrabold">
+                                        {badge.text}
+                                      </span>
                                     </>
                                   )}
                                 </div>
@@ -641,7 +699,9 @@ const MyAuctionlist = () => {
                           <div className="mt-3 grid grid-cols-2 gap-3">
                             <div className="rounded-2xl bg-white/60 ring-1 ring-black/5 p-3">
                               <p className="text-xs font-bold text-zinc-500">
-                                {product.status === "SELLED" ? "낙찰가" : "현재가"}
+                                {product.status === "SELLED"
+                                  ? "낙찰가"
+                                  : "현재가"}
                               </p>
                               <p
                                 className={cn(
@@ -649,8 +709,8 @@ const MyAuctionlist = () => {
                                   product.status === "SELLED"
                                     ? "text-violet-700"
                                     : product.status === "NOTSELLED"
-                                    ? "text-zinc-400"
-                                    : "text-emerald-700"
+                                      ? "text-zinc-400"
+                                      : "text-emerald-700",
                                 )}
                               >
                                 {(product.latestBidAmount ?? 0) === 0
@@ -660,7 +720,9 @@ const MyAuctionlist = () => {
                             </div>
 
                             <div className="rounded-2xl bg-white/60 ring-1 ring-black/5 p-3">
-                              <p className="text-xs font-bold text-zinc-500">입찰 수</p>
+                              <p className="text-xs font-bold text-zinc-500">
+                                입찰 수
+                              </p>
                               <p className="mt-1 text-lg font-extrabold text-zinc-900">
                                 {Math.max(0, (product.bidCount ?? 0) - 1)}건
                               </p>
@@ -669,7 +731,13 @@ const MyAuctionlist = () => {
 
                           <div className="mt-4 flex items-center justify-between text-xs text-zinc-400">
                             <span>#{product.productId}</span>
-                            <span className={cn(isClickable ? "text-[#765AFF]" : "text-zinc-400")}>
+                            <span
+                              className={cn(
+                                isClickable
+                                  ? "text-[#765AFF]"
+                                  : "text-zinc-400",
+                              )}
+                            >
                               {isClickable ? "상세보기" : "대기중"}
                             </span>
                           </div>
@@ -690,32 +758,43 @@ const MyAuctionlist = () => {
 
                     const priceLabel = priceLabelByStatus(product.status);
                     const priceText =
-                      (product.latestBidAmount ?? 0) === 0 ? "입찰 없음" : formatPrice(product.latestBidAmount ?? 0);
+                      (product.latestBidAmount ?? 0) === 0
+                        ? "입찰 없음"
+                        : formatPrice(product.latestBidAmount ?? 0);
 
                     const priceClass =
                       product.status === "SELLED"
                         ? "text-violet-700"
                         : product.status === "NOTSELLED"
-                        ? "text-zinc-400"
-                        : product.status === "READY"
-                        ? "text-blue-700"
-                        : "text-emerald-700";
+                          ? "text-zinc-400"
+                          : product.status === "READY"
+                            ? "text-blue-700"
+                            : "text-emerald-700";
 
                     return (
                       <div
                         key={product.productId}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (isClickable) navigate(`/auction_detail/${product.productId}`);
+                          if (isClickable)
+                            navigate(`/auction_detail/${product.productId}`);
                         }}
                         className={cn(
                           "relative flex items-center gap-4 px-5 py-4 transition",
-                          idx !== visibleProducts.length - 1 && "border-b border-black/5",
-                          isClickable ? "cursor-pointer hover:bg-white/60" : "cursor-not-allowed opacity-75"
+                          idx !== visibleProducts.length - 1 &&
+                            "border-b border-black/5",
+                          isClickable
+                            ? "cursor-pointer hover:bg-white/60"
+                            : "cursor-not-allowed opacity-75",
                         )}
                       >
                         {/* 왼쪽 상태 accent bar */}
-                        <div className={cn("absolute left-0 top-0 bottom-0 w-1", statusAccent(product.status))} />
+                        <div
+                          className={cn(
+                            "absolute left-0 top-0 bottom-0 w-1",
+                            statusAccent(product.status),
+                          )}
+                        />
 
                         {/* 썸네일 */}
                         <div className="w-28 h-20 shrink-0 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white">
@@ -728,7 +807,9 @@ const MyAuctionlist = () => {
                             />
                           ) : (
                             <div className="w-full h-full bg-zinc-50 grid place-items-center">
-                              <span className="text-[11px] font-bold text-zinc-300">No Image</span>
+                              <span className="text-[11px] font-bold text-zinc-300">
+                                No Image
+                              </span>
                             </div>
                           )}
                         </div>
@@ -739,7 +820,7 @@ const MyAuctionlist = () => {
                             <span
                               className={cn(
                                 "inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold ring-1 ring-black/5",
-                                badge.chip
+                                badge.chip,
                               )}
                             >
                               {badge.text}
@@ -751,11 +832,14 @@ const MyAuctionlist = () => {
                           </div>
 
                           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                            <span className="text-zinc-400">#{product.productId}</span>
+                            <span className="text-zinc-400">
+                              #{product.productId}
+                            </span>
                             <span className="text-zinc-300">•</span>
                             <span>입찰 {bids}건</span>
 
-                            {(product.status === "READY" || product.status === "PROCESSING") && (
+                            {(product.status === "READY" ||
+                              product.status === "PROCESSING") && (
                               <>
                                 <span className="text-zinc-300">•</span>
                                 <TimePill
@@ -771,8 +855,17 @@ const MyAuctionlist = () => {
                         {/* 오른쪽 가격 + 액션 */}
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <div className="text-[11px] font-bold text-zinc-500">{priceLabel}</div>
-                            <div className={cn("text-lg font-extrabold tabular-nums", priceClass)}>{priceText}</div>
+                            <div className="text-[11px] font-bold text-zinc-500">
+                              {priceLabel}
+                            </div>
+                            <div
+                              className={cn(
+                                "text-lg font-extrabold tabular-nums",
+                                priceClass,
+                              )}
+                            >
+                              {priceText}
+                            </div>
                           </div>
 
                           <button
@@ -782,12 +875,15 @@ const MyAuctionlist = () => {
                               "w-10 h-10 rounded-full ring-1 ring-black/5 grid place-items-center transition",
                               isClickable
                                 ? "bg-white/70 text-zinc-800 hover:bg-zinc-900 hover:text-white"
-                                : "bg-zinc-100/60 text-zinc-400 cursor-not-allowed"
+                                : "bg-zinc-100/60 text-zinc-400 cursor-not-allowed",
                             )}
                             title={isClickable ? "상세보기" : "대기중"}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (isClickable) navigate(`/auction_detail/${product.productId}`);
+                              if (isClickable)
+                                navigate(
+                                  `/auction_detail/${product.productId}`,
+                                );
                             }}
                           >
                             <ChevronRight className="w-5 h-5" />

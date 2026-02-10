@@ -6,12 +6,16 @@ import LoadingModal from "@/components/LoadingModal";
 import { ModalContext } from "./ModalContext";
 import WarningModal from "@/components/WarningModal";
 
+type LoginModalMode = "navigation" | "confirm";
+
 interface ModalProviderProps {
   children: ReactNode;
 }
 
 export default function ModalProvider({ children }: ModalProviderProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginModalMode, setLoginModalMode] =
+    useState<LoginModalMode>("navigation");
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [showLoadingModal, setShowLoadingModal] = useState(false);
@@ -19,7 +23,10 @@ export default function ModalProvider({ children }: ModalProviderProps) {
   const [warningMessage, setWarningMessage] = useState("");
   const [loadingMessage, setLoadingMessage] = useState("");
 
-  const showLogin = () => setShowLoginModal(true);
+  const showLogin = (mode: LoginModalMode = "navigation") => {
+    setLoginModalMode(mode);
+    setShowLoginModal(true);
+  };
 
   const showError = (message = "서버 오류가 발생했습니다.") => {
     setErrorMessage(message);
@@ -45,7 +52,10 @@ export default function ModalProvider({ children }: ModalProviderProps) {
       {children}
 
       {showLoginModal && (
-        <LoginModal onClose={() => setShowLoginModal(false)} />
+        <LoginModal
+          mode={loginModalMode} // mode prop 전달
+          onClose={() => setShowLoginModal(false)}
+        />
       )}
       {showErrorModal && (
         <ErrorModal
