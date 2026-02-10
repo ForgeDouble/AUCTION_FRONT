@@ -255,7 +255,7 @@ return (
 
         <button
           onClick={() => setOpen(true)}
-          className="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm flex items-center gap-2"
+          className="px-3 py-2 rounded-xl bg-[rgb(118_90_255)] hover:bg-[rgb(104_79_224)] text-white text-sm flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           일정 추가
@@ -288,7 +288,7 @@ return (
           className={
             "min-h-[92px] rounded-xl border p-2 cursor-pointer " +
             (c.inMonth ? "bg-white border-gray-100 hover:bg-gray-50" : "bg-gray-50 border-gray-100") +
-            (isToday ? " ring-2 ring-violet-200" : "")
+            (isToday ? " ring-2 ring-[rgb(118_90_255)]/25" : "")
           }
           title={c.date ? "클릭: 일정 추가 / 드래그 드롭: 날짜 변경" : ""}
         >
@@ -298,7 +298,7 @@ return (
             </div>
 
             {dayEvents.length > 0 && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-50 border border-violet-100 text-violet-700">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgb(118_90_255)]/10 border border-[rgb(118_90_255)]/20 text-[rgb(118_90_255)]">
                 {dayEvents.length}
               </span>
             )}
@@ -318,7 +318,7 @@ return (
                   }}
                   className={
                     "relative text-[11px] pl-3 pr-2 py-1.5 rounded-lg border bg-white hover:bg-gray-50 truncate " +
-                    (selectedId === e.id ? "border-violet-300" : "border-gray-100")
+                    (selectedId === e.id ? "border-[rgb(118_90_255)]/45" : "border-gray-100")
                   }
                   title="클릭: 상세/메모 / 드래그: 날짜 변경"
                 >
@@ -375,7 +375,7 @@ return (
               onClick={() => setSelectedId(e.id)}
               className={
                 "w-full text-left p-2 rounded-xl bg-white border hover:bg-gray-50 " +
-                (selectedId === e.id ? "border-violet-300" : "border-gray-100")
+                (selectedId === e.id ? "border-[rgb(118_90_255)]/45" : "border-gray-100")
               }
             >
               <div className="flex items-start gap-2">
@@ -508,7 +508,7 @@ return (
             </button>
             <button
               onClick={onSaveEdit}
-              className="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm flex items-center gap-2"
+              className="px-3 py-2 rounded-xl bg-[rgb(118_90_255)] hover:bg-[rgb(104_79_224)] text-white text-sm flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
               저장
@@ -590,7 +590,7 @@ return (
           <button onClick={() => setOpen(false)} className="px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm">
             취소
           </button>
-          <button onClick={saveNew} className="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm">
+          <button onClick={saveNew} className="px-3 py-2 rounded-xl bg-[rgb(118_90_255)] hover:bg-[rgb(104_79_224)] text-white text-sm">
             저장
           </button>
         </div>
@@ -628,7 +628,7 @@ return (
               }}
               className={
                 "w-full text-left p-2 rounded-xl bg-white border hover:bg-gray-50 " +
-                (selectedId === e.id ? "border-violet-300" : "border-gray-100")
+                (selectedId === e.id ? "border-[rgb(118_90_255)]/45" : "border-gray-100")
               }
               title="클릭: 상세/메모 보기"
             >

@@ -14,6 +14,15 @@ import { SectionTitle } from "../components/AdminUi";
 type ReportCategory = "SPAM" | "AD" | "ABUSE" | "HATE" | "SCAM" | "OTHER";
 type ReportStatus = "PENDING" | "ACCEPTED" | "REJECTED";
 
+// 색상 헬퍼
+function groupStateTextClass(g: GroupRow) {
+  const now = Date.now();
+  const suspended = g.suspendedUntil && new Date(g.suspendedUntil).getTime() > now;
+  if (suspended) return "text-red-700";
+  if (g.viewOnly) return "text-[rgb(118_90_255)]";
+  return "text-gray-700";
+}
+
 type GroupRow = {
   targetUserId: number;
   targetName?: string | null;
@@ -194,12 +203,12 @@ function groupStateLabel(g: GroupRow) {
   const suspended = g.suspendedUntil && new Date(g.suspendedUntil).getTime() > now;
 
   if (suspended) return { label: "정지", cls: "bg-red-50 text-red-700 border-red-200" };
-  if (g.viewOnly) return { label: "제한", cls: "bg-violet-50 text-violet-700 border-violet-200" };
+  if (g.viewOnly) return { label: "제한", cls: "bg-[rgb(118_90_255)]/10 text-[rgb(118_90_255)] border-[rgb(118_90_255)]/20" };
   return { label: "정상", cls: "bg-gray-50 text-gray-700 border-gray-200" };
 }
 
 const controlBase =
-  "h-9 px-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:ring-2 focus:ring-violet-200";
+  "h-9 px-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[rgb(118_90_255)]/25";
 const miniChipBase =
   "inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] leading-none";
 
@@ -480,7 +489,7 @@ const AdminReportsPage: React.FC = () => {
                   onClick={() => setSelectedKey(key)}
                   className={
                     "w-full text-left p-3 rounded-xl border transition " +
-                    (active ? "bg-violet-50 border-violet-200" : "bg-gray-50 border-gray-100 hover:bg-gray-100")
+                    (active ? "bg-[rgb(118_90_255)]/10 border-[rgb(118_90_255)]/20" : "bg-gray-50 border-gray-100 hover:bg-gray-100")
                   }
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -561,7 +570,7 @@ const AdminReportsPage: React.FC = () => {
 
                     <div className="mt-2 text-[12px] text-gray-700">
                       상태:{" "}
-                      <span className={"font-semibold " + groupStateLabel(selected).cls.replace("bg-", "text-").replace("border-", "")}>
+                      <span className={"font-semibold " + groupStateTextClass(selected)}>
                         {groupStateLabel(selected).label}
                       </span>
                       {selected.suspendedUntil ? (
@@ -587,7 +596,7 @@ const AdminReportsPage: React.FC = () => {
                     <textarea
                       value={adminContent}
                       onChange={(e) => setAdminContent(e.target.value)}
-                      className="w-full min-h-[110px] px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-violet-200"
+                      className="w-full min-h-[110px] px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-[rgb(118_90_255)]/25"
                       placeholder="승인/기각/정지 이유를 작성하시오."
                     />
                   </div>

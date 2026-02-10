@@ -28,8 +28,10 @@ import Footer from "./components/Footer";
 import ForgotPassword from "./pages/forgot_password/ForgotPassword";
 import ResetPassword from "./pages/forgot_password/ResetPassword";
 import UserProfilePage from "@/pages/mypage/publicProfile/UserProfilePage";
+import MyShopReviewsPage from "@/pages/mypage/reviews/MyShopReviewsPage";
 import ErrorPage from "./errors/ErrorPage";
 import EditProductPage from "./pages/sell_edit_product/EditProductPage";
+
 
 function App() {
   const location = useLocation();
@@ -141,6 +143,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
                     <MyAuctionlist />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mypage/reviews"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ADMIN", "INQUIRY"]}>
+                    <MyShopReviewsPage />
                   </ProtectedRoute>
                 }
               />

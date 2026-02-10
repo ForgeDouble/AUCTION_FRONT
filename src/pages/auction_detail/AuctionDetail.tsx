@@ -39,10 +39,14 @@ import dayjs from "dayjs";
 import { fetchCreateWishlist, fetchDeleteWishlist } from "@/api/wishListApi";
 import { useNumberParam } from "@/hooks/useNumberParam";
 import { useModal } from "@/contexts/ModalContext";
+import { fetchSeasonLatestForUser } from "@/components/season/seasonApi";
+import type { SeasonUserAwardsDto } from "@/components/season/seasonTypes";
+import SeasonAwardChips from "@/components/season/SeasonAwardChips";
 import ErrorPage from "@/errors/ErrorPage";
 import { handleApiError } from "@/errors/HandleApiError";
 import type { ErrorStatus } from "@/errors/ErrorDto";
 import { ApiError } from "@/errors/Errors";
+
 
 const AuctionDetail = () => {
   const productId = useNumberParam("productId");
@@ -77,13 +81,15 @@ const AuctionDetail = () => {
 
   // UI 전용: 상세 펼침/접기
   const [detailExpanded, setDetailExpanded] = useState(false);
-  /** 에러 페이지 state */
+  // 시즌 뱃지
+  const [seasonAwards, setSeasonAwards] = useState<SeasonUserAwardsDto | null>(null);
   const [errorState, setErrorState] = useState<{
     show: boolean;
     type: ErrorStatus;
     title?: string;
     message?: string;
   } | null>(null);
+
 
   // 본인 상품 여부 등 로직 (필요시 복구)
   // const isSelfSeller = false;
@@ -114,7 +120,7 @@ const AuctionDetail = () => {
 
   const [bidDetailOpen, setBidDetailOpen] = useState(false);
 
-  // 왼쪽 스크롤 컨테이너 + 상세 섹션 앵커
+  //  왼쪽 스크롤 컨테이너 + 상세 섹션 앵커
   const leftScrollRef = useRef<HTMLDivElement | null>(null);
   const bidDetailAnchorRef = useRef<HTMLDivElement | null>(null);
 
@@ -682,6 +688,43 @@ const AuctionDetail = () => {
     };
   }, [product?.status, productId]);
 
+  useEffect(() => {
+    const uidRaw = sellerInfo?.userId;
+    if (uidRaw == null) {
+      setSeasonAwards(null);
+      return;
+    }
+
+    const uid = Number(uidRaw);
+    if (!Number.isFinite(uid)) {
+      setSeasonAwards(null);
+      return;
+    }
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setSeasonAwards(null);
+      return;
+    }
+
+    let alive = true;
+
+    (async () => {
+      try {
+        const dto = await fetchSeasonLatestForUser(token, uid);
+      if (!alive) return;
+        setSeasonAwards(dto);
+      } catch {
+        if (!alive) return;
+        setSeasonAwards(null);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [sellerInfo?.userId]);
+
   const sendBid = () => {
     if (product?.status !== "PROCESSING") {
       showError("진행중인 경매가 아닙니다.");
@@ -939,25 +982,8 @@ const AuctionDetail = () => {
                       {product?.productName || "상품명을 불러오는 중..."}
                     </h1>
 
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200">
-                        정품 보증
-                      </span>
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200">
-                        검수 가능
-                      </span>
-                      <span
-                        className="px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1"
-                        style={{
-                          color: ACCENT,
-                          backgroundColor: ACCENT_SOFT,
-                          borderColor: "rgba(118,90,255,0.25)",
-                        }}
-                      >
-                        <Shield className="w-3.5 h-3.5" />
-                        안전 거래
-                      </span>
-                    </div>
+
+                    <div className="mt-4"> <SeasonAwardChips data={seasonAwards} accent={ACCENT} accentSoft={ACCENT_SOFT} max={3} /> </div>
                   </div>
                   <div className="hidden md:block text-right">
                     <div className="text-xs text-slate-500 font-bold">

@@ -1,3 +1,4 @@
+//src/components/ServiceWorkerNoficationBridge.tsx
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { routeForNotification } from "@/firebase/notificationRoute";

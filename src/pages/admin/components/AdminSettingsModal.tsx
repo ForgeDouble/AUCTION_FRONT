@@ -112,6 +112,23 @@ function formatBirthdayDisplay(birthdayStr: string | null): string {
   return `${md.yyyy}-${md.mm}-${md.dd}`;
 }
 
+// 알림 방지 기능 적용
+function notifSupported(): boolean {
+  return typeof window !== "undefined" && "Notification" in window;
+}
+
+async function ensureNotifPermission(): Promise<"granted" | "denied" | "default"> {
+  if (!notifSupported()) return "denied";
+  try {
+    if (Notification.permission === "granted") return "granted";
+    if (Notification.permission === "denied") return "denied";
+    const perm = await Notification.requestPermission();
+    return perm;
+  } catch {
+    return Notification.permission ?? "default";
+  }
+}
+
 const Toggle: React.FC<{
   value: boolean;
   onChange: (v: boolean) => void;
@@ -396,6 +413,30 @@ const AdminSettingsModal: React.FC<Props> = ({
     }
   };
 
+  const onToggleNotif = async (next: boolean) => {
+    // OFF -> ON 켤 때만 권한 체크/요청
+    if (next) {
+      if (!notifSupported()) {
+        alert("이 브라우저/환경에서는 알림 기능을 지원하지 않습니다.");
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        alert("브라우저 알림 권한이 차단되어 있어요. 브라우저 설정에서 알림을 허용한 뒤 다시 켜주세요.");
+        return;
+      }
+
+      if (Notification.permission === "default") {
+        const perm = await ensureNotifPermission();
+        if (perm !== "granted") {
+          alert("알림 권한이 허용되지 않아 알림을 켤 수 없습니다.");
+          return;
+        }
+      }
+    }
+    setNotifEnabled(next);
+  };
+
   return (
     <div className="fixed inset-0 z-[9999]">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
@@ -404,7 +445,7 @@ const AdminSettingsModal: React.FC<Props> = ({
         <div className="w-full max-w-[760px] bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-[rgb(118,90,255)] flex items-center justify-center">
                  <Settings className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -446,8 +487,8 @@ const AdminSettingsModal: React.FC<Props> = ({
                       <User2 className="w-9 h-9 text-gray-400" />
                     )}
 
-                    <span className="absolute bottom-2 right-2 w-8 h-8 rounded-xl bg-bg-transparent backdrop-blur border border-white/60 flex items-center justify-center shadow">
-                      <Camera className="w-4 h-4 text-violet-700" />
+                    <span className="absolute bottom-2 right-2 w-8 h-8 rounded-xl bg-transparent backdrop-blur border border-white/60 flex items-center justify-center shadow">
+                      <Camera className="w-4 h-4 text-[rgb(118,90,255)]" />
                     </span>
                   </button>
 
@@ -510,7 +551,7 @@ const AdminSettingsModal: React.FC<Props> = ({
                     <input
                       value={nickDraft}
                       onChange={(e) => setNickDraft(e.target.value)}
-                      className="h-10 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-violet-400"
+                      className="h-10 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-[rgb(118,90,255)] focus:ring-2 focus:ring-[rgba(118,90,255,0.20)]"
                       placeholder="새 닉네임"
                     />
                     <button
@@ -518,8 +559,8 @@ const AdminSettingsModal: React.FC<Props> = ({
                       onClick={() => void onSaveNickname()}
                       disabled={busyNick}
                       className={
-                        "h-10 px-4 min-w-[84px] rounded-xl bg-violet-600 text-white text-sm font-semibold flex items-center justify-center gap-2 whitespace-nowrap break-keep " +
-                        (busyNick ? "opacity-60 cursor-not-allowed" : "hover:bg-violet-700")
+                        "h-10 px-4 min-w-[84px] rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-semibold flex items-center justify-center gap-2 whitespace-nowrap break-keep " +
+                        (busyNick ? "opacity-60 cursor-not-allowed" : "hover:brightness-95")
                       }
                     >
                       <Save className={"w-4 h-4 " + (busyNick ? "animate-pulse" : "")} />
@@ -577,7 +618,13 @@ const AdminSettingsModal: React.FC<Props> = ({
                       <div className="text-[11px] text-gray-500">운영 화면에서 알림 배너/브라우저 알림 등에 활용</div>
                     </div>
 
-                    <Toggle value={notifEnabled} onChange={setNotifEnabled} labelOn="ON" labelOff="OFF" />
+                    <Toggle
+                      value={notifEnabled}
+                      onChange={(v) => { void onToggleNotif(v); }}
+                      labelOn="ON"
+                      labelOff="OFF"
+                      disabled={!notifSupported()}
+                    />
                   </div>
                 </div>
               </div>
@@ -597,7 +644,7 @@ const AdminSettingsModal: React.FC<Props> = ({
               onClick={() => void onSaveAll()}
               disabled={busySave}
               className={
-                "h-10 px-4 rounded-xl bg-violet-600 text-white hover:bg-violet-700 text-sm font-semibold flex items-center gap-2 " +
+                "h-10 px-4 rounded-xl bg-[rgb(118,90,255)] text-white hover:brightness-95 text-sm font-semibold flex items-center gap-2 " +
                 (busySave ? "opacity-60 cursor-not-allowed" : "")
               }
             >
