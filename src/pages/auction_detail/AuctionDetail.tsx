@@ -10,7 +10,6 @@ import {
   Heart,
   Share2,
   Clock,
-  Shield,
   TrendingUp,
   ChevronLeft,
   ChevronRight,
@@ -47,7 +46,6 @@ import { handleApiError } from "@/errors/HandleApiError";
 import type { ErrorStatus } from "@/errors/ErrorDto";
 import { ApiError } from "@/errors/Errors";
 
-
 const AuctionDetail = () => {
   const productId = useNumberParam("productId");
   const { showWarning, showError, showLogin } = useModal();
@@ -82,14 +80,15 @@ const AuctionDetail = () => {
   // UI 전용: 상세 펼침/접기
   const [detailExpanded, setDetailExpanded] = useState(false);
   // 시즌 뱃지
-  const [seasonAwards, setSeasonAwards] = useState<SeasonUserAwardsDto | null>(null);
+  const [seasonAwards, setSeasonAwards] = useState<SeasonUserAwardsDto | null>(
+    null,
+  );
   const [errorState, setErrorState] = useState<{
     show: boolean;
     type: ErrorStatus;
     title?: string;
     message?: string;
   } | null>(null);
-
 
   // 본인 상품 여부 등 로직 (필요시 복구)
   // const isSelfSeller = false;
@@ -104,19 +103,9 @@ const AuctionDetail = () => {
 
   const { userEmail: authEmail, userId: authUserId } = useAuth();
 
-  const myEmailNorm = useMemo(() => {
-    const fromAuth = String(authEmail ?? "")
-      .trim()
-      .toLowerCase();
-    if (fromAuth) return fromAuth;
-
-    const raw =
-      localStorage.getItem("userEmail") ||
-      localStorage.getItem("email") ||
-      localStorage.getItem("userId") ||
-      "";
-    return String(raw).trim().toLowerCase();
-  }, [authEmail]);
+  const myEmailNorm = String(authEmail ?? "")
+    .trim()
+    .toLowerCase();
 
   const [bidDetailOpen, setBidDetailOpen] = useState(false);
 
@@ -145,13 +134,13 @@ const AuctionDetail = () => {
     });
   };
 
-  const sellerEmailNorm = useMemo(() => {
-    return String(sellerInfo?.email ?? "")
-      .trim()
-      .toLowerCase();
-  }, [sellerInfo?.email]);
+  const sellerEmailNorm = String(sellerInfo?.email ?? "")
+    .trim()
+    .toLowerCase();
 
-  const isSelfSeller = useMemo(() => {
+  const isSelfSeller = (() => {
+    if (!authUserId && !authEmail) return false; // 로그인 안 했으면 false
+
     const myId = authUserId != null ? Number(authUserId) : null;
     const sellerId =
       sellerInfo?.userId != null ? Number(sellerInfo.userId) : null;
@@ -163,19 +152,11 @@ const AuctionDetail = () => {
       myEmailNorm === sellerEmailNorm;
 
     return sameId || sameEmail;
-  }, [authUserId, myEmailNorm, sellerEmailNorm, sellerInfo?.userId]);
+  })();
 
-  const canChatSeller = useMemo(() => {
-    return !isSelfSeller && Boolean(sellerInfo?.email);
-  }, [isSelfSeller, sellerInfo?.email]);
-
-  const canReportSeller = useMemo(() => {
-    return !isSelfSeller && Boolean(sellerInfo?.userId);
-  }, [isSelfSeller, sellerInfo?.userId]);
-
-  const canWishlist = useMemo(() => {
-    return !isSelfSeller;
-  }, [isSelfSeller]);
+  const canChatSeller = !isSelfSeller && Boolean(sellerInfo?.email);
+  const canReportSeller = !isSelfSeller && Boolean(sellerInfo?.userId);
+  const canWishlist = !isSelfSeller;
 
   // 입찰정책 펼치기/닫기 관련
   const [bidPolicyOpen, setBidPolicyOpen] = useState(false);
@@ -357,6 +338,7 @@ const AuctionDetail = () => {
               title: "서버 내부에서 오류가 발생했습니다",
               message: "관리자에게 문의해주세요.",
             });
+
           break;
 
         default:
@@ -712,7 +694,7 @@ const AuctionDetail = () => {
     (async () => {
       try {
         const dto = await fetchSeasonLatestForUser(token, uid);
-      if (!alive) return;
+        if (!alive) return;
         setSeasonAwards(dto);
       } catch {
         if (!alive) return;
@@ -868,6 +850,17 @@ const AuctionDetail = () => {
       ? Number(bidLogs[0].bidAmount)
       : Number(product?.price || 0);
 
+  // productId에 이상이 있을 경우 오류 페이지 렌더링
+  if (errorState?.show) {
+    return (
+      <ErrorPage
+        type={errorState.type}
+        title={errorState.title}
+        message={errorState.message}
+      />
+    );
+  }
+
   // 상품 또는 판매자 정보 로딩
   if (!product || !sellerInfo) {
     return (
@@ -887,17 +880,6 @@ const AuctionDetail = () => {
         type="404"
         title="경매 준비 중"
         message="아직 경매가 시작되지 않은 상품입니다. 경매 시작 시간을 확인해주세요."
-      />
-    );
-  }
-
-  // productId에 이상이 있을 경우 오류 페이지 렌더링
-  if (errorState?.show) {
-    return (
-      <ErrorPage
-        type={errorState.type}
-        title={errorState.title}
-        message={errorState.message}
       />
     );
   }
@@ -982,8 +964,15 @@ const AuctionDetail = () => {
                       {product?.productName || "상품명을 불러오는 중..."}
                     </h1>
 
-
-                    <div className="mt-4"> <SeasonAwardChips data={seasonAwards} accent={ACCENT} accentSoft={ACCENT_SOFT} max={3} /> </div>
+                    <div className="mt-4">
+                      {" "}
+                      <SeasonAwardChips
+                        data={seasonAwards}
+                        accent={ACCENT}
+                        accentSoft={ACCENT_SOFT}
+                        max={3}
+                      />{" "}
+                    </div>
                   </div>
                   <div className="hidden md:block text-right">
                     <div className="text-xs text-slate-500 font-bold">
@@ -1507,10 +1496,10 @@ const AuctionDetail = () => {
                       <div className="divide-y divide-slate-100">
                         {bidLogs.map((bid, index) => {
                           const isTop = index === 0 && isLive;
-                          const initial = (bid.profileImageUrl || "?").slice(
-                            0,
-                            1,
-                          );
+                          // const initial = (bid.profileImageUrl || "?").slice(
+                          //   0,
+                          //   1,
+                          // );
 
                           return (
                             <div
