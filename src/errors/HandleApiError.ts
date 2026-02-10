@@ -1,11 +1,18 @@
 import type { ErrorHandlingResult } from "./ErrorDto";
-import { ApiError, UnauthorizedError } from "./Errors";
+import { ApiError, DataReadError, UnauthorizedError } from "./Errors";
 
 export function handleApiError(error: unknown): ErrorHandlingResult {
   if (error instanceof UnauthorizedError) {
     return {
+      type: "AUTH",
+      message: "유효하지 않거나 만료된 JWT 토큰입니다.",
+    };
+  }
+
+  if (error instanceof DataReadError) {
+    return {
       type: "REDIRECT",
-      to: "/login",
+      to: "/500",
     };
   }
 
@@ -14,7 +21,7 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
       /** 공통 */
       case "INTERNAL_SERVER_ERROR":
         return {
-          type: "MODAL",
+          type: "ERROR",
           message:
             "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
         };
@@ -25,27 +32,56 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           message: "유효하지 않거나 만료된 JWT 토큰입니다.",
         };
 
-      /** 입찰 */
-      case "LOW_PRICE":
-      case "QUANTITY_ERROR":
+      case "INVALID_USER":
         return {
-          type: "FIELD_ERROR",
-          field: "price",
-          message: error.message,
+          type: "AUTH",
+          message: "유효하지 않은 계정입니다.",
         };
 
-      case "PRODUCT_NOT_FOUND":
+      case "DATA_NOT_FOUND":
         return {
           type: "REDIRECT",
           to: "/404",
         };
 
-      case "INTERNAL_ERROR":
+      /** 위시리스트 */
+      case "SELF_WISHLIST_FORBIDDEN":
         return {
-          type: "MODAL",
-          message: error.message,
+          type: "WARNING",
+          message: "본인 상품에는 찜기능을 사용 할 수 없습니다.",
         };
 
+      /** 입찰 */
+      case "INVALID_INPUT_FORMAT":
+        return {
+          type: "WARNING",
+          message: "올바르지 않은 입력입니다.",
+        };
+      case "BID_VALIDATION_ERROR":
+        return {
+          type: "WARNING",
+          message: "올바르지 않은 입력입니다.",
+        };
+      case "NOT_PROCESSING":
+        return {
+          type: "REDIRECT",
+          to: "/500",
+        };
+      case "SELLER_NOT_ALLOWED":
+        return {
+          type: "WARNING",
+          message: "판매자는 입찰을 할 수 없습니다.",
+        };
+      case "QUANTITY_ERROR":
+        return {
+          type: "WARNING",
+          message: "입찰가는 1000원 단위로 입력해주세요.",
+        };
+      case "LOW_PRICE":
+        return {
+          type: "WARNING",
+          message: "현재 최고가 보다 높은 금액만 입찰가능합니다.",
+        };
       /** 비밀번호 찾기 이메일 전송 */
       case "INVALID_PS_TOKEN":
         return {
@@ -63,7 +99,7 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
   }
 
   return {
-    type: "MODAL",
+    type: "ERROR",
     message: "알 수 없는 오류가 발생했습니다.",
   };
 }
