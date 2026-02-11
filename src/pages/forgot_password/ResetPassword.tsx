@@ -34,7 +34,7 @@ const ResetPassword = () => {
       console.error(result);
 
       switch (result.type) {
-        case "MODAL":
+        case "ERROR":
           setTokenError(result.message);
           break;
 
@@ -96,7 +96,7 @@ const ResetPassword = () => {
       console.error(result);
 
       switch (result.type) {
-        case "MODAL":
+        case "ERROR":
           setPasswordError(result.message);
           break;
 

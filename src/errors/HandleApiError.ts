@@ -86,7 +86,7 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
       case "INVALID_PS_TOKEN":
         return {
           type: "DIALOG",
-          message: error.message,
+          message: "유효하지 않거나 만료된 요청입니다. 다시 시도해주세요.",
         };
 
       /** 기본 */
