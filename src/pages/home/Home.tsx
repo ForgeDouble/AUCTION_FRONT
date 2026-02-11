@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   Search,
   Clock,
-  Gavel,
   TrendingUp,
   ArrowRight,
   Award,
@@ -16,16 +15,17 @@ import {
   Bike,
   Book,
   type LucideIcon,
+  AlertCircle,
 } from "lucide-react";
 import { fetchParentCategories, fetchTop3Products } from "./HomeApi";
 import type { ParentCategoriesDto, Top3ProductDto } from "./HomeDto";
 import { useNavigate } from "react-router-dom";
 import PlaceHolder from "@/components/PlaceHolder";
 import dayjs from "dayjs";
-import { useModal } from "@/contexts/ModalContext";
+import { handleApiError } from "@/errors/HandleApiError";
+import { ApiError } from "@/errors/Errors";
 
 const Home = () => {
-  const { showError } = useModal();
   const navigate = useNavigate();
 
   /* 입찰수 상위 3개 상품들 */
@@ -34,6 +34,9 @@ const Home = () => {
   const [parentCategories, setParentCategories] = useState<
     ParentCategoriesDto[]
   >([]);
+
+  const [productsError, setProductsError] = useState<string>("");
+  const [categoriesError, setCategoriesError] = useState<string>("");
   // 각 경매의 남은 시간을 관리하는 state
   const [timers, setTimers] = useState<
     Record<number, { hours: number; minutes: number; seconds: number }>
@@ -70,24 +73,40 @@ const Home = () => {
   /* 입찰수 상위 3개 상품들 조회 */
   const loadTop3Products = async () => {
     try {
+      // throw new ApiError(500, "INTERNAL_SERVER_ERROR", "test");
+
       const data = await fetchTop3Products();
       const response = data.result;
       setProducts(response);
-    } catch (error) {
-      showError("데이터를 불러오는데 실패했습니다.");
-      console.error(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      setProductsError(
+        result.type === "ERROR"
+          ? result.message
+          : "상품 데이터를 불러오는 중 오류가 발생했습니다.",
+      );
     }
   };
 
   /* 부모 카테고리 조회 */
   const loadParentCategories = async () => {
     try {
+      // throw new ApiError(500, "INTERNAL_SERVER_ERROR", "test");
+
       const data = await fetchParentCategories();
       const categoryResponse = data.result;
       setParentCategories(categoryResponse);
-    } catch (error) {
-      showError("데이터를 불러오는데 실패했습니다.");
-      console.error(error);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      setCategoriesError(
+        result.type === "ERROR"
+          ? result.message
+          : "카테고리 데이터를 불러오는 중 오류가 발생했습니다.",
+      );
     }
   };
 
@@ -192,65 +211,85 @@ const Home = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {products.map((item) => (
-                  <div
-                    key={item.productId}
-                    className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200"
-                  >
-                    <div className="relative">
-                      {item.previewImageUrl ? (
-                        <img
-                          src={item.previewImageUrl}
-                          alt={item.productName}
-                          className="w-full h-40 object-cover"
-                        />
-                      ) : (
-                        <PlaceHolder />
-                      )}
-                      <div className="absolute top-3 right-3 bg-gray-900/80 text-white px-2.5 py-1 rounded-full text-[11px] font-medium flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {timers[item.productId]
-                          ? `${timers[item.productId].hours}:${String(
-                              timers[item.productId].minutes,
-                            ).padStart(2, "0")}:${String(
-                              timers[item.productId].seconds,
-                            ).padStart(2, "0")}`
-                          : "0:00:00"}
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2">
-                        {item.productName}
-                      </h3>
-                      <div className="flex justify-between items-center mb-3">
-                        <div>
-                          <div className="text-[11px] text-gray-500 mb-0.5">
-                            현재 입찰가
-                          </div>
-                          <div className="text-lg font-semibold text-[rgb(118,90,255)]">
-                            {item.latestBidAmount}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-[11px] text-gray-500 mb-0.5">
-                            입찰 수
-                          </div>
-                          <div className="text-sm font-semibold text-gray-900">
-                            {item.bidCount}개
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() =>
-                          navigate(`/auction_detail/${item.productId}`)
-                        }
-                        className="w-full bg-[rgb(118,90,255)] text-white py-2 rounded-xl hover:bg-[rgb(90,58,252)] text-sm font-medium cursor-pointer transition-colors"
-                      >
-                        입찰 참여하기
-                      </button>
-                    </div>
+                {productsError ? (
+                  <div className="col-span-full bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+                    <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
+                    <p className="text-red-700 font-medium mb-1">
+                      데이터를 불러올 수 없습니다
+                    </p>
+                    <p className="text-sm text-red-600">{productsError}</p>
+                    <button
+                      onClick={loadTop3Products}
+                      className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+                    >
+                      다시 시도
+                    </button>
                   </div>
-                ))}
+                ) : products.length === 0 ? (
+                  <div className="col-span-full bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center">
+                    <p className="text-gray-500">진행 중인 경매가 없습니다</p>
+                  </div>
+                ) : (
+                  products.map((item) => (
+                    <div
+                      key={item.productId}
+                      className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200"
+                    >
+                      <div className="relative">
+                        {item.previewImageUrl ? (
+                          <img
+                            src={item.previewImageUrl}
+                            alt={item.productName}
+                            className="w-full h-40 object-cover"
+                          />
+                        ) : (
+                          <PlaceHolder />
+                        )}
+                        <div className="absolute top-3 right-3 bg-gray-900/80 text-white px-2.5 py-1 rounded-full text-[11px] font-medium flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {timers[item.productId]
+                            ? `${timers[item.productId].hours}:${String(
+                                timers[item.productId].minutes,
+                              ).padStart(2, "0")}:${String(
+                                timers[item.productId].seconds,
+                              ).padStart(2, "0")}`
+                            : "0:00:00"}
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2">
+                          {item.productName}
+                        </h3>
+                        <div className="flex justify-between items-center mb-3">
+                          <div>
+                            <div className="text-[11px] text-gray-500 mb-0.5">
+                              현재 입찰가
+                            </div>
+                            <div className="text-lg font-semibold text-[rgb(118,90,255)]">
+                              {item.latestBidAmount}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[11px] text-gray-500 mb-0.5">
+                              입찰 수
+                            </div>
+                            <div className="text-sm font-semibold text-gray-900">
+                              {item.bidCount}개
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() =>
+                            navigate(`/auction_detail/${item.productId}`)
+                          }
+                          className="w-full bg-[rgb(118,90,255)] text-white py-2 rounded-xl hover:bg-[rgb(90,58,252)] text-sm font-medium cursor-pointer transition-colors"
+                        >
+                          입찰 참여하기
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -272,30 +311,52 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {parentCategories.map((category, index) => {
-              const IconComponent =
-                categoryIcons[category.categoryName] || ShoppingBag;
-              return (
-                <div
-                  key={index}
-                  onClick={() =>
-                    navigate(`/auction_list?categoryId=${category.categoryId}`)
-                  }
-                  className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-5 text-center hover:bg-white hover:shadow-sm transition-all duration-150 cursor-pointer"
+            {categoriesError ? (
+              <div className="col-span-full bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+                <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
+                <p className="text-red-700 font-medium mb-1">
+                  데이터를 불러올 수 없습니다
+                </p>
+                <p className="text-sm text-red-600">{categoriesError}</p>
+                <button
+                  onClick={loadParentCategories}
+                  className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
                 >
-                  <div className="flex justify-center mb-3">
-                    <IconComponent className="text-3xl text-gray-700" />
-                  </div>
+                  다시 시도
+                </button>
+              </div>
+            ) : parentCategories.length === 0 ? (
+              <div className="col-span-full bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center">
+                <p className="text-gray-500">카테고리 정보가 없습니다</p>
+              </div>
+            ) : (
+              parentCategories.map((category, index) => {
+                const IconComponent =
+                  categoryIcons[category.categoryName] || ShoppingBag;
+                return (
+                  <div
+                    key={index}
+                    onClick={() =>
+                      navigate(
+                        `/auction_list?categoryId=${category.categoryId}`,
+                      )
+                    }
+                    className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-5 text-center hover:bg-white hover:shadow-sm transition-all duration-150 cursor-pointer"
+                  >
+                    <div className="flex justify-center mb-3">
+                      <IconComponent className="text-3xl text-gray-700" />
+                    </div>
 
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">
-                    {category.categoryName}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {category.productCount}개
-                  </p>
-                </div>
-              );
-            })}
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">
+                      {category.categoryName}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {category.productCount}개
+                    </p>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </section>
@@ -371,7 +432,7 @@ const Home = () => {
                 onClick={() => navigate(`/register`)}
                 className="px-8 py-3 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-semibold hover:bg-[rgb(90,58,252)] cursor-pointer transition-colors"
               >
-                 회원가입
+                회원가입
                 <ArrowRight className="inline-block ml-2 h-4 w-4" />
               </button>
               <button

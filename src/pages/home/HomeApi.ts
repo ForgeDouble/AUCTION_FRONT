@@ -1,5 +1,6 @@
 import type { ApiResponse } from "@/type/CommonType";
 import type { ParentCategoriesDto, Top3ProductDto } from "./HomeDto";
+import { ApiError } from "@/errors/Errors";
 
 export const fetchTop3Products = async (): Promise<
   ApiResponse<Top3ProductDto[]>
@@ -12,7 +13,13 @@ export const fetchTop3Products = async (): Promise<
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch Products: ${response.status}`);
+    const body = await response.json();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
@@ -29,7 +36,13 @@ export const fetchParentCategories = async (): Promise<
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch categories: ${response.status}`);
+    const body = await response.json();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
