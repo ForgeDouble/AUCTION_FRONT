@@ -1,13 +1,7 @@
 // src/pages/.../MyPageApi.ts
 import { ApiError } from "@/errors/Errors";
 import type { ApiResponse } from "../../type/CommonType";
-import type {
-  BidListDto,
-  ProductListDto,
-  Status,
-  UserDto,
-  UserUpdateDto,
-} from "./MyPageDto";
+import type { UserDto, UserUpdateDto } from "./MyPageDto";
 
 const BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ??
@@ -49,95 +43,6 @@ export const fetchLoginUser = async (
     if (response.status === 401 || response.status === 403)
       throw new Error("AUTH_REQUIRED");
     await throwApiError(response, "내 정보 조회 실패");
-  }
-
-  return response.json();
-};
-
-/** 내 판매글/경매글 목록 */
-export type MyProductsQuery = {
-  page?: number;
-  size?: number;
-  search?: string; // q 같은 이름으로 쓰고싶으면 프론트에서만 바꿔도 됨
-  statuses?: string[]; // ["READY","PROCESSING"...]
-  sortBy?: string; // "NEWEST" | "ENDING_SOON" | "MOST_BIDS" | "HIGHEST_BID"
-};
-
-export async function fetchProductsByUser(
-  token: string,
-  query: MyProductsQuery = {},
-) {
-  const params = new URLSearchParams();
-
-  params.set("page", String(query.page ?? 0));
-  params.set("size", String(query.size ?? 10));
-
-  if (query.search && query.search.trim().length > 0) {
-    params.set("search", query.search.trim());
-  }
-
-  if (query.sortBy) {
-    params.set("sortBy", query.sortBy);
-  }
-
-  if (query.statuses && query.statuses.length > 0) {
-    query.statuses.forEach((s) => params.append("statuses", s));
-  }
-
-  const url = `${BASE}/product/myPageProductUser?${params.toString()}`;
-
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    const body = await response.json();
-    throw new ApiError(
-      response.status,
-      body.statusCode,
-      body.errorMessage,
-      body.additionalInfo,
-    );
-  }
-
-  return response.json();
-}
-
-/** 내 입찰 목록 */
-export const fetchBidsByUser = async (
-  token: string | null,
-  page: number = 0,
-  size: number = 10,
-  status: Status | null,
-): Promise<
-  ApiResponse<{
-    content: BidListDto[];
-    totalElements: number;
-    totalPages: number;
-    currentPage: number;
-    status: Status;
-    size: number;
-  }>
-> => {
-  const response = await fetch(
-    `${BASE}/bid/allByUser?page=${page}&size=${size}&status=${status}`,
-    {
-      method: "GET",
-
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    },
-  );
-
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403)
-      throw new Error("AUTH_REQUIRED");
-    await throwApiError(response, "입찰 조회 실패");
   }
 
   return response.json();
