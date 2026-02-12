@@ -89,6 +89,40 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           message: error.message,
         };
 
+      /** 리뷰 - 계정 상태 */
+      case "ACCOUNT_WARNING_STATE":
+        return {
+          type: "WARNING",
+          message: error.message || "임시 제한 상태라 리뷰를 작성할 수 없습니다.",
+        };
+
+      case "ACCOUNT_SUSPENDED": {
+        const until = error.additionalInfo;
+        return {
+          type: "DIALOG",
+          message: until
+            ? `${error.message}\n정지 해제: ${until}`
+            : (error.message || "정지된 계정은 리뷰를 작성할 수 없습니다."),
+        };
+      }
+
+      case "RATING_REQUIRED":
+      case "RATING_OUT_OF_RANGE":
+      case "RATING_STEP_INVALID":
+      case "TAG_REQUIRED":
+      case "SELF_REVIEW_FORBIDDEN":
+      case "DUPLICATE_REVIEW":
+      case "WINNER_BID_NOT_FOUND":
+      case "REVIEWER_NOT_WINNER":
+      case "PRODUCT_NOT_FOUND":
+      case "PRODUCT_BE_SELLED":
+      case "REVIEW_ID_REQUIRED":
+      case "REVIEW_NOT_FOUND":
+        return {
+          type: "WARNING",
+          message: error.message,
+        };
+
       /** 기본 */
       default:
         return {

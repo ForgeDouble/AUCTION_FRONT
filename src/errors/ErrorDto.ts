@@ -15,7 +15,23 @@ export type ErrorCode =
   | "NOT_PROCESSING"
   | "SELLER_NOT_ALLOWED"
   | "QUANTITY_ERROR"
-  | "LOW_PRICE";
+  | "LOW_PRICE"
+  /** 리뷰 */
+  | "ACCOUNT_WARNING_STATE"
+  | "ACCOUNT_SUSPENDED"
+  | "RATING_REQUIRED"
+  | "RATING_OUT_OF_RANGE"
+  | "RATING_STEP_INVALID"
+  | "TAG_REQUIRED"
+  | "PRODUCT_NOT_FOUND"
+  | "PRODUCT_BE_SELLED"
+  | "SELF_REVIEW_FORBIDDEN"
+  | "WINNER_BID_NOT_FOUND"
+  | "REVIEWER_NOT_WINNER"
+  | "DUPLICATE_REVIEW"
+  | "REVIEW_ID_REQUIRED"
+  | "REVIEW_NOT_FOUND";
+  
 
 export type ErrorHandlingResult =
   | { type: "REDIRECT"; to: string }
