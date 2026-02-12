@@ -88,6 +88,17 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "DIALOG",
           message: "유효하지 않거나 만료된 요청입니다. 다시 시도해주세요.",
         };
+      /** 로그인 */
+      case "INVALID_LOGIN_CREDENTIALS":
+        return {
+          type: "DIALOG",
+          message: "이메일 또는 비밀번호가 일치하지 않습니다.",
+        };
+      case "ACCOUNT_SUSPENDED":
+        return {
+          type: "DIALOG",
+          message: `정지된 계정입니다. ${error.additionalInfo}`,
+        };
 
       /** 기본 */
       default:

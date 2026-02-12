@@ -15,7 +15,10 @@ export type ErrorCode =
   | "NOT_PROCESSING"
   | "SELLER_NOT_ALLOWED"
   | "QUANTITY_ERROR"
-  | "LOW_PRICE";
+  | "LOW_PRICE"
+  /** 로그인 */
+  | "INVALID_LOGIN_CREDENTIALS"
+  | "ACCOUNT_SUSPENDED";
 
 export type ErrorHandlingResult =
   | { type: "REDIRECT"; to: string }
