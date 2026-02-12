@@ -23,7 +23,6 @@ import { useNavigate } from "react-router-dom";
 import PlaceHolder from "@/components/PlaceHolder";
 import dayjs from "dayjs";
 import { handleApiError } from "@/errors/HandleApiError";
-import { ApiError } from "@/errors/Errors";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -73,8 +72,6 @@ const Home = () => {
   /* 입찰수 상위 3개 상품들 조회 */
   const loadTop3Products = async () => {
     try {
-      // throw new ApiError(500, "INTERNAL_SERVER_ERROR", "test");
-
       const data = await fetchTop3Products();
       const response = data.result;
       setProducts(response);
@@ -93,8 +90,6 @@ const Home = () => {
   /* 부모 카테고리 조회 */
   const loadParentCategories = async () => {
     try {
-      // throw new ApiError(500, "INTERNAL_SERVER_ERROR", "test");
-
       const data = await fetchParentCategories();
       const categoryResponse = data.result;
       setParentCategories(categoryResponse);
