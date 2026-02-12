@@ -8,14 +8,16 @@ import {
   LayoutGrid,
   List as ListIcon,
   ChevronRight,
+  XCircle,
 } from "lucide-react";
-import { fetchProductsByUser } from "../MyPageApi";
+
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { PageInfo, ProductListDto } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
 import { useModal } from "@/contexts/ModalContext";
 import { handleApiError } from "@/errors/HandleApiError";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchProductsByUser } from "./MyAuctionlistApi";
 
 type StatusFilter = "ALL" | "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";
 type SortKey = "NEWEST" | "ENDING_SOON" | "HIGHEST_BID" | "MOST_BIDS";
@@ -73,11 +75,11 @@ function formatPrice(price: number) {
   return new Intl.NumberFormat("ko-KR").format(price) + "원";
 }
 
-function isValidStatus(v: any): v is StatusFilter {
+function isValidStatus(v: string | null): v is StatusFilter {
   return STATUS_OPTIONS.some((o) => o.value === v);
 }
 
-function isValidSort(v: any): v is SortKey {
+function isValidSort(v: string | null): v is SortKey {
   return SORT_OPTIONS.some((o) => o.value === v);
 }
 
@@ -162,18 +164,19 @@ const PlaceholderImg = () => (
 
 function TimePill({
   status,
-  auctionStartTime,
   auctionEndTime,
+  auctionDuration, // 새로 추가: 경매 지속 시간 (분 단위)
 }: {
   status: string;
-  auctionStartTime?: string | null;
   auctionEndTime?: string | null;
+  auctionDuration?: number | null; // 분 단위
 }) {
   const now = Date.now();
-  const st = parseTime(auctionStartTime);
   const et = parseTime(auctionEndTime);
 
-  if (status === "READY" && st) {
+  if (status === "READY" && et && auctionDuration) {
+    // 종료시간에서 경매 지속시간을 빼서 시작시간 계산
+    const st = et - auctionDuration * 60 * 1000;
     const left = st - now;
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-blue-50 text-blue-700 ring-1 ring-blue-100">
@@ -252,7 +255,7 @@ function ViewToggle({
 }
 
 const MyAuctionlist = () => {
-  const { showLogin, showError } = useModal();
+  const { showLogin } = useModal();
   const { logout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -264,7 +267,8 @@ const MyAuctionlist = () => {
     currentPage: 0,
     size: 10,
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
 
   // URL -> applied
   const appliedPage = safeNumber(searchParams.get("page"), 0);
@@ -309,13 +313,14 @@ const MyAuctionlist = () => {
 
         const token = localStorage.getItem("accessToken");
         if (!token) {
-          showLogin();
+          showLogin("confirm");
+          logout();
           return;
         }
 
         const statuses = status === "ALL" ? undefined : [status];
 
-        const data: any = await fetchProductsByUser(token, {
+        const data = await fetchProductsByUser(token, {
           page,
           size,
           search: search || undefined,
@@ -324,10 +329,6 @@ const MyAuctionlist = () => {
         });
 
         const res = data?.result ?? data;
-        if (!res) {
-          console.error("Unexpected API response:", data);
-          throw new Error("상품 목록 조회 실패: 응답 형식이 비정상입니다.");
-        }
 
         setProducts(res?.content ?? []);
         setPageInfo({
@@ -347,13 +348,13 @@ const MyAuctionlist = () => {
             logout();
             break;
           default:
-            showError();
+            setError("경매 목록을 조회하지 못했습니다");
         }
       } finally {
         setLoading(false);
       }
     },
-    [showLogin, showError],
+    [showLogin, logout],
   );
 
   useEffect(() => {
@@ -372,11 +373,11 @@ const MyAuctionlist = () => {
     let list = [...(products || [])];
 
     if (appliedStatus !== "ALL")
-      list = list.filter((p: any) => p.status === appliedStatus);
+      list = list.filter((p: ProductListDto) => p.status === appliedStatus);
 
     if (appliedSearch.length > 0) {
       const q = appliedSearch.toLowerCase();
-      list = list.filter((p: any) => {
+      list = list.filter((p: ProductListDto) => {
         const name = String(p.productName ?? "").toLowerCase();
         const content = String(p.productContent ?? "").toLowerCase();
         return name.includes(q) || content.includes(q);
@@ -593,6 +594,34 @@ const MyAuctionlist = () => {
                 </div>
               ))}
             </div>
+          ) : error ? (
+            <div className="rounded-3xl bg-white/70 backdrop-blur ring-1 ring-black/5 shadow-sm p-12 text-center">
+              <div className="mx-auto w-14 h-14 rounded-3xl bg-red-50 ring-1 ring-red-100 grid place-items-center">
+                <XCircle className="w-10 h-10 text-red-500" />
+              </div>
+              <p className="mt-5 text-zinc-900 font-extrabold text-xl">
+                경매 목록을 조회하지 못했습니다
+              </p>
+              <p className="mt-2 text-sm text-zinc-500">
+                잠시 후 다시 시도해주세요.
+              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  loadProductsByUser(
+                    appliedPage,
+                    appliedSize,
+                    appliedStatus,
+                    appliedSort,
+                    appliedSearch,
+                  )
+                }
+                className="mt-6 inline-flex items-center gap-2 px-5 h-11 rounded-2xl bg-zinc-900 text-white text-sm font-extrabold hover:bg-zinc-800 transition"
+              >
+                <RefreshCw className="w-4 h-4" />
+                다시 시도
+              </button>
+            </div>
           ) : visibleProducts.length === 0 ? (
             <div className="rounded-3xl bg-white/70 backdrop-blur ring-1 ring-black/5 shadow-sm p-12 text-center">
               <div className="mx-auto w-14 h-14 rounded-3xl bg-white/80 ring-1 ring-black/5 grid place-items-center">
@@ -618,7 +647,7 @@ const MyAuctionlist = () => {
               {/* GRID */}
               {appliedView === "grid" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {visibleProducts.map((product: any) => {
+                  {visibleProducts.map((product) => {
                     const badge = getStatusBadge(product.status);
                     const isClickable = product.status !== "READY";
 
@@ -653,7 +682,7 @@ const MyAuctionlist = () => {
                             <div className="absolute top-3 left-3">
                               <TimePill
                                 status={product.status}
-                                auctionStartTime={product.auctionStartTime}
+                                auctionDuration={60}
                                 auctionEndTime={product.auctionEndTime}
                               />
                             </div>
@@ -751,7 +780,7 @@ const MyAuctionlist = () => {
               {/* LIST */}
               {appliedView === "list" && (
                 <div className="rounded-3xl bg-white/70 backdrop-blur ring-1 ring-black/5 shadow-sm overflow-hidden">
-                  {visibleProducts.map((product: any, idx: number) => {
+                  {visibleProducts.map((product, idx: number) => {
                     const badge = getStatusBadge(product.status);
                     const isClickable = product.status !== "READY";
                     const bids = Math.max(0, (product.bidCount ?? 0) - 1);
@@ -844,7 +873,7 @@ const MyAuctionlist = () => {
                                 <span className="text-zinc-300">•</span>
                                 <TimePill
                                   status={product.status}
-                                  auctionStartTime={product.auctionStartTime}
+                                  auctionDuration={60}
                                   auctionEndTime={product.auctionEndTime}
                                 />
                               </>
