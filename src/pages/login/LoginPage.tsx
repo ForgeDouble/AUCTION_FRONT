@@ -6,6 +6,7 @@ import { useAuth } from "../../hooks/useAuth";
 import type { loginRequest } from "./LoginDto";
 import { requestFcmToken } from "@/firebase/firebase";
 import { registerDeviceToken } from "../../api/pushApi";
+import { handleApiError } from "@/errors/HandleApiError";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -23,6 +24,11 @@ const LoginPage = () => {
     if (savedEmail) {
       setEmail(savedEmail);
       setRememberEmail(true);
+    }
+    const error = sessionStorage.getItem("login_error");
+    if (error) {
+      setErrorMessage(error);
+      sessionStorage.removeItem("login_error");
     }
   }, []);
 
@@ -66,21 +72,20 @@ const LoginPage = () => {
       }
 
       window.location.replace("/");
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes("401")) {
-          console.error(error);
-          setErrorMessage("이메일 또는 비밀번호가 일치하지 않습니다.");
-        } else if (error.message.includes("403")) {
-          console.error(error);
-          setErrorMessage("정지된 계정입니다.");
-        } else {
-          console.error(error);
-          setErrorMessage("서버에서 오류가 발생했습니다.");
-        }
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      if (result.type === "DIALOG") {
+        sessionStorage.setItem("login_error", result.message);
       } else {
-        setErrorMessage("로그인에 실패했습니다.");
+        sessionStorage.setItem(
+          "login_error",
+          "로그인에 실패했습니다. 다시 시도해주세요.",
+        );
       }
+
+      window.location.replace("/login");
     } finally {
       setLoading(false);
     }
