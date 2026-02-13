@@ -14,7 +14,8 @@ import {
   type ReviewDetailDto,
 } from "./reviewTypes";
 import ReviewWriteModal from "./ReviewWriteModal";
-import { handleApiError } from "@/errors/handleApiError";
+import { handleApiError } from "@/errors/HandleApiError";
+import { useModal } from "@/contexts/ModalContext";
 
 function isReviewTag(x: unknown): x is ReviewTag {
   return typeof x === "string" && x in REVIEW_TAG_LABEL;
@@ -25,15 +26,14 @@ type TabKey = "PENDING" | "MINE";
 function applyUiError(
   e: unknown,
   nav: ReturnType<typeof useNavigate>,
-  setErr: (v: string | null) => void
+  modal: ReturnType<typeof useModal>
 ) {
   const r = handleApiError(e);
 
   if (r.type === "IGNORE") return;
 
   if (r.type === "AUTH") {
-    alert(r.message);
-    nav("/login");
+    modal.showLogin("navigation");
     return;
   }
 
@@ -41,11 +41,24 @@ function applyUiError(
     nav(r.to);
     return;
   }
-  setErr(r.message);
+
+  if (r.type === "WARNING" || r.type === "TOAST" || r.type === "FIELD_ERROR") {
+    modal.showWarning(r.message);
+    return;
+  }
+
+  if (r.type === "ERROR" || r.type === "DIALOG" || r.type === "MODAL") {
+    modal.showError(r.message);
+    return;
+  }
+
+  modal.showError("알 수 없는 오류가 발생했습니다.");
 }
 
 export default function MyShopReviewsPage() {
   const nav = useNavigate();
+  const modal = useModal();
+
   const token = useMemo(() => localStorage.getItem("accessToken") ?? "", []);
 
   const [tab, setTab] = useState<TabKey>("PENDING");
@@ -57,7 +70,7 @@ export default function MyShopReviewsPage() {
   const [mine, setMine] = useState<SpringPage<ReviewListDto> | null>(null);
 
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  // const [err, setErr] = useState<string | null>(null);
   
   const [writeOpen, setWriteOpen] = useState(false);
   const [writeTarget, setWriteTarget] = useState<PendingReviewRowDto | null>(null);
@@ -95,40 +108,44 @@ export default function MyShopReviewsPage() {
   }
 
   async function loadPending() {
-    setErr(null);
     setLoading(true);
     try {
       const res = await fetchMyPendingReviews(token, pPage, 10);
       const pageObj = unwrap<SpringPage<PendingReviewRowDto>>(res);
       setPending(pageObj);
     } catch (e: any) {
-      applyUiError(e, nav, setErr);
+      applyUiError(e, nav, modal);
     } finally {
       setLoading(false);
     }
   }
 
   async function loadMine() {
-    setErr(null);
+    // setErr(null);
     setLoading(true);
     try {
       const res = await fetchMyReviews(token, mPage, 10);
       const pageObj = unwrap<SpringPage<ReviewListDto>>(res);
       setMine(pageObj);
     } catch (e: any) {
-      applyUiError(e, nav, setErr);
+      applyUiError(e, nav, modal);
     } finally {
       setLoading(false);
     }
   }
-
   useEffect(() => {
     if (!token) {
-      alert("로그인이 필요합니다.");
-      nav("/login");
+      modal.showLogin("navigation");
       return;
     }
-  }, [token]);
+  }, [token, modal]);
+  // useEffect(() => {
+  //   if (!token) {
+  //     alert("로그인이 필요합니다.");
+  //     nav("/login");
+  //     return;
+  //   }
+  // }, [token]);
 
   useEffect(() => {
     if (tab === "PENDING") loadPending();
@@ -156,15 +173,29 @@ export default function MyShopReviewsPage() {
           const r = handleApiError(e);
 
           if (r.type === "AUTH") {
-            alert(r.message);
-            nav("/login");
+            modal.showLogin("navigation");
             return;
           }
+
           if (r.type === "REDIRECT") {
             nav(r.to);
             return;
           }
-          if (r.type !== "IGNORE") setDetailErr(r.message);
+
+          if (r.type === "WARNING" || r.type === "TOAST" || r.type === "FIELD_ERROR") {
+            modal.showWarning(r.message);
+            setDetailErr(r.message);
+            return;
+          }
+
+          if (r.type === "ERROR" || r.type === "DIALOG" || r.type === "MODAL") {
+            modal.showError(r.message);
+            setDetailErr(r.message);
+            return;
+          }
+
+          setDetailErr("알 수 없는 오류가 발생했습니다.");
+          modal.showError("알 수 없는 오류가 발생했습니다.");
         }
       } finally {
         if (!ac.signal.aborted) setDetailLoading(false);
@@ -172,8 +203,7 @@ export default function MyShopReviewsPage() {
     })();
 
     return () => ac.abort();
-
-  }, [detailOpen, detailId]);
+  }, [detailOpen, detailId, token, nav, modal]);
 
   const pendingRows = pending?.content ?? [];
   const myRows = mine?.content ?? [];
@@ -221,19 +251,19 @@ export default function MyShopReviewsPage() {
 
         <div className="animate-fade-in-up">
           {loading && (
-             <div className="py-20 text-center">
-             <div className="animate-spin w-8 h-8 border-4 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full mx-auto mb-4" />
-             <p className="text-gray-500 text-sm">정보를 불러오고 있습니다...</p>
-           </div>
+            <div className="py-20 text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full mx-auto mb-4" />
+              <p className="text-gray-500 text-sm">정보를 불러오고 있습니다...</p>
+            </div>
           )}
-
+{/* 
           {err && (
             <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-sm font-medium text-center">
               {err}
             </div>
-          )}
+          )} */}
 
-          {!loading && !err && (
+          {!loading && (
             <>
               {tab === "PENDING" && (
                 <div className="space-y-4">
@@ -311,12 +341,16 @@ export default function MyShopReviewsPage() {
               setTab("MINE");
               try {
                 const p = await fetchMyPendingReviews(token, 0, 10);
-                setPending(p);
-              } catch {}
+                setPending(unwrap(p));
+              } catch (e: any) {
+                applyUiError(e, nav, modal);
+              }
               try {
                 const m = await fetchMyReviews(token, 0, 10);
-                setMine(m);
-              } catch {}
+                setMine(unwrap(m));
+              } catch (e: any) {
+                applyUiError(e, nav, modal);
+              }
             }}
           />
 
@@ -670,7 +704,7 @@ function ReviewDetailModal(props: {
                                   text-xs font-semibold text-gray-900"
                       >
                         <Tag className="w-3 h-3 text-[rgb(118,90,255)]" />
-                        {REVIEW_TAG_LABEL[t]}
+                        {isReviewTag(t) ? REVIEW_TAG_LABEL[t] : String(t)}
                       </span>
                     ))}
                   </div>

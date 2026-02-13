@@ -106,22 +106,24 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
         };
       }
 
+      case "PRODUCT_NOT_FOUND":
+      case "REVIEW_NOT_FOUND":
+        return { type: "REDIRECT", to: "/404" };
+
+      case "DUPLICATE_REVIEW":
+      case "SELF_REVIEW_FORBIDDEN":
+      case "REVIEWER_NOT_WINNER":
+      case "WINNER_BID_NOT_FOUND":
+      case "PRODUCT_BE_SELLED":
+        return { type: "WARNING", message: error.message };
+
       case "RATING_REQUIRED":
       case "RATING_OUT_OF_RANGE":
       case "RATING_STEP_INVALID":
       case "TAG_REQUIRED":
-      case "SELF_REVIEW_FORBIDDEN":
-      case "DUPLICATE_REVIEW":
-      case "WINNER_BID_NOT_FOUND":
-      case "REVIEWER_NOT_WINNER":
-      case "PRODUCT_NOT_FOUND":
-      case "PRODUCT_BE_SELLED":
       case "REVIEW_ID_REQUIRED":
-      case "REVIEW_NOT_FOUND":
-        return {
-          type: "WARNING",
-          message: error.message,
-        };
+      case "PRODUCT_ID_REQUIRED":
+        return { type: "WARNING", message: error.message };
 
       /** 기본 */
       default:
