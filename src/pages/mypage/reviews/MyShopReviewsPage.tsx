@@ -28,6 +28,8 @@ function applyUiError(
   nav: ReturnType<typeof useNavigate>,
   modal: ReturnType<typeof useModal>
 ) {
+  console.error("[UI ERROR]", e);
+
   const r = handleApiError(e);
 
   if (r.type === "IGNORE") return;
@@ -38,7 +40,11 @@ function applyUiError(
   }
 
   if (r.type === "REDIRECT") {
-    nav(r.to);
+    if (r.to === "/404") {
+      nav("/404");
+      return;
+    }
+    modal.showError("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
     return;
   }
 
@@ -59,7 +65,8 @@ export default function MyShopReviewsPage() {
   const nav = useNavigate();
   const modal = useModal();
 
-  const token = useMemo(() => localStorage.getItem("accessToken") ?? "", []);
+  const [token, setToken] = useState(() => localStorage.getItem("accessToken") ?? "");
+
 
   const [tab, setTab] = useState<TabKey>("PENDING");
 
@@ -133,6 +140,25 @@ export default function MyShopReviewsPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    const onStorage = (ev: StorageEvent) => {
+      if (ev.key === "accessToken") {
+        setToken(ev.newValue ?? "");
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+
+  useEffect(() => {
+
+    const onFocus = () => setToken(localStorage.getItem("accessToken") ?? "");
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+
   useEffect(() => {
     if (!token) {
       modal.showLogin("navigation");
@@ -170,6 +196,7 @@ export default function MyShopReviewsPage() {
         setDetail(dto);
       } catch (e: any) {
         if (!ac.signal.aborted) {
+          console.error("[DETAIL ERROR]", e);
           const r = handleApiError(e);
 
           if (r.type === "AUTH") {
@@ -178,10 +205,15 @@ export default function MyShopReviewsPage() {
           }
 
           if (r.type === "REDIRECT") {
-            nav(r.to);
+            if (r.to === "/404") {
+              nav("/404");
+              return;
+            }
+            modal.showError("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+            setDetailErr("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
             return;
           }
-
+          
           if (r.type === "WARNING" || r.type === "TOAST" || r.type === "FIELD_ERROR") {
             modal.showWarning(r.message);
             setDetailErr(r.message);
@@ -204,6 +236,7 @@ export default function MyShopReviewsPage() {
 
     return () => ac.abort();
   }, [detailOpen, detailId, token, nav, modal]);
+
 
   const pendingRows = pending?.content ?? [];
   const myRows = mine?.content ?? [];
