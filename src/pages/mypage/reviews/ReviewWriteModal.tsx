@@ -103,6 +103,7 @@ export default function ReviewWriteModal(props: {
 
     useEffect(() => {
         if (!open) return;
+
         setErr(null);
         setRating(0.0);
         setTags([]);
@@ -111,26 +112,47 @@ export default function ReviewWriteModal(props: {
 
         if (!target?.productId) return;
 
+        if (!token) {
+            const msg = "로그인이 필요합니다.";
+            setCanWrite({ ok: false, reason: msg });
+            setErr(msg);
+            return;
+        }
+
         (async () => {
-        try {
-            const r = await fetchCanWriteReview(token, target.productId);
-            setCanWrite({ ok: r.canWrite, reason: r.reason });
-        } catch (e: any) {
-        const r = handleApiError(e);
+            try {
+                const r = await fetchCanWriteReview(token, target.productId);
+                setCanWrite({ ok: r.canWrite, reason: r.reason });
+            } catch (e: any) {
+                console.error("[ReviewWriteModal canWrite ERROR]", e);
 
-        if (r.type === "AUTH") {
-            setCanWrite({ ok: false, reason: r.message });
-            return;
-        }
-        if (r.type === "REDIRECT") {
-            nav(r.to);
-            return;
-        }
+                const r = handleApiError(e);
 
-        setCanWrite({ ok: true });
-        }
+                if (r.type === "AUTH") {
+                    setCanWrite({ ok: false, reason: r.message });
+                    setErr(r.message);
+                    return;
+                }
+
+                if (r.type === "REDIRECT") {
+                    if (r.to === "/404") {
+                        nav("/404");
+                        return;
+                    }
+                    const msg = "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+                    setCanWrite({ ok: false, reason: msg });
+                    setErr(msg);
+                    return;
+                }
+
+                const msg = r.type === "IGNORE" ? "요청이 취소되었습니다." : (r.message ?? "알 수 없는 오류가 발생했습니다.");
+                setCanWrite({ ok: false, reason: msg });
+                setErr(msg);
+            }
+
+
         })();
-    }, [open, target?.productId]);
+    }, [open, target?.productId, token, nav]);
 
     if (!open || !target) return null;
 
@@ -138,7 +160,7 @@ export default function ReviewWriteModal(props: {
         setTags((prev) => {
             const has = prev.includes(t);
             if (has) return prev.filter((x) => x !== t);
-            if (prev.length >= 10) return prev;
+            if (prev.length >= 5) return prev;
             return [...prev, t];
         });
     };
@@ -155,6 +177,11 @@ export default function ReviewWriteModal(props: {
     };
 
     const submit = async () => {
+
+        if (!token) {
+            setErr("로그인이 필요합니다.");
+            return;
+        }
         if (!target?.productId) return;
 
         setErr(null);
@@ -179,18 +206,23 @@ export default function ReviewWriteModal(props: {
 
         onSubmitted();
         } catch (e: any) {
+            console.error("[ReviewWriteModal submit ERROR]", e);
             const r = handleApiError(e);
+            if (r.type === "IGNORE") return;
 
             if (r.type === "AUTH") {
                 setErr(r.message);
-                nav("/login");
                 return;
             }
             if (r.type === "REDIRECT") {
-                nav(r.to);
+                if (r.to === "/404") {
+                    nav("/404");
+                    return;
+                }
+                setErr("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
                 return;
             }
-            if (r.type !== "IGNORE") setErr(r.message);
+            setErr(r.message ?? "알 수 없는 오류가 발생했습니다.");
         } finally {
             setSubmitting(false);
         }
