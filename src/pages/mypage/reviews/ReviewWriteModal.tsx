@@ -1,7 +1,10 @@
+// pages/mypage/reviews/ReviewWriteModal.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { X, Star, UploadCloud, Trash2, Tag, RotateCcw } from "lucide-react";
 import { createReview, fetchCanWriteReview } from "./reviewApi";
 import { REVIEW_TAG_LABEL, type PendingReviewRowDto, type ReviewTag } from "./reviewTypes";
+import { useNavigate } from "react-router-dom";
+import { handleApiError } from "@/errors/HandleApiError";
 
 const TAGS: ReviewTag[] = [
     "SAME_AS_DESCRIPTION",
@@ -90,6 +93,8 @@ export default function ReviewWriteModal(props: {
 
     const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
 
+    const nav = useNavigate();
+
     useEffect(() => {
         return () => {
         previews.forEach((u) => URL.revokeObjectURL(u));
@@ -111,12 +116,18 @@ export default function ReviewWriteModal(props: {
             const r = await fetchCanWriteReview(token, target.productId);
             setCanWrite({ ok: r.canWrite, reason: r.reason });
         } catch (e: any) {
-            const msg = String(e?.message ?? e);
-            if (msg.includes("AUTH_REQUIRED")) {
-            setCanWrite({ ok: false, reason: "로그인이 필요합니다." });
+        const r = handleApiError(e);
+
+        if (r.type === "AUTH") {
+            setCanWrite({ ok: false, reason: r.message });
             return;
-            }
-            setCanWrite({ ok: true });
+        }
+        if (r.type === "REDIRECT") {
+            nav(r.to);
+            return;
+        }
+
+        setCanWrite({ ok: true });
         }
         })();
     }, [open, target?.productId]);
@@ -159,17 +170,27 @@ export default function ReviewWriteModal(props: {
 
         setSubmitting(true);
         try {
-        await createReview(token, {
-            productId: target.productId,
-            rating,
-            tags,
-            content: content?.trim() ? content.trim() : null,
-        }, files);
+            await createReview(token, {
+                productId: target.productId,
+                rating,
+                tags,
+                content: content?.trim() ? content.trim() : null,
+            }, files);
 
         onSubmitted();
         } catch (e: any) {
-            const msg = String(e?.message ?? e);
-            setErr(msg.includes("AUTH_REQUIRED") ? "로그인이 필요합니다." : msg);
+            const r = handleApiError(e);
+
+            if (r.type === "AUTH") {
+                setErr(r.message);
+                nav("/login");
+                return;
+            }
+            if (r.type === "REDIRECT") {
+                nav(r.to);
+                return;
+            }
+            if (r.type !== "IGNORE") setErr(r.message);
         } finally {
             setSubmitting(false);
         }

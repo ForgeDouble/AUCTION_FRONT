@@ -14,12 +14,35 @@ import {
   type ReviewDetailDto,
 } from "./reviewTypes";
 import ReviewWriteModal from "./ReviewWriteModal";
+import { handleApiError } from "@/errors/handleApiError";
 
 function isReviewTag(x: unknown): x is ReviewTag {
   return typeof x === "string" && x in REVIEW_TAG_LABEL;
 }
 
 type TabKey = "PENDING" | "MINE";
+
+function applyUiError(
+  e: unknown,
+  nav: ReturnType<typeof useNavigate>,
+  setErr: (v: string | null) => void
+) {
+  const r = handleApiError(e);
+
+  if (r.type === "IGNORE") return;
+
+  if (r.type === "AUTH") {
+    alert(r.message);
+    nav("/login");
+    return;
+  }
+
+  if (r.type === "REDIRECT") {
+    nav(r.to);
+    return;
+  }
+  setErr(r.message);
+}
 
 export default function MyShopReviewsPage() {
   const nav = useNavigate();
@@ -79,13 +102,7 @@ export default function MyShopReviewsPage() {
       const pageObj = unwrap<SpringPage<PendingReviewRowDto>>(res);
       setPending(pageObj);
     } catch (e: any) {
-      const msg = String(e?.message ?? e);
-      if (msg.includes("AUTH_REQUIRED")) {
-        alert("로그인이 필요합니다.");
-        nav("/login");
-        return;
-      }
-      setErr(msg);
+      applyUiError(e, nav, setErr);
     } finally {
       setLoading(false);
     }
@@ -99,13 +116,7 @@ export default function MyShopReviewsPage() {
       const pageObj = unwrap<SpringPage<ReviewListDto>>(res);
       setMine(pageObj);
     } catch (e: any) {
-      const msg = String(e?.message ?? e);
-      if (msg.includes("AUTH_REQUIRED")) {
-        alert("로그인이 필요합니다.");
-        nav("/login");
-        return;
-      }
-      setErr(msg);
+      applyUiError(e, nav, setErr);
     } finally {
       setLoading(false);
     }
@@ -141,13 +152,20 @@ export default function MyShopReviewsPage() {
         // const dto = unwrap(res);
         setDetail(dto);
       } catch (e: any) {
-        const msg = String(e?.message ?? e);
-        if (msg.includes("AUTH_REQUIRED")) {
-          alert("로그인이 필요합니다.");
-          nav("/login");
-          return;
+        if (!ac.signal.aborted) {
+          const r = handleApiError(e);
+
+          if (r.type === "AUTH") {
+            alert(r.message);
+            nav("/login");
+            return;
+          }
+          if (r.type === "REDIRECT") {
+            nav(r.to);
+            return;
+          }
+          if (r.type !== "IGNORE") setDetailErr(r.message);
         }
-        if (!ac.signal.aborted) setDetailErr(msg);
       } finally {
         if (!ac.signal.aborted) setDetailLoading(false);
       }
