@@ -96,14 +96,45 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
         };
       case "ACCOUNT_SUSPENDED":
         return {
-          type: "DIALOG",
+          type: "WARNING",
           message: `정지된 계정입니다. ${error.additionalInfo}`,
+        };
+      /** 닉네임 변경 */
+      case "USER_TEMPORARY_RESTRICTED":
+        return {
+          type: "WARNING",
+          message: "임시 제한 상태라 닉네임을 변경할 수 없습니다.",
+        };
+      case "BLANK_NICKNAME":
+        return {
+          type: "DIALOG",
+          message: "닉네임을 입력해 주세요.",
+        };
+      case "INVALID_NICKNAME_LENGTH":
+        return {
+          type: "DIALOG",
+          message: "닉네임은 2~8자로 입력해 주세요.",
+        };
+      case "INVALID_NICKNAME_FORMAT":
+        return {
+          type: "DIALOG",
+          message: "닉네임은 영문,숫자,한글,_ 만 사용가능합니다.",
+        };
+      case "NICKNAME_CHANGE_COOLDOWN":
+        return {
+          type: "WARNING",
+          message: error.message,
+        };
+      case "ALREADY_USED_NICKNAME":
+        return {
+          type: "DIALOG",
+          message: "이미 사용 중인 닉네임입니다.",
         };
 
       /** 기본 */
       default:
         return {
-          type: "TOAST",
+          type: "ERROR",
           message: error.message,
         };
     }
