@@ -28,7 +28,7 @@ function applyUiError(
   nav: ReturnType<typeof useNavigate>,
   modal: ReturnType<typeof useModal>
 ) {
-  console.error("[UI ERROR]", e);
+  console.error(e);
 
   const r = handleApiError(e);
 
@@ -115,6 +115,8 @@ export default function MyShopReviewsPage() {
   }
 
   async function loadPending() {
+    if (!token) return;
+
     setLoading(true);
     try {
       const res = await fetchMyPendingReviews(token, pPage, 10);
@@ -128,6 +130,7 @@ export default function MyShopReviewsPage() {
   }
 
   async function loadMine() {
+    if (!token) return;
     // setErr(null);
     setLoading(true);
     try {
@@ -175,11 +178,11 @@ export default function MyShopReviewsPage() {
 
   useEffect(() => {
     if (tab === "PENDING") loadPending();
-  }, [tab, pPage]);
+  }, [tab, pPage, token]);
 
   useEffect(() => {
     if (tab === "MINE") loadMine();
-  }, [tab, mPage]);
+  }, [tab, mPage, token]);
 
   useEffect(() => {
     if (!detailOpen || detailId == null) return;
@@ -196,7 +199,8 @@ export default function MyShopReviewsPage() {
         setDetail(dto);
       } catch (e: any) {
         if (!ac.signal.aborted) {
-          console.error("[DETAIL ERROR]", e);
+          // console.error("[DETAIL ERROR]", e);
+          console.error(e);
           const r = handleApiError(e);
 
           if (r.type === "AUTH") {
