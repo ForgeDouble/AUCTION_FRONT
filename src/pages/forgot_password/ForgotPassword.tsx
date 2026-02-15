@@ -44,11 +44,7 @@ const ForgotPassword = () => {
       console.error(result);
 
       switch (result.type) {
-        case "MODAL":
-          setApiError(result.message);
-          break;
-
-        case "DIALOG":
+        case "ERROR":
           setApiError(result.message);
           break;
 

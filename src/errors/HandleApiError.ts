@@ -86,7 +86,49 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
       case "INVALID_PS_TOKEN":
         return {
           type: "DIALOG",
+          message: "유효하지 않거나 만료된 요청입니다. 다시 시도해주세요.",
+        };
+      /** 로그인 */
+      case "INVALID_LOGIN_CREDENTIALS":
+        return {
+          type: "DIALOG",
+          message: "이메일 또는 비밀번호가 일치하지 않습니다.",
+        };
+      case "ACCOUNT_SUSPENDED":
+        return {
+          type: "WARNING",
+          message: `정지된 계정입니다. ${error.additionalInfo}`,
+        };
+      /** 닉네임 변경 */
+      case "USER_TEMPORARY_RESTRICTED":
+        return {
+          type: "WARNING",
+          message: "임시 제한 상태라 닉네임을 변경할 수 없습니다.",
+        };
+      case "BLANK_NICKNAME":
+        return {
+          type: "DIALOG",
+          message: "닉네임을 입력해 주세요.",
+        };
+      case "INVALID_NICKNAME_LENGTH":
+        return {
+          type: "DIALOG",
+          message: "닉네임은 2~8자로 입력해 주세요.",
+        };
+      case "INVALID_NICKNAME_FORMAT":
+        return {
+          type: "DIALOG",
+          message: "닉네임은 영문,숫자,한글,_ 만 사용가능합니다.",
+        };
+      case "NICKNAME_CHANGE_COOLDOWN":
+        return {
+          type: "WARNING",
           message: error.message,
+        };
+      case "ALREADY_USED_NICKNAME":
+        return {
+          type: "DIALOG",
+          message: "이미 사용 중인 닉네임입니다.",
         };
 
       /** 리뷰 - 계정 상태 */
@@ -128,7 +170,7 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
       /** 기본 */
       default:
         return {
-          type: "TOAST",
+          type: "ERROR",
           message: error.message,
         };
     }

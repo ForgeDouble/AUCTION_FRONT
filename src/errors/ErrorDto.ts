@@ -16,6 +16,7 @@ export type ErrorCode =
   | "SELLER_NOT_ALLOWED"
   | "QUANTITY_ERROR"
   | "LOW_PRICE"
+
   /** 리뷰 */
   | "ACCOUNT_WARNING_STATE"
   | "ACCOUNT_SUSPENDED"
@@ -33,9 +34,18 @@ export type ErrorCode =
   | "RATING_STEP_INVALID"
   | "TAG_REQUIRED"
 
-  
   | (string & {});
-  
+
+  /** 로그인 */
+  | "INVALID_LOGIN_CREDENTIALS"
+  | "ACCOUNT_SUSPENDED"
+  /** 닉네임 변경 */
+  | "USER_TEMPORARY_RESTRICTED"
+  | "BLANK_NICKNAME"
+  | "INVALID_NICKNAME_LENGTH"
+  | "INVALID_NICKNAME_FORMAT"
+  | "NICKNAME_CHANGE_COOLDOWN"
+  | "ALREADY_USED_NICKNAME";
 
 export type ErrorHandlingResult =
   | { type: "REDIRECT"; to: string }
@@ -49,3 +59,11 @@ export type ErrorHandlingResult =
   | { type: "AUTH"; message: string };
 
 export type ErrorStatus = "404" | "500" | "network";
+
+/** ErrorPage Props */
+export interface ErrorState {
+  show: boolean;
+  type: ErrorStatus;
+  title?: string;
+  message?: string;
+}

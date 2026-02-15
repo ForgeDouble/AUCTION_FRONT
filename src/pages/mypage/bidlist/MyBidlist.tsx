@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import { Clock, CheckCircle, XCircle } from "lucide-react";
-import { fetchBidsByUser } from "../MyPageApi";
+
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { BidListDto, IsWinned, PageInfo, Status } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
 import { useModal } from "@/contexts/ModalContext";
+import { fetchBidsByUser } from "./MyBidListApi";
+import { handleApiError } from "@/errors/HandleApiError";
+import { useAuth } from "@/hooks/useAuth";
 
 const MyBidlist = () => {
-  const { showLogin, showError } = useModal();
+  const { showLogin } = useModal();
+  const { logout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [bids, setBids] = useState<BidListDto[]>([]);
   const [currentPage, setCurrentPage] = useState(
@@ -19,7 +23,8 @@ const MyBidlist = () => {
     currentPage: 0,
     size: 10,
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const navigate = useNavigate();
 
@@ -121,6 +126,7 @@ const MyBidlist = () => {
     navigate(`/payment/${productId}`);
   };
 
+  /** 입찰 목록 조회 */
   const loadBidsByUser = async (
     page: number = 0,
     size: number = 10,
@@ -130,8 +136,8 @@ const MyBidlist = () => {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
       if (token == null) {
-        showLogin();
-        console.error("Missing AccessToken");
+        showLogin("confirm");
+        logout();
         return;
       }
       const data = await fetchBidsByUser(token, page, size, status);
@@ -143,9 +149,18 @@ const MyBidlist = () => {
         size: data.result.size,
       });
       setCurrentPage(page);
-    } catch (error) {
-      console.error(error);
-      showError();
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+        default:
+          setError("입찰 목록을 조회하지 못했습니다");
+      }
     } finally {
       setLoading(false);
     }
@@ -249,6 +264,16 @@ const MyBidlist = () => {
               {loading ? (
                 <div className="flex justify-center items-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+                </div>
+              ) : error ? (
+                <div className="text-center py-16">
+                  <XCircle className="h-16 w-16 text-red-700 mx-auto mb-4" />
+                  <p className="text-gray-900 text-lg mb-2 font-semibold">
+                    {error}
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    잠시 후 다시 시도해주세요
+                  </p>
                 </div>
               ) : (
                 <>

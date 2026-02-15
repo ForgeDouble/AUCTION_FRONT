@@ -1,3 +1,4 @@
+import { ApiError, UnauthorizedError } from "@/errors/Errors";
 import type { ApiResponse, PageResponse } from "../../type/CommonType";
 import type {
   ParentCategoriesDto,
@@ -5,8 +6,9 @@ import type {
   wishlistDto,
 } from "./AuctionListDto";
 
+/** 상품목록 조회 */
 export const fetchProducts = async (
-  params: URLSearchParams
+  params: URLSearchParams,
 ): Promise<ApiResponse<PageResponse<ProductListDto>>> => {
   const response = await fetch(
     `http://localhost:8080/product/all?${params.toString()}`,
@@ -15,16 +17,24 @@ export const fetchProducts = async (
       headers: {
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch products: ${response.status}`);
+    const body = await response.json();
+
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
 };
 
+/** 카테고리 목록 조회 */
 export const fetchParentCategories = async (): Promise<
   ApiResponse<ParentCategoriesDto[]>
 > => {
@@ -35,18 +45,26 @@ export const fetchParentCategories = async (): Promise<
       headers: {
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch categories: ${response.status}`);
+    const body = await response.json();
+
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();
 };
 
+/** 위시리스트 여부 조회 */
 export const fetchWishlistByUser = async (
-  token: string | null
+  token: string | null,
 ): Promise<ApiResponse<wishlistDto[]>> => {
   const response = await fetch(`http://localhost:8080/wishlist/allByUser`, {
     method: "GET",
@@ -57,7 +75,16 @@ export const fetchWishlistByUser = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch wishlist: ${response.status}`);
+    const body = await response.json();
+
+    if (response.status === 401) throw new UnauthorizedError();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
+
   return response.json();
 };

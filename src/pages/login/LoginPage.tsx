@@ -1,4 +1,3 @@
-// login/LoginPage.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -7,6 +6,8 @@ import { useAuth } from "../../hooks/useAuth";
 import type { loginRequest } from "./LoginDto";
 import { requestFcmToken } from "@/firebase/firebase";
 import { registerDeviceToken } from "../../api/pushApi";
+import { handleApiError } from "@/errors/HandleApiError";
+import { useModal } from "@/contexts/ModalContext";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -18,12 +19,23 @@ const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { checkAuth } = useAuth();
+  const { showWarning } = useModal();
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("saved_email");
     if (savedEmail) {
       setEmail(savedEmail);
       setRememberEmail(true);
+    }
+    const error = sessionStorage.getItem("login_error");
+    if (error) {
+      setErrorMessage(error);
+      sessionStorage.removeItem("login_error");
+    }
+    const warning = sessionStorage.getItem("login_warning");
+    if (warning) {
+      showWarning(warning);
+      sessionStorage.removeItem("login_warning");
     }
   }, []);
 
@@ -42,46 +54,47 @@ const LoginPage = () => {
       else localStorage.removeItem("saved_email");
 
       localStorage.setItem("accessToken", result.result.token);
-      localStorage.setItem("userId", email);
+      // localStorage.setItem("userId", email);
       await checkAuth();
 
       try {
         const fcmToken = await requestFcmToken();
-      if (fcmToken) {
-        const prevToken = localStorage.getItem("fcm_token");
-        const prevEmail = localStorage.getItem("fcm_email");
+        if (fcmToken) {
+          const prevToken = localStorage.getItem("fcm_token");
+          const prevEmail = localStorage.getItem("fcm_email");
 
-        const shouldRegister = prevToken !== fcmToken || prevEmail !== email;
+          const shouldRegister = prevToken !== fcmToken || prevEmail !== email;
 
-        if (shouldRegister) {
-          await registerDeviceToken(fcmToken);
-          localStorage.setItem("fcm_registered", "true");
-          localStorage.setItem("fcm_token", fcmToken);
-          localStorage.setItem("fcm_email", email);
+          if (shouldRegister) {
+            await registerDeviceToken(fcmToken);
+            localStorage.setItem("fcm_registered", "true");
+            localStorage.setItem("fcm_token", fcmToken);
+            localStorage.setItem("fcm_email", email);
+          }
+        } else {
+          console.warn("FCM 토큰 없음 (권한 거부 또는 오류)");
         }
-      } else {
-        console.warn("FCM 토큰 없음 (권한 거부 또는 오류)");
-      }
       } catch (fcmError) {
         console.error("로그인 후 FCM 등록 중 오류:", fcmError);
       }
 
       window.location.replace("/");
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes("401")) {
-          console.error(error);
-          setErrorMessage("이메일 또는 비밀번호가 일치하지 않습니다.");
-        } else if (error.message.includes("403")) {
-          console.error(error);
-          setErrorMessage("정지된 계정입니다.");
-        } else {
-          console.error(error);
-          setErrorMessage("서버에서 오류가 발생했습니다.");
-        }
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      if (result.type === "DIALOG") {
+        sessionStorage.setItem("login_error", result.message);
+      } else if (result.type === "WARNING") {
+        sessionStorage.setItem("login_warning", result.message);
       } else {
-        setErrorMessage("로그인에 실패했습니다.");
+        sessionStorage.setItem(
+          "login_error",
+          "로그인에 실패했습니다. 다시 시도해주세요.",
+        );
       }
+
+      window.location.replace("/login");
     } finally {
       setLoading(false);
     }

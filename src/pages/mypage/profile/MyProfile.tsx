@@ -1,4 +1,3 @@
-// src/pages/.../MyProfile.tsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -13,144 +12,40 @@ import {
   MapPin,
   Calendar,
   User2,
-  ChevronRight,
   Heart,
   Gavel,
   Trash2,
 } from "lucide-react";
 
 import { useAuth } from "../../../hooks/useAuth";
-import type { UserDto } from "../MyPageDto";
-import {
-  fetchLoginUser,
-  updateMyProfileBasic,
-  updateMyNickname,
-  uploadMyProfileImage,
-  deleteMyProfileImage,
-} from "../MyPageApi";
 import { useModal } from "@/contexts/ModalContext";
-
-interface ProfileFieldProps {
-  label: string;
-  value: any;
-  icon: any;
-  isEditable?: boolean;
-  onChange?: (e: any) => void;
-  type?: string;
-  options?: { value: string; label: string }[];
-  isEditing: boolean;
-  helperText?: string;
-}
-
-const ProfileField = ({
-  label,
-  value,
-  icon: Icon,
-  isEditable = false,
-  onChange,
-  type = "text",
-  options = [],
-  isEditing,
-  helperText,
-}: ProfileFieldProps) => {
-  const readOnly = !isEditable;
-
-  const wrapperScale = isEditing && isEditable ? "scale-[1.01]" : "";
-  const viewBoxClass = readOnly
-    ? "bg-gray-50 border border-gray-200 text-gray-500"
-    : "bg-white border border-gray-100 text-gray-900 shadow-sm group-hover:border-[#765AFF]/30";
-
-  return (
-    <div className="group flex flex-col">
-      <div className="ml-1 min-h-[34px]">
-        <div className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
-          <Icon className="w-3.5 h-3.5" />
-          {label}
-        </div>
-        <div className="mt-1 min-h-[14px] text-[11px] text-gray-400">
-          {helperText ? helperText : <span className="invisible">자리맞춤</span>}
-        </div>
-      </div>
-
-      <div className={`relative transition-all duration-300 ${wrapperScale}`}>
-        {isEditing && isEditable ? (
-          type === "radio" ? (
-            <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-200 h-12 items-center">
-              {options.map((opt: any) => (
-                <label key={opt.value} className="flex-1 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={label}
-                    value={opt.value}
-                    checked={value === opt.value}
-                    onChange={onChange}
-                    className="peer sr-only"
-                  />
-                  <div className="py-2 text-center text-sm font-medium text-gray-500 rounded-xl transition-all peer-checked:bg-white peer-checked:text-[#765AFF] peer-checked:shadow-sm">
-                    {opt.label}
-                  </div>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <input
-              type={type}
-              value={value ?? ""}
-              onChange={onChange}
-              className="w-full h-12 px-5 bg-gray-50 border-0 rounded-2xl text-gray-900 font-medium focus:ring-2 focus:ring-[#765AFF]/20 focus:bg-white transition-all outline-none placeholder:text-gray-300"
-            />
-          )
-        ) : (
-          <div className={`w-full h-12 px-5 rounded-2xl flex items-center justify-between transition-colors ${viewBoxClass}`}>
-            <span className={readOnly ? "font-medium" : "font-medium"}>
-              {type === "radio"
-                ? options.find((o: any) => o.value === value)?.label || value
-                : value || <span className="text-gray-300 font-normal">미입력</span>}
-            </span>
-            {!isEditing && !readOnly && (
-              <div className="w-1.5 h-1.5 rounded-full bg-gray-200 group-hover:bg-[#765AFF] transition-colors" />
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const MenuItem = ({
-  onClick,
-  icon: Icon,
-  label,
-  colorClass = "bg-purple-50 text-[#765AFF]",
-}: any) => (
-  <button
-    onClick={onClick}
-    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors text-sm text-gray-600 group"
-  >
-    <span className="flex items-center gap-3">
-      <div
-        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors group-hover:bg-[#765AFF] group-hover:text-white ${colorClass}`}
-      >
-        <Icon className="w-4 h-4" />
-      </div>
-      <span className="font-medium">{label}</span>
-    </span>
-    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#765AFF]" />
-  </button>
-);
+import {
+  deleteMyProfileImage,
+  fetchLoginUser,
+  updateMyNickname,
+  updateMyProfileBasic,
+  uploadMyProfileImage,
+} from "./MyProfileApi";
+import type { UserDto } from "./MyProfileDto";
+import ProfileField from "./components/ProFileField";
+import MenuItem from "./components/MenuItem";
+import { handleApiError } from "@/errors/HandleApiError";
+import type { ErrorState } from "@/errors/ErrorDto";
+import ErrorPage from "@/errors/ErrorPage";
 
 const MyProfile = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { showLogin, showError, showWarning } = useModal();
 
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
   const [user, setUser] = useState<UserDto | null>(null);
   const [tempUser, setTempUser] = useState<UserDto | null>(null);
-
+  const [errorState, setErrorState] = useState<ErrorState | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [photoMenuOpen, setPhotoMenuOpen] = useState<boolean>(false);
 
-  const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
   const nicknameWarnedRef = useRef(false);
 
   useEffect(() => {
@@ -159,27 +54,42 @@ const MyProfile = () => {
 
   const loadLoginUser = useCallback(async () => {
     try {
-      const t = localStorage.getItem("accessToken");
-      if (!t) {
-        showLogin();
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        showLogin("confirm");
+        logout();
         return;
       }
 
-      const data = await fetchLoginUser(t);
-      const raw = (data as any).result;
+      const data = await fetchLoginUser(token);
+      const raw = (data as { result: UserDto }).result;
 
       const userProfile: UserDto = {
         ...raw,
-        createdAt: raw.createdAt.split("T")[0].replace(/-/g, "."),
+        createdAt: raw.createdAt?.split("T")[0].replace(/-/g, ".") ?? "",
       };
 
       setUser(userProfile);
       setTempUser((prev) => (isEditing ? prev : userProfile));
-    } catch (e: any) {
-      console.error(e);
-      showError(e?.message ?? "서버 오류가 발생했습니다.");
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+        default:
+          setErrorState({
+            show: true,
+            type: "500",
+            title: "서버 내부에서 오류가 발생했습니다",
+            message: "관리자에게 문의해주세요.",
+          });
+      }
     }
-  }, [isEditing, showLogin, showError]);
+  }, [isEditing, showLogin, logout]);
 
   useEffect(() => {
     loadLoginUser();
@@ -189,12 +99,18 @@ const MyProfile = () => {
     if (!user) return;
     setTempUser({ ...user });
     setIsEditing(true);
-    nicknameWarnedRef.current = false;
-  }, [user]);
+    setErrorMessage("");
+
+    if (!nicknameWarnedRef.current) {
+      nicknameWarnedRef.current = true;
+      showWarning("닉네임은 규칙/중복/7일 제한이 적용됩니다");
+    }
+  }, [user, showWarning]);
 
   const handleCancel = useCallback(() => {
     setTempUser(user ? { ...user } : null);
     setIsEditing(false);
+    setErrorMessage("");
     nicknameWarnedRef.current = false;
     setPhotoMenuOpen(false);
   }, [user]);
@@ -205,9 +121,10 @@ const MyProfile = () => {
   }, [logout, navigate]);
 
   const handleSave = useCallback(async () => {
-    const t = localStorage.getItem("accessToken");
-    if (!t) {
-      showLogin();
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      showLogin("confirm");
+      logout();
       return;
     }
     if (!user || !tempUser) return;
@@ -222,38 +139,68 @@ const MyProfile = () => {
 
     try {
       if (nameChanged || addressChanged || phoneChanged) {
-        await updateMyProfileBasic(t, {
+        await updateMyProfileBasic(token, {
           name: nameChanged ? tempUser.name : undefined,
           address: addressChanged ? tempUser.address : undefined,
           phone: phoneChanged ? tempUser.phone : undefined,
         });
       }
-    } catch (e: any) {
-      console.error(e);
-      showError(e?.message ?? "기본정보 수정 중 오류가 발생했습니다.");
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+        default:
+          showError(
+            "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+          );
+      }
       return;
     }
 
     if (nicknameChanged) {
-      if (!nicknameWarnedRef.current) {
-        nicknameWarnedRef.current = true;
-        showWarning("닉네임은 규칙/중복/7일 제한이 적용됩니다");
-      }
-
       try {
-        await updateMyNickname(t, (tempUser.nickname ?? "").trim());
-      } catch (e: any) {
-        console.error(e);
-        await loadLoginUser();
-        showError(e?.message ?? "닉네임 수정 중 오류가 발생했습니다.");
+        await updateMyNickname(token, (tempUser.nickname ?? "").trim());
+      } catch (error: unknown) {
+        const result = handleApiError(error);
+        console.error(result);
+
+        switch (result.type) {
+          case "AUTH":
+            showLogin("confirm");
+            logout();
+            break;
+          case "WARNING":
+            showWarning(result.message);
+            break;
+          case "DIALOG":
+            setErrorMessage(result.message);
+            break;
+          default:
+            showError(
+              "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+            );
+        }
         return;
       }
     }
 
     await loadLoginUser();
     setIsEditing(false);
-    nicknameWarnedRef.current = false;
-  }, [loadLoginUser, showLogin, showError, showWarning, tempUser, user]);
+    setErrorMessage("");
+  }, [
+    loadLoginUser,
+    showLogin,
+    logout,
+    showError,
+    showWarning,
+    tempUser,
+    user,
+  ]);
 
   const openSelector = useCallback(() => {
     if (!isEditing) return;
@@ -267,33 +214,51 @@ const MyProfile = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const t = localStorage.getItem("accessToken");
-        if (!t) {
-          showLogin();
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+          showLogin("confirm");
+          logout();
           return;
         }
 
-        await uploadMyProfileImage(t, file);
+        await uploadMyProfileImage(token, file);
         await loadLoginUser();
-      } catch (err: any) {
-        console.error(err);
-        showError(err?.message ?? "프로필 이미지 업로드 실패");
+      } catch (error: unknown) {
+        const result = handleApiError(error);
+        console.error(result);
+
+        switch (result.type) {
+          case "AUTH":
+            showLogin("confirm");
+            logout();
+            break;
+          case "WARNING":
+            showWarning(result.message);
+            break;
+          case "DIALOG":
+            setErrorMessage(result.message);
+            break;
+          default:
+            showError(
+              "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+            );
+        }
       } finally {
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
-    [loadLoginUser, showLogin, showError]
+    [loadLoginUser, showLogin, logout, showWarning, showError],
   );
 
   const onDeleteImage = useCallback(async () => {
     try {
-      const t = localStorage.getItem("accessToken");
-      if (!t) {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
         showLogin();
         return;
       }
       setPhotoMenuOpen(false);
-      await deleteMyProfileImage(t);
+      await deleteMyProfileImage(token);
       await loadLoginUser();
     } catch (e: any) {
       console.error(e);
@@ -302,6 +267,16 @@ const MyProfile = () => {
   }, [loadLoginUser, showLogin, showError]);
 
   const viewUser = isEditing ? tempUser : user;
+
+  if (errorState?.show) {
+    return (
+      <ErrorPage
+        type={errorState.type}
+        title={errorState.title}
+        message={errorState.message}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] pt-20 pb-28 font-sans">
@@ -464,7 +439,7 @@ const MyProfile = () => {
                 {!isEditing ? (
                   <button
                     onClick={startEdit}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-transparent text-gray-500 hover:bg-[#765AFF]/5 hover:text-[#765AFF] transition-all"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-transparent text-gray-500 hover:bg-[#765AFF]/5 hover:text-[#765AFF] transition-all"
                     title="수정"
                   >
                     <Edit2 className="w-5 h-5" />
@@ -496,7 +471,7 @@ const MyProfile = () => {
                   icon={User2}
                   isEditable={true}
                   isEditing={isEditing}
-                  onChange={(e: any) =>
+                  onChange={(e) =>
                     setTempUser((prev) => ({
                       ...(prev ?? (user as UserDto)),
                       name: e.target.value,
@@ -510,13 +485,23 @@ const MyProfile = () => {
                   icon={User}
                   isEditable={true}
                   isEditing={isEditing}
-                  onChange={(e: any) =>
+                  onChange={(e) =>
                     setTempUser((prev) => ({
                       ...(prev ?? (user as UserDto)),
                       nickname: e.target.value,
                     }))
                   }
                 />
+
+                {errorMessage && (
+                  <div className="md:col-span-2">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-xl">
+                      <span className="text-sm text-red-600">
+                        {errorMessage}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="md:col-span-2">
                   <ProfileField
@@ -534,8 +519,11 @@ const MyProfile = () => {
                   icon={Smartphone}
                   isEditable={true}
                   isEditing={isEditing}
-                  onChange={(e: any) => {
-                    const onlyDigits = String(e.target.value ?? "").replace(/[^0-9]/g, "");
+                  onChange={(e) => {
+                    const onlyDigits = String(e.target.value ?? "").replace(
+                      /[^0-9]/g,
+                      "",
+                    );
                     setTempUser((prev) => ({
                       ...(prev ?? (user as UserDto)),
                       phone: onlyDigits,
@@ -558,7 +546,7 @@ const MyProfile = () => {
                     icon={MapPin}
                     isEditable={true}
                     isEditing={isEditing}
-                    onChange={(e: any) =>
+                    onChange={(e) =>
                       setTempUser((prev) => ({
                         ...(prev ?? (user as UserDto)),
                         address: e.target.value,
@@ -577,7 +565,7 @@ const MyProfile = () => {
                     type="radio"
                     options={[
                       { value: "M", label: "남성" },
-                      { value: "W", label: "여성" }, 
+                      { value: "W", label: "여성" },
                       { value: "F", label: "여성" },
                     ]}
                   />
@@ -586,7 +574,6 @@ const MyProfile = () => {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
