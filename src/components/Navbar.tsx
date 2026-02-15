@@ -7,7 +7,9 @@ import { useAuth } from "@/hooks/useAuth";
 const Navbar = () => {
   const navigate = useNavigate();
   const { showLogin } = useModal();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authority } = useAuth();
+
+  const isAdmin = authority === "ADMIN";
 
   const navigateSellProduct = () => {
     if (!isAuthenticated) {
@@ -16,6 +18,14 @@ const Navbar = () => {
       return;
     }
     navigate("/sell_product");
+  };
+  const onClickSupport = () => {
+    if (isAdmin) {
+    navigate("/admin");
+    return;
+    }
+    // 일반 유저용 고객센터 이동(원래 동작이 없어서 기본 라우트 예시)
+    navigate("/support");
   };
 
   return (
@@ -52,8 +62,9 @@ const Navbar = () => {
               <button
                 type="button"
                 className="text-slate-600 hover:text-slate-900 transition-colors font-medium cursor-pointer"
+                onClick={onClickSupport}
               >
-                고객센터
+                {isAdmin ? "MOS" : "고객센터"}
               </button>
             </div>
 
