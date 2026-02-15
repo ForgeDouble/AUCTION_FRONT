@@ -1,7 +1,10 @@
+// pages/mypage/reviews/ReviewWriteModal.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { X, Star, UploadCloud, Trash2, Tag, RotateCcw } from "lucide-react";
 import { createReview, fetchCanWriteReview } from "./reviewApi";
 import { REVIEW_TAG_LABEL, type PendingReviewRowDto, type ReviewTag } from "./reviewTypes";
+import { useNavigate } from "react-router-dom";
+import { handleApiError } from "@/errors/HandleApiError";
 
 const TAGS: ReviewTag[] = [
     "SAME_AS_DESCRIPTION",
@@ -90,6 +93,8 @@ export default function ReviewWriteModal(props: {
 
     const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
 
+    const nav = useNavigate();
+
     useEffect(() => {
         return () => {
         previews.forEach((u) => URL.revokeObjectURL(u));
@@ -98,6 +103,7 @@ export default function ReviewWriteModal(props: {
 
     useEffect(() => {
         if (!open) return;
+
         setErr(null);
         setRating(0.0);
         setTags([]);
@@ -106,20 +112,47 @@ export default function ReviewWriteModal(props: {
 
         if (!target?.productId) return;
 
-        (async () => {
-        try {
-            const r = await fetchCanWriteReview(token, target.productId);
-            setCanWrite({ ok: r.canWrite, reason: r.reason });
-        } catch (e: any) {
-            const msg = String(e?.message ?? e);
-            if (msg.includes("AUTH_REQUIRED")) {
-            setCanWrite({ ok: false, reason: "로그인이 필요합니다." });
+        if (!token) {
+            const msg = "로그인이 필요합니다.";
+            setCanWrite({ ok: false, reason: msg });
+            setErr(msg);
             return;
-            }
-            setCanWrite({ ok: true });
         }
+
+        (async () => {
+            try {
+                const r = await fetchCanWriteReview(token, target.productId);
+                setCanWrite({ ok: r.canWrite, reason: r.reason });
+            } catch (e: any) {
+                console.error("[ReviewWriteModal canWrite ERROR]", e);
+
+                const r = handleApiError(e);
+
+                if (r.type === "AUTH") {
+                    setCanWrite({ ok: false, reason: r.message });
+                    setErr(r.message);
+                    return;
+                }
+
+                if (r.type === "REDIRECT") {
+                    if (r.to === "/404") {
+                        nav("/404");
+                        return;
+                    }
+                    const msg = "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+                    setCanWrite({ ok: false, reason: msg });
+                    setErr(msg);
+                    return;
+                }
+
+                const msg = r.type === "IGNORE" ? "요청이 취소되었습니다." : (r.message ?? "알 수 없는 오류가 발생했습니다.");
+                setCanWrite({ ok: false, reason: msg });
+                setErr(msg);
+            }
+
+
         })();
-    }, [open, target?.productId]);
+    }, [open, target?.productId, token, nav]);
 
     if (!open || !target) return null;
 
@@ -127,7 +160,7 @@ export default function ReviewWriteModal(props: {
         setTags((prev) => {
             const has = prev.includes(t);
             if (has) return prev.filter((x) => x !== t);
-            if (prev.length >= 10) return prev;
+            if (prev.length >= 5) return prev;
             return [...prev, t];
         });
     };
@@ -144,6 +177,11 @@ export default function ReviewWriteModal(props: {
     };
 
     const submit = async () => {
+
+        if (!token) {
+            setErr("로그인이 필요합니다.");
+            return;
+        }
         if (!target?.productId) return;
 
         setErr(null);
@@ -159,17 +197,32 @@ export default function ReviewWriteModal(props: {
 
         setSubmitting(true);
         try {
-        await createReview(token, {
-            productId: target.productId,
-            rating,
-            tags,
-            content: content?.trim() ? content.trim() : null,
-        }, files);
+            await createReview(token, {
+                productId: target.productId,
+                rating,
+                tags,
+                content: content?.trim() ? content.trim() : null,
+            }, files);
 
         onSubmitted();
         } catch (e: any) {
-            const msg = String(e?.message ?? e);
-            setErr(msg.includes("AUTH_REQUIRED") ? "로그인이 필요합니다." : msg);
+            console.error("[ReviewWriteModal submit ERROR]", e);
+            const r = handleApiError(e);
+            if (r.type === "IGNORE") return;
+
+            if (r.type === "AUTH") {
+                setErr(r.message);
+                return;
+            }
+            if (r.type === "REDIRECT") {
+                if (r.to === "/404") {
+                    nav("/404");
+                    return;
+                }
+                setErr("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+                return;
+            }
+            setErr(r.message ?? "알 수 없는 오류가 발생했습니다.");
         } finally {
             setSubmitting(false);
         }

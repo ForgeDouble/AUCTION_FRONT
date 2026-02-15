@@ -29,8 +29,8 @@ import PublicProfileReviews from "./PublicProfileReviews";
 import { fetchSeasonLatestForUser } from "@/components/season/seasonApi";
 import type { SeasonUserAwardsDto } from "@/components/season/seasonTypes";
 import SeasonAwardChips from "@/components/season/SeasonAwardChips";
-
-// --- Types ---
+import { handleApiError } from "@/errors/HandleApiError";
+import { useModal } from "@/contexts/ModalContext";
 type ProductRow = {
   productId: number;
   productName: string;
@@ -45,7 +45,6 @@ type ProductRow = {
   createdAt: string;
 };
 
-// --- Utilities ---
 function unwrap<T>(api: any): T {
   return (api?.result ?? api?.data ?? api?.body ?? api) as T;
 }
@@ -58,7 +57,6 @@ function formatMoney(v: number) {
   }
 }
 
-// 스크린샷 기반의 세련된 상태 배지 스타일
 function statusBadge(s: ProductRow["status"]) {
   switch (s) {
     case "READY":
@@ -90,8 +88,21 @@ export default function UserProfilePage() {
     return Number.isFinite(n) ? n : null;
   }, [params.userId]);
 
-  const token = useMemo(() => localStorage.getItem("accessToken") ?? "", []);
+  // const token = useMemo(() => localStorage.getItem("accessToken") ?? "", []);
+  const [token, setToken] = useState(() => localStorage.getItem("accessToken") ?? "");
 
+  useEffect(() => {
+    const sync = () => setToken(localStorage.getItem("accessToken") ?? "");
+    sync();
+
+    window.addEventListener("focus", sync);
+    window.addEventListener("auth:changed", sync as any);
+
+    return () => {
+      window.removeEventListener("focus", sync);
+      window.removeEventListener("auth:changed", sync as any);
+    };
+  }, []);
   // State
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [profile, setProfile] = useState<PublicProfileDto | null>(null);
@@ -130,6 +141,8 @@ export default function UserProfilePage() {
   const [seasonAwards, setSeasonAwards] = useState<SeasonUserAwardsDto | null>(null);
   const [seasonLoading, setSeasonLoading] = useState(false);
 
+  const modal = useModal();
+
   function calcChipMax() {
     const w = window.innerWidth;
     if (w < 480) return 4;
@@ -145,59 +158,95 @@ export default function UserProfilePage() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  function applyUiError(e: any) {
+    console.error(e);
+
+    const r = handleApiError(e);
+
+    if (r.type === "REDIRECT" && r.to === "/404") {
+      nav("/404");
+      return;
+    }
+
+    if (r.type === "AUTH") {
+      modal.showLogin("navigation");
+      return;
+    }
+
+    if (r.type === "WARNING") {
+      modal.showWarning(r.message);
+      return;
+    }
+
+    if (r.type === "IGNORE") return;
+
+    modal.showError((r as any).message ?? "오류가 발생했습니다.");
+  }
+
   // API Calls
   const loadProfile = async () => {
     if (!targetUserId) return;
-    if (!token) {
-      alert("로그인이 필요합니다.");
-      nav("/login");
+
+    const t = localStorage.getItem("accessToken") ?? "";
+    if (t !== token) setToken(t);
+
+    if (!t) {
+      modal.showLogin("navigation");
       return;
     }
 
     setLoadingProfile(true);
     try {
-      const res = await fetchPublicProfile(token, targetUserId);
+      const res = await fetchPublicProfile(t, targetUserId);
       const data = unwrap<PublicProfileDto>(res);
       setProfile(data);
     } catch (e: any) {
-      const msg = String(e?.message ?? "");
-      if (msg.includes("AUTH_REQUIRED") || msg.includes("401") || msg.includes("403")) {
-        alert("로그인이 필요합니다.");
-        nav("/login");
-        return;
-      }
-      alert("프로필 조회 실패\n" + msg);
+      applyUiError(e);
     } finally {
       setLoadingProfile(false);
     }
   };
 
   useEffect(() => {
-    if (!token || !targetUserId) return;
+    if (!token || !targetUserId) {
+      setSeasonAwards(null);
+      setSeasonLoading(false);
+      return;
+    }
 
     let mounted = true;
     (async () => {
-    setSeasonLoading(true);
-    try {
-      const dto = await fetchSeasonLatestForUser(token, targetUserId);
-    if (mounted) setSeasonAwards(dto);
-    } catch {
-      if (mounted) setSeasonAwards(null);
-    } finally {
-      if (mounted) setSeasonLoading(false);
-    }
+      setSeasonLoading(true);
+      try {
+        const dto = await fetchSeasonLatestForUser(token, targetUserId);
+        if (mounted) setSeasonAwards(dto);
+      } catch (e: any) {
+        if (mounted) setSeasonAwards(null);
+        applyUiError(e);
+      } finally {
+        if (mounted) setSeasonLoading(false);
+      }
     })();
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [token, targetUserId]);
 
   const loadList = async () => {
     if (!targetUserId) return;
-    if (!token) return;
+
+    const t = localStorage.getItem("accessToken") ?? "";
+    if (t !== token) setToken(t);
+
+    if (!t) {
+      modal.showLogin("navigation");
+      return;
+    }
 
     setLoadingList(true);
     try {
-      const res = await fetchProductsByTargetUser(token, targetUserId, {
+      const res = await fetchProductsByTargetUser(t, targetUserId, {
         page,
         size,
         search,
@@ -206,30 +255,31 @@ export default function UserProfilePage() {
       });
 
       const payload = unwrap<any>(res);
-      const pageObj = payload?.content
-        ? payload
-        : payload?.result ?? payload?.data ?? payload;
+      const pageObj = payload?.content ? payload : payload?.result ?? payload?.data ?? payload;
 
       setRows((pageObj?.content ?? []) as ProductRow[]);
       setTotalPages(Number(pageObj?.totalPages ?? 0));
       setTotalElements(Number(pageObj?.totalElements ?? 0));
     } catch (e: any) {
-      alert("상품 목록 조회 실패\n" + String(e?.message ?? e));
+      applyUiError(e);
     } finally {
       setLoadingList(false);
     }
   };
 
+  // 프로필 로드
   useEffect(() => {
     if (!targetUserId) return;
+    if (!token) return;
     loadProfile();
-  }, [targetUserId]);
+  }, [targetUserId, token]);
 
   useEffect(() => {
     if (!targetUserId) return;
+    if (!token) return;
     if (section !== "PRODUCTS") return;
     loadList();
-  }, [targetUserId, page, sortBy, statuses, section]);
+  }, [targetUserId, token, page, sortBy, statuses, section]);
 
   const applySearch = () => {
     if (section !== "PRODUCTS") return;
