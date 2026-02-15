@@ -1,39 +1,5 @@
-/** 마이페이지 유저프로필 */
-export interface UserProfile {
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  joinDate: string;
-}
-
 /** 마이페이지 성별 */
 export type Gender = "M" | "W";
-
-/** 마이페이지 유저 조회 dto */
-export interface UserDto {
-  userId: number;
-  name: string;
-  nickname: string;
-  email: string;
-  phone: string;
-  address: string;
-  birthday: string;
-  gender: Gender;
-  profileImageUrl: string | null;
-  warning: number;
-  createdAt: string;
-}
-
-/** 마이페이지 유저 업데이트 dto */
-export interface UserUpdateDto {
-  name: string;
-  nickname: string;
-  phone: string;
-  address: string;
-  birthday: string;
-  gender: Gender;
-}
 
 /** 상품 관리 상태 */
 export type Status = "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";
