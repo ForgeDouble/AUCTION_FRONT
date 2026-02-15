@@ -7,6 +7,7 @@ import type { loginRequest } from "./LoginDto";
 import { requestFcmToken } from "@/firebase/firebase";
 import { registerDeviceToken } from "../../api/pushApi";
 import { handleApiError } from "@/errors/HandleApiError";
+import { useModal } from "@/contexts/ModalContext";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { checkAuth } = useAuth();
+  const { showWarning } = useModal();
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("saved_email");
@@ -29,6 +31,11 @@ const LoginPage = () => {
     if (error) {
       setErrorMessage(error);
       sessionStorage.removeItem("login_error");
+    }
+    const warning = sessionStorage.getItem("login_warning");
+    if (warning) {
+      showWarning(warning);
+      sessionStorage.removeItem("login_warning");
     }
   }, []);
 
@@ -78,6 +85,8 @@ const LoginPage = () => {
 
       if (result.type === "DIALOG") {
         sessionStorage.setItem("login_error", result.message);
+      } else if (result.type === "WARNING") {
+        sessionStorage.setItem("login_warning", result.message);
       } else {
         sessionStorage.setItem(
           "login_error",
