@@ -43,7 +43,7 @@ import type { SeasonUserAwardsDto } from "@/components/season/seasonTypes";
 import SeasonAwardChips from "@/components/season/SeasonAwardChips";
 import ErrorPage from "@/errors/ErrorPage";
 import { handleApiError } from "@/errors/HandleApiError";
-import type { ErrorStatus } from "@/errors/ErrorDto";
+import type { ErrorState } from "@/errors/ErrorDto";
 import { ApiError } from "@/errors/Errors";
 
 const AuctionDetail = () => {
@@ -83,12 +83,7 @@ const AuctionDetail = () => {
   const [seasonAwards, setSeasonAwards] = useState<SeasonUserAwardsDto | null>(
     null,
   );
-  const [errorState, setErrorState] = useState<{
-    show: boolean;
-    type: ErrorStatus;
-    title?: string;
-    message?: string;
-  } | null>(null);
+  const [errorState, setErrorState] = useState<ErrorState | null>(null);
 
   // 본인 상품 여부 등 로직 (필요시 복구)
   // const isSelfSeller = false;
