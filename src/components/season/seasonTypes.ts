@@ -1,3 +1,6 @@
+// src/components/season/seasonType.ts
+import type { ErrorCode } from "@/errors/ErrorDto";
+
 export type SeasonUserAwardsDto = {
     ym: string | null;
     titles: Array<{
@@ -15,4 +18,10 @@ export type SeasonUserAwardsDto = {
         totalReviews: number;
         ratio: number;
     }>;
+};
+
+export type CommonErrorBody = {
+    statusCode?: ErrorCode | string;
+    errorMessage?: string;
+    additionalInfo?: string | null;
 };
