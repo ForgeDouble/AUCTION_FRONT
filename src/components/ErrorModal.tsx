@@ -26,7 +26,7 @@ export default function ErrorModal({
 
   const modalContent = (
     <div
-      className="fixed inset-0 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 flex items-center justify-center p-4 z-[95]"
       style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
     >
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative">
@@ -44,7 +44,7 @@ export default function ErrorModal({
             <AlertCircle className="w-10 h-10 text-red-500" />
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">오류</h2>
-          <p className="text-gray-600">{message}</p>
+          <p className="text-gray-600 whitespace-pre-line">{message}</p>
         </div>
 
         {/* 확인 버튼 */}
