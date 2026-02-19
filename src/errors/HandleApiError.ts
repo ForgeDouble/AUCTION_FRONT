@@ -132,41 +132,40 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
         };
 
       /** 리뷰 - 계정 상태 */
-      case "ACCOUNT_WARNING_STATE":
+      case "REVIEW_TEMPORARY_RESTRICTED":
         return {
           type: "WARNING",
           message: error.message || "임시 제한 상태라 리뷰를 작성할 수 없습니다.",
         };
-
-      case "ACCOUNT_SUSPENDED": {
-        const until = error.additionalInfo;
-        return {
-          type: "DIALOG",
-          message: until
-            ? `${error.message}\n정지 해제: ${until}`
-            : (error.message || "정지된 계정은 리뷰를 작성할 수 없습니다."),
-        };
-      }
-
       case "PRODUCT_NOT_FOUND":
+        return { 
+          type: "REDIRECT", 
+          to: "/404" 
+        };
       case "REVIEW_NOT_FOUND":
-        return { type: "REDIRECT", to: "/404" };
-
-      case "DUPLICATE_REVIEW":
-      case "SELF_REVIEW_FORBIDDEN":
-      case "REVIEWER_NOT_WINNER":
-      case "WINNER_BID_NOT_FOUND":
-      case "PRODUCT_BE_SELLED":
-        return { type: "WARNING", message: error.message };
+        return { 
+          type: "REDIRECT", 
+          to: "/404" 
+        };
 
       case "RATING_REQUIRED":
       case "RATING_OUT_OF_RANGE":
       case "RATING_STEP_INVALID":
       case "TAG_REQUIRED":
+      case "TAG_INVALID":
       case "REVIEW_ID_REQUIRED":
       case "PRODUCT_ID_REQUIRED":
+      case "SELLER_ID_REQUIRED":
         return { type: "WARNING", message: error.message };
 
+      case "REVIEW_IMAGE_UPLOAD_FAILED":
+      case "WINNER_USER_MISSING":
+      case "BID_PRODUCT_MISSING":
+      case "SELLER_NOT_FOUND":
+        return {
+          type: "ERROR",
+          message: "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        };
       /** 기본 */
       default:
         return {

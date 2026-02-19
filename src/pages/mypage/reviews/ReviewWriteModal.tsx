@@ -145,7 +145,7 @@ export default function ReviewWriteModal(props: {
                     return;
                 }
 
-                const msg = r.type === "IGNORE" ? "요청이 취소되었습니다." : (r.message ?? "알 수 없는 오류가 발생했습니다.");
+                const msg = r.type === "IGNORE" ? "요청이 취소되었습니다." : (r.message ?? "알 수 없는 오류가 발생했습니다. 관리자에게 문의해주세요.");
                 setCanWrite({ ok: false, reason: msg });
                 setErr(msg);
             }
@@ -222,7 +222,7 @@ export default function ReviewWriteModal(props: {
                 setErr("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
                 return;
             }
-            setErr(r.message ?? "알 수 없는 오류가 발생했습니다.");
+            setErr(r.message ?? "알 수 없는 오류가 발생했습니다. 관리자에게 문의해주세요.");
         } finally {
             setSubmitting(false);
         }
@@ -245,11 +245,11 @@ export default function ReviewWriteModal(props: {
         </div>
 
         <div className="p-6 space-y-6">
-            {!canWrite.ok && (
+            {/* {!canWrite.ok && (
                 <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-sm font-semibold">
                     작성 불가: {canWrite.reason}
                 </div>
-            )}
+            )} */}
 
             {err && (
                 <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-sm font-semibold">
@@ -372,7 +372,6 @@ export default function ReviewWriteModal(props: {
                 )}
             </div>
 
-            {/* Actions */}
             <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                 onClick={onClose}

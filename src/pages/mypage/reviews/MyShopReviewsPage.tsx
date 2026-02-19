@@ -1,7 +1,19 @@
 // pages/mypage/reviews/MyShopReviewsPage.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Star, Edit3, ShoppingBag, Clock, Tag, MessageSquare, ChevronRight, Store, X } from "lucide-react";
+import {
+  ChevronLeft,
+  Star,
+  Edit3,
+  ShoppingBag,
+  Clock,
+  Tag,
+  MessageSquare,
+  ChevronRight,
+  Store,
+  X,
+} from "lucide-react";
 import { fetchMyPendingReviews, fetchMyReviews, fetchReviewDetail } from "./reviewApi";
 import {
   REVIEW_TAG_LABEL,
@@ -15,7 +27,6 @@ import {
 } from "./reviewTypes";
 import ReviewWriteModal from "./ReviewWriteModal";
 import { handleApiError } from "@/errors/HandleApiError";
-import { useModal } from "@/contexts/ModalContext";
 
 function isReviewTag(x: unknown): x is ReviewTag {
   return typeof x === "string" && x in REVIEW_TAG_LABEL;
@@ -23,10 +34,13 @@ function isReviewTag(x: unknown): x is ReviewTag {
 
 type TabKey = "PENDING" | "MINE";
 
+const LOGIN_PATH = "/login";
+
 function applyUiError(
   e: unknown,
   nav: ReturnType<typeof useNavigate>,
-  modal: ReturnType<typeof useModal>
+  setDialogMsg?: (msg: string | null) => void,
+  onAuth?: () => void,
 ) {
   console.error(e);
 
@@ -35,38 +49,24 @@ function applyUiError(
   if (r.type === "IGNORE") return;
 
   if (r.type === "AUTH") {
-    modal.showLogin("navigation");
+    setDialogMsg?.(r.message ?? "로그인이 필요합니다.");
+    if (onAuth) onAuth();
+    else nav(LOGIN_PATH, { replace: true });
     return;
   }
 
   if (r.type === "REDIRECT") {
-    if (r.to === "/404") {
-      nav("/404");
-      return;
-    }
-    modal.showError("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    nav(r.to);
     return;
   }
-
-  if (r.type === "WARNING" || r.type === "TOAST" || r.type === "FIELD_ERROR") {
-    modal.showWarning(r.message);
-    return;
-  }
-
-  if (r.type === "ERROR" || r.type === "DIALOG" || r.type === "MODAL") {
-    modal.showError(r.message);
-    return;
-  }
-
-  modal.showError("알 수 없는 오류가 발생했습니다.");
+  const msg = r.message ?? "알 수 없는 오류가 발생했습니다. 관리자에게 문의해주세요.";
+  setDialogMsg?.(msg);
 }
 
 export default function MyShopReviewsPage() {
   const nav = useNavigate();
-  const modal = useModal();
 
   const [token, setToken] = useState(() => localStorage.getItem("accessToken") ?? "");
-
 
   const [tab, setTab] = useState<TabKey>("PENDING");
 
@@ -77,8 +77,9 @@ export default function MyShopReviewsPage() {
   const [mine, setMine] = useState<SpringPage<ReviewListDto> | null>(null);
 
   const [loading, setLoading] = useState(false);
-  // const [err, setErr] = useState<string | null>(null);
-  
+
+  const [err, setErr] = useState<string | null>(null);
+
   const [writeOpen, setWriteOpen] = useState(false);
   const [writeTarget, setWriteTarget] = useState<PendingReviewRowDto | null>(null);
 
@@ -90,6 +91,10 @@ export default function MyShopReviewsPage() {
 
   const [lbOpen, setLbOpen] = useState(false);
   const [lbIndex, setLbIndex] = useState(0);
+
+  const { logout } = useAuth();
+  const didLogoutRef = useRef(false);
+
   function openDetail(id: number) {
     setDetailId(id);
     setDetailOpen(true);
@@ -98,6 +103,7 @@ export default function MyShopReviewsPage() {
     .slice()
     .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
     .map((x: any) => x.url);
+
   function closeDetail() {
     setDetailOpen(false);
     setDetailId(null);
@@ -108,37 +114,69 @@ export default function MyShopReviewsPage() {
     setLbIndex(0);
   }
 
-  // 이미지 상세보기를 위한 라이트박스
+  const forceReauth = () => {
+    setWriteOpen(false);
+    setWriteTarget(null);
+    closeDetail();
+
+    if (!didLogoutRef.current) {
+      didLogoutRef.current = true;
+      try {
+        logout();
+      } finally {
+        setToken("");
+      }
+    } else {
+      setToken("");
+    }
+
+    if (window.location.pathname !== LOGIN_PATH) {
+      nav(LOGIN_PATH, { replace: true });
+    }
+  };
+
+  useEffect(() => {
+    if (token) didLogoutRef.current = false;
+  }, [token]);
+
   function openLightbox(index: number) {
     setLbIndex(index);
     setLbOpen(true);
   }
 
   async function loadPending() {
-    if (!token) return;
+    if (!token) {
+      forceReauth();
+      return;
+    }
 
     setLoading(true);
+    setErr(null);
     try {
       const res = await fetchMyPendingReviews(token, pPage, 10);
       const pageObj = unwrap<SpringPage<PendingReviewRowDto>>(res);
       setPending(pageObj);
     } catch (e: any) {
-      applyUiError(e, nav, modal);
+      applyUiError(e, nav, setErr, forceReauth);
     } finally {
       setLoading(false);
     }
   }
 
   async function loadMine() {
-    if (!token) return;
-    // setErr(null);
+    if (!token) {
+      forceReauth();
+      return;
+    }
+
     setLoading(true);
+    setErr(null);
     try {
       const res = await fetchMyReviews(token, mPage, 10);
       const pageObj = unwrap<SpringPage<ReviewListDto>>(res);
       setMine(pageObj);
     } catch (e: any) {
-      applyUiError(e, nav, modal);
+      applyUiError(e, nav, setErr, forceReauth);
     } finally {
       setLoading(false);
     }
@@ -154,9 +192,7 @@ export default function MyShopReviewsPage() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-
   useEffect(() => {
-
     const onFocus = () => setToken(localStorage.getItem("accessToken") ?? "");
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -164,17 +200,10 @@ export default function MyShopReviewsPage() {
 
   useEffect(() => {
     if (!token) {
-      modal.showLogin("navigation");
+      forceReauth();
       return;
     }
-  }, [token, modal]);
-  // useEffect(() => {
-  //   if (!token) {
-  //     alert("로그인이 필요합니다.");
-  //     nav("/login");
-  //     return;
-  //   }
-  // }, [token]);
+  }, [token]);
 
   useEffect(() => {
     if (tab === "PENDING") loadPending();
@@ -185,6 +214,10 @@ export default function MyShopReviewsPage() {
   }, [tab, mPage, token]);
 
   useEffect(() => {
+    if (!token) {
+      forceReauth();
+      return;
+    }
     if (!detailOpen || detailId == null) return;
 
     const ac = new AbortController();
@@ -195,43 +228,12 @@ export default function MyShopReviewsPage() {
       try {
         const res = await fetchReviewDetail(token, detailId, ac.signal);
         const dto = unwrap<ReviewDetailDto>(res);
-        // const dto = unwrap(res);
         setDetail(dto);
       } catch (e: any) {
         if (!ac.signal.aborted) {
-          // console.error("[DETAIL ERROR]", e);
-          console.error(e);
-          const r = handleApiError(e);
-
-          if (r.type === "AUTH") {
-            modal.showLogin("navigation");
-            return;
-          }
-
-          if (r.type === "REDIRECT") {
-            if (r.to === "/404") {
-              nav("/404");
-              return;
-            }
-            modal.showError("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-            setDetailErr("일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-            return;
-          }
-          
-          if (r.type === "WARNING" || r.type === "TOAST" || r.type === "FIELD_ERROR") {
-            modal.showWarning(r.message);
-            setDetailErr(r.message);
-            return;
-          }
-
-          if (r.type === "ERROR" || r.type === "DIALOG" || r.type === "MODAL") {
-            modal.showError(r.message);
-            setDetailErr(r.message);
-            return;
-          }
-
-          setDetailErr("알 수 없는 오류가 발생했습니다.");
-          modal.showError("알 수 없는 오류가 발생했습니다.");
+          // 디테일 모달 내부도 모달 띄우지 않고 문구로만 보여주되,
+          // AUTH면 디테일 닫고 로그인 화면 이동
+          applyUiError(e, nav, setDetailErr, forceReauth);
         }
       } finally {
         if (!ac.signal.aborted) setDetailLoading(false);
@@ -239,8 +241,7 @@ export default function MyShopReviewsPage() {
     })();
 
     return () => ac.abort();
-  }, [detailOpen, detailId, token, nav, modal]);
-
+  }, [detailOpen, detailId, token, nav]);
 
   const pendingRows = pending?.content ?? [];
   const myRows = mine?.content ?? [];
@@ -262,59 +263,66 @@ export default function MyShopReviewsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        
         <div className="relative mb-8 bg-white rounded-3xl border border-gray-100 p-6 overflow-hidden">
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">리뷰 관리</h1>
-          
           <p className="text-gray-500 text-sm mt-1">
             낙찰받은 상품의 후기를 작성하거나, 내가 쓴 후기를 관리할 수 있습니다.
           </p>
         </div>
 
         <div className="flex items-center gap-8 border-b border-gray-200 mb-6">
-          <TabButton 
-            active={tab === "PENDING"} 
-            onClick={() => { setTab("PENDING"); setPPage(0); }} 
-            label="작성 대기" 
+          <TabButton
+            active={tab === "PENDING"}
+            onClick={() => {
+              setTab("PENDING");
+              setPPage(0);
+            }}
+            label="작성 대기"
             count={pending?.totalElements}
           />
-          <TabButton 
-            active={tab === "MINE"} 
-            onClick={() => { setTab("MINE"); setMPage(0); }} 
-            label="내가 쓴 리뷰" 
+          <TabButton
+            active={tab === "MINE"}
+            onClick={() => {
+              setTab("MINE");
+              setMPage(0);
+            }}
+            label="내가 쓴 리뷰"
             count={mine?.totalElements}
           />
         </div>
 
         <div className="animate-fade-in-up">
+          {err && (
+            <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 text-sm font-bold whitespace-pre-line text-center">
+              {err}
+            </div>
+          )}
+
           {loading && (
             <div className="py-20 text-center">
               <div className="animate-spin w-8 h-8 border-4 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full mx-auto mb-4" />
               <p className="text-gray-500 text-sm">정보를 불러오고 있습니다...</p>
             </div>
           )}
-{/* 
-          {err && (
-            <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-sm font-medium text-center">
-              {err}
-            </div>
-          )} */}
 
           {!loading && (
             <>
               {tab === "PENDING" && (
                 <div className="space-y-4">
                   {pendingRows.length === 0 ? (
-                    <EmptyBox 
-                      title="작성할 리뷰가 없습니다" 
-                      desc="낙찰받은 상품의 거래가 완료되면 리뷰를 작성할 수 있습니다." 
+                    <EmptyBox
+                      title="작성할 리뷰가 없습니다"
+                      desc="낙찰받은 상품의 거래가 완료되면 리뷰를 작성할 수 있습니다."
                     />
                   ) : (
                     pendingRows.map((r) => (
                       <PendingReviewCard
                         key={r.productId}
                         data={r}
-                        onReview={() => { setWriteTarget(r); setWriteOpen(true); }}
+                        onReview={() => {
+                          setWriteTarget(r);
+                          setWriteOpen(true);
+                        }}
                         onViewProduct={() => nav(`/auction_detail/${r.productId}`)}
                         onViewSeller={() => {
                           const sellerUserId = (r as any).sellerUserId ?? (r as any).sellerId;
@@ -339,10 +347,7 @@ export default function MyShopReviewsPage() {
               {tab === "MINE" && (
                 <div className="space-y-4">
                   {myRows.length === 0 ? (
-                    <EmptyBox 
-                      title="작성한 리뷰가 없습니다" 
-                      desc="소중한 거래 후기를 남겨보세요." 
-                    />
+                    <EmptyBox title="작성한 리뷰가 없습니다" desc="소중한 거래 후기를 남겨보세요." />
                   ) : (
                     myRows.map((r) => (
                       <WrittenReviewCard
@@ -366,27 +371,36 @@ export default function MyShopReviewsPage() {
               )}
             </>
           )}
+
           <ReviewWriteModal
             open={writeOpen}
             token={token}
             target={writeTarget}
             onClose={() => setWriteOpen(false)}
             onSubmitted={async () => {
+              if (!token) {
+                forceReauth();
+                return;
+              }
+
               setWriteOpen(false);
               setPPage(0);
               setMPage(0);
               setTab("MINE");
+              setErr(null);
+
               try {
                 const p = await fetchMyPendingReviews(token, 0, 10);
                 setPending(unwrap(p));
               } catch (e: any) {
-                applyUiError(e, nav, modal);
+                applyUiError(e, nav, setErr, forceReauth);
               }
+
               try {
                 const m = await fetchMyReviews(token, 0, 10);
                 setMine(unwrap(m));
               } catch (e: any) {
-                applyUiError(e, nav, modal);
+                applyUiError(e, nav, setErr, forceReauth);
               }
             }}
           />
@@ -412,10 +426,8 @@ export default function MyShopReviewsPage() {
         </div>
       </div>
     </div>
-    
   );
 }
-
 function TabButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
   return (
     <button
