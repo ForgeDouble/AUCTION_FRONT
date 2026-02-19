@@ -9,13 +9,15 @@ import {
   ChevronRight,
   Heart,
 } from "lucide-react";
-import { fetchProductsByWishlist, deleteWishlist } from "../MyPageApi";
+
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { PageInfo, ProductListDto } from "../MyPageDto";
+import type { PageInfo } from "../MyPageDto";
 import RenderPagination from "../components/RenderPagination";
 import { useModal } from "@/contexts/ModalContext";
 import { useAuth } from "@/hooks/useAuth";
-import { UnauthorizedError } from "@/errors/Errors";
+import { deleteWishlist, fetchProductsByWishlist } from "./MyWishlistApi";
+import type { ProductListDto } from "./MywishlistDto";
+import { handleApiError } from "@/errors/HandleApiError";
 
 type StatusFilter = "ALL" | "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";
 type ViewMode = "grid" | "list";
@@ -43,7 +45,7 @@ function formatPrice(price: number) {
   return new Intl.NumberFormat("ko-KR").format(price) + "원";
 }
 
-function isValidStatus(v: any): v is StatusFilter {
+function isValidStatus(v: string | null): v is StatusFilter {
   return STATUS_OPTIONS.some((o) => o.value === v);
 }
 
@@ -228,7 +230,7 @@ function ViewToggle({
 
 const MyWishlist = () => {
   const { showLogin, showError } = useModal();
-  const { checkAuth } = useAuth();
+  const { logout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -239,7 +241,8 @@ const MyWishlist = () => {
     currentPage: 0,
     size: 10,
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const appliedPage = safeNumber(searchParams.get("page"), 0);
 
@@ -269,9 +272,7 @@ const MyWishlist = () => {
 
   const handleUnwish = async (wishlistId?: number) => {
     if (!wishlistId) {
-      showError(
-        "wishlistId가 없습니다. 찜 목록 조회 응답에 wishlistId를 포함시켜주세요.",
-      );
+      showError("서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.");
       return;
     }
 
@@ -280,21 +281,37 @@ const MyWishlist = () => {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        showLogin();
+        showLogin("confirm");
+        logout();
         return;
       }
 
       await deleteWishlist(token, wishlistId);
 
-      setWishlist((prev: any[]) =>
+      setWishlist((prev: ProductListDto[]) =>
         prev.filter((x) => x.wishlistId !== wishlistId),
       );
       setPageInfo((prev) => ({
         ...prev,
         totalElements: Math.max(0, (prev.totalElements || 0) - 1),
       }));
-    } catch (e: any) {
-      showError(e?.message ?? "찜 해제 중 오류가 발생했습니다.");
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+        case "ERROR":
+          showError(result.message);
+          break;
+        default:
+          showError(
+            "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+          );
+      }
     } finally {
       setRemoving((p) => {
         const next = { ...p };
@@ -308,19 +325,23 @@ const MyWishlist = () => {
     async (page: number, size: number) => {
       try {
         setLoading(true);
+        setError(null);
 
         const token = localStorage.getItem("accessToken");
         if (!token) {
-          showLogin();
+          showLogin("confirm");
+          logout();
           return;
         }
 
-        const data: any = await fetchProductsByWishlist(token, page, size);
+        const data = await fetchProductsByWishlist(token, page, size);
         const res = data?.result ?? data;
 
         if (!res) {
           console.error("Unexpected API response:", data);
-          throw new Error("찜 목록 조회 실패: 응답 형식이 비정상입니다.");
+          setError(
+            "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+          );
         }
 
         setWishlist(res?.content ?? []);
@@ -330,15 +351,28 @@ const MyWishlist = () => {
           currentPage: page,
           size: Number(res?.size) || size,
         });
-      } catch (e: any) {
-        console.error(e);
-        if (e?.message === "AUTH_REQUIRED") showLogin();
-        else showError(e?.message ?? "찜 목록 조회 중 오류가 발생했습니다.");
+      } catch (error: unknown) {
+        const result = handleApiError(error);
+        console.error(result);
+
+        switch (result.type) {
+          case "AUTH":
+            showLogin("confirm");
+            logout();
+            break;
+          case "ERROR":
+            setError(result.message);
+            break;
+          default:
+            setError(
+              "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+            );
+        }
       } finally {
         setLoading(false);
       }
     },
-    [showLogin, showError],
+    [showLogin, logout],
   );
 
   useEffect(() => {
@@ -350,28 +384,15 @@ const MyWishlist = () => {
     let list = [...(wishlist || [])];
 
     if (appliedStatus !== "ALL")
-      list = list.filter((p: any) => p.status === appliedStatus);
+      list = list.filter((p: ProductListDto) => p.status === appliedStatus);
 
     if (appliedSearch.length > 0) {
       const q = appliedSearch.toLowerCase();
-      list = list.filter((p: any) => {
+      list = list.filter((p: ProductListDto) => {
         const name = String(p.productName ?? "").toLowerCase();
         const content = String(p.productContent ?? "").toLowerCase();
         return name.includes(q) || content.includes(q);
       });
-
-      //       setCurrentPage(page);
-      //       console.log(data);
-      //     } catch (error) {
-      //       console.error(error);
-      //       if (error instanceof UnauthorizedError) {
-      //         showLogin();
-      //       } else {
-      //         showError();
-      //       }
-      //       checkAuth();
-      //     } finally {
-      //       setLoading(false);
     }
     return list;
   }, [wishlist, appliedStatus, appliedSearch]);
@@ -565,6 +586,24 @@ const MyWishlist = () => {
                 </div>
               ))}
             </div>
+          ) : error ? (
+            <div className="rounded-3xl bg-white/70 backdrop-blur ring-1 ring-black/5 shadow-sm p-12 text-center">
+              <div className="mx-auto w-14 h-14 rounded-3xl bg-rose-50 ring-1 ring-rose-100 grid place-items-center">
+                <Search className="w-6 h-6 text-rose-400" />
+              </div>
+              <p className="mt-5 text-zinc-900 font-extrabold text-xl">
+                오류가 발생했습니다
+              </p>
+              <p className="mt-2 text-sm text-zinc-500">{error}</p>
+              <button
+                type="button"
+                onClick={() => loadProductsByWishlist(appliedPage, appliedSize)}
+                className="mt-6 inline-flex items-center gap-2 px-5 h-11 rounded-2xl bg-zinc-900 text-white text-sm font-extrabold hover:bg-zinc-800 transition cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" />
+                다시 시도
+              </button>
+            </div>
           ) : visibleProducts.length === 0 ? (
             <div className="rounded-3xl bg-white/70 backdrop-blur ring-1 ring-black/5 shadow-sm p-12 text-center">
               <div className="mx-auto w-14 h-14 rounded-3xl bg-white/80 ring-1 ring-black/5 grid place-items-center">
@@ -590,7 +629,7 @@ const MyWishlist = () => {
               {/* GRID */}
               {appliedView === "grid" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {visibleProducts.map((product: any) => {
+                  {visibleProducts.map((product: ProductListDto) => {
                     const badge = getStatusBadge(product.status);
                     const isClickable = product.status !== "READY";
 
@@ -770,181 +809,185 @@ const MyWishlist = () => {
               {/* LIST */}
               {appliedView === "list" && (
                 <div className="rounded-3xl bg-white/70 backdrop-blur ring-1 ring-black/5 shadow-sm overflow-hidden">
-                  {visibleProducts.map((product: any, idx: number) => {
-                    const badge = getStatusBadge(product.status);
-                    const isClickable = product.status !== "READY";
-                    const bids = Math.max(0, (product.bidCount ?? 0) - 1);
+                  {visibleProducts.map(
+                    (product: ProductListDto, idx: number) => {
+                      const badge = getStatusBadge(product.status);
+                      const isClickable = product.status !== "READY";
+                      const bids = Math.max(0, (product.bidCount ?? 0) - 1);
 
-                    const priceLabel = priceLabelByStatus(product.status);
-                    const priceText =
-                      (product.latestBidAmount ?? 0) === 0
-                        ? "입찰 없음"
-                        : formatPrice(product.latestBidAmount ?? 0);
+                      const priceLabel = priceLabelByStatus(product.status);
+                      const priceText =
+                        (product.latestBidAmount ?? 0) === 0
+                          ? "입찰 없음"
+                          : formatPrice(product.latestBidAmount ?? 0);
 
-                    const priceClass =
-                      product.status === "SELLED"
-                        ? "text-[rgb(118,90,255)]"
-                        : product.status === "NOTSELLED"
-                          ? "text-zinc-400"
-                          : product.status === "READY"
-                            ? "text-blue-700"
-                            : "text-emerald-700";
+                      const priceClass =
+                        product.status === "SELLED"
+                          ? "text-[rgb(118,90,255)]"
+                          : product.status === "NOTSELLED"
+                            ? "text-zinc-400"
+                            : product.status === "READY"
+                              ? "text-blue-700"
+                              : "text-emerald-700";
 
-                    return (
-                      <div
-                        key={product.productId}
-                        onClick={(e) => {
-                          const t = e.target as HTMLElement;
-                          if (t.closest('[data-unwish="1"]')) return; // 하트면 무시
-                          if (isClickable)
-                            navigate(`/auction_detail/${product.productId}`);
-                        }}
-                        className={cn(
-                          "relative flex items-center gap-4 px-5 py-4 transition",
-                          idx !== visibleProducts.length - 1 &&
-                            "border-b border-black/5",
-                          isClickable
-                            ? "cursor-pointer hover:bg-white/60"
-                            : "cursor-not-allowed opacity-75",
-                        )}
-                      >
+                      return (
                         <div
+                          key={product.productId}
+                          onClick={(e) => {
+                            const t = e.target as HTMLElement;
+                            if (t.closest('[data-unwish="1"]')) return; // 하트면 무시
+                            if (isClickable)
+                              navigate(`/auction_detail/${product.productId}`);
+                          }}
                           className={cn(
-                            "absolute left-0 top-0 bottom-0 w-1",
-                            statusAccent(product.status),
+                            "relative flex items-center gap-4 px-5 py-4 transition",
+                            idx !== visibleProducts.length - 1 &&
+                              "border-b border-black/5",
+                            isClickable
+                              ? "cursor-pointer hover:bg-white/60"
+                              : "cursor-not-allowed opacity-75",
                           )}
-                        />
+                        >
+                          <div
+                            className={cn(
+                              "absolute left-0 top-0 bottom-0 w-1",
+                              statusAccent(product.status),
+                            )}
+                          />
 
-                        <div className="w-28 h-20 shrink-0 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white">
-                          {product.previewImageUrl ? (
-                            <img
-                              src={product.previewImageUrl}
-                              alt={product.productName}
-                              className="w-full h-full object-contain bg-zinc-50 p-2"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-zinc-50 grid place-items-center">
-                              <span className="text-[11px] font-bold text-zinc-300">
-                                No Image
+                          <div className="w-28 h-20 shrink-0 rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white">
+                            {product.previewImageUrl ? (
+                              <img
+                                src={product.previewImageUrl}
+                                alt={product.productName}
+                                className="w-full h-full object-contain bg-zinc-50 p-2"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-zinc-50 grid place-items-center">
+                                <span className="text-[11px] font-bold text-zinc-300">
+                                  No Image
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold ring-1 ring-black/5",
+                                  badge.chip,
+                                )}
+                              >
+                                {badge.text}
                               </span>
+
+                              <h3 className="min-w-0 text-zinc-900 font-extrabold text-base truncate">
+                                {product.productName}
+                              </h3>
                             </div>
-                          )}
-                        </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className={cn(
-                                "inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold ring-1 ring-black/5",
-                                badge.chip,
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                              <span className="text-zinc-400">
+                                #{product.productId}
+                              </span>
+                              <span className="text-zinc-300">•</span>
+                              <span>입찰 {bids}건</span>
+
+                              {(product.status === "READY" ||
+                                product.status === "PROCESSING") && (
+                                <>
+                                  <span className="text-zinc-300">•</span>
+                                  <TimePill
+                                    status={product.status}
+                                    auctionStartTime={product.auctionStartTime}
+                                    auctionEndTime={product.auctionEndTime}
+                                  />
+                                </>
                               )}
-                            >
-                              {badge.text}
-                            </span>
 
-                            <h3 className="min-w-0 text-zinc-900 font-extrabold text-base truncate">
-                              {product.productName}
-                            </h3>
+                              {product.status === "PROCESSING" && (
+                                <div className="mt-3 pt-3 border-t border-black/20 pb-4"></div>
+                              )}
+                            </div>
                           </div>
 
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                            <span className="text-zinc-400">
-                              #{product.productId}
-                            </span>
-                            <span className="text-zinc-300">•</span>
-                            <span>입찰 {bids}건</span>
+                          {(() => {
+                            const wid = product.wishlistId as
+                              | number
+                              | undefined;
+                            const isRemoving = wid ? !!removing[wid] : false;
 
-                            {(product.status === "READY" ||
-                              product.status === "PROCESSING") && (
-                              <>
-                                <span className="text-zinc-300">•</span>
-                                <TimePill
-                                  status={product.status}
-                                  auctionStartTime={product.auctionStartTime}
-                                  auctionEndTime={product.auctionEndTime}
-                                />
-                              </>
-                            )}
-
-                            {product.status === "PROCESSING" && (
-                              <div className="mt-3 pt-3 border-t border-black/20 pb-4"></div>
-                            )}
-                          </div>
-                        </div>
-
-                        {(() => {
-                          const wid = product.wishlistId as number | undefined;
-                          const isRemoving = wid ? !!removing[wid] : false;
-
-                          return (
-                            <div className="flex items-center gap-3">
-                              <div className="text-right">
-                                <div className="text-[11px] font-bold text-zinc-500">
-                                  {priceLabel}
+                            return (
+                              <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                  <div className="text-[11px] font-bold text-zinc-500">
+                                    {priceLabel}
+                                  </div>
+                                  <div
+                                    className={cn(
+                                      "text-lg font-extrabold tabular-nums",
+                                      priceClass,
+                                    )}
+                                  >
+                                    {priceText}
+                                  </div>
                                 </div>
-                                <div
+
+                                <button
+                                  type="button"
+                                  title="찜 해제"
+                                  disabled={!wid || isRemoving}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUnwish(wid);
+                                  }}
                                   className={cn(
-                                    "text-lg font-extrabold tabular-nums",
-                                    priceClass,
+                                    "w-10 h-10 rounded-full ring-1 ring-black/5 grid place-items-center transition",
+                                    "bg-white/70 text-zinc-800 hover:bg-white active:scale-95",
+                                    (!wid || isRemoving) &&
+                                      "bg-zinc-100/60 text-zinc-400 cursor-not-allowed",
                                   )}
                                 >
-                                  {priceText}
-                                </div>
-                              </div>
+                                  <Heart
+                                    className={cn(
+                                      "w-5 h-5",
+                                      !wid || isRemoving
+                                        ? "text-zinc-300"
+                                        : "text-rose-600",
+                                    )}
+                                    fill="currentColor"
+                                  />
+                                </button>
 
-                              <button
-                                type="button"
-                                title="찜 해제"
-                                disabled={!wid || isRemoving}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleUnwish(wid);
-                                }}
-                                className={cn(
-                                  "w-10 h-10 rounded-full ring-1 ring-black/5 grid place-items-center transition",
-                                  "bg-white/70 text-zinc-800 hover:bg-white active:scale-95",
-                                  (!wid || isRemoving) &&
-                                    "bg-zinc-100/60 text-zinc-400 cursor-not-allowed",
-                                )}
-                              >
-                                <Heart
+                                <button
+                                  type="button"
+                                  disabled={!isClickable}
                                   className={cn(
-                                    "w-5 h-5",
-                                    !wid || isRemoving
-                                      ? "text-zinc-300"
-                                      : "text-rose-600",
+                                    "w-10 h-10 rounded-full ring-1 ring-black/5 grid place-items-center transition",
+                                    isClickable
+                                      ? "bg-white/70 text-zinc-800 hover:bg-zinc-900 hover:text-white"
+                                      : "bg-zinc-100/60 text-zinc-400 cursor-not-allowed",
                                   )}
-                                  fill="currentColor"
-                                />
-                              </button>
-
-                              <button
-                                type="button"
-                                disabled={!isClickable}
-                                className={cn(
-                                  "w-10 h-10 rounded-full ring-1 ring-black/5 grid place-items-center transition",
-                                  isClickable
-                                    ? "bg-white/70 text-zinc-800 hover:bg-zinc-900 hover:text-white"
-                                    : "bg-zinc-100/60 text-zinc-400 cursor-not-allowed",
-                                )}
-                                title={isClickable ? "상세보기" : "대기중"}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (isClickable)
-                                    navigate(
-                                      `/auction_detail/${product.productId}`,
-                                    );
-                                }}
-                              >
-                                <ChevronRight className="w-5 h-5" />
-                              </button>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    );
-                  })}
+                                  title={isClickable ? "상세보기" : "대기중"}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isClickable)
+                                      navigate(
+                                        `/auction_detail/${product.productId}`,
+                                      );
+                                  }}
+                                >
+                                  <ChevronRight className="w-5 h-5" />
+                                </button>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      );
+                    },
+                  )}
                 </div>
               )}
 
