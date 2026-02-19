@@ -1,6 +1,6 @@
 import type { BidLogDto, ProductDto, SellerDto } from "./AuctionDetailDto";
 import type { ApiResponse } from "../../type/CommonType";
-import { ApiError, DataReadError, UnauthorizedError } from "@/errors/Errors";
+import { ApiError, DataReadError } from "@/errors/Errors";
 
 /** redis로부터 경매 내역 조회 (입찰이 진행 중인 경우) */
 export const fetchBidsFromRedis = async (
