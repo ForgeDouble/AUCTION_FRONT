@@ -34,8 +34,6 @@ export type ErrorCode =
   | "RATING_STEP_INVALID"
   | "TAG_REQUIRED"
 
-  | (string & {});
-
   /** 로그인 */
   | "INVALID_LOGIN_CREDENTIALS"
   | "ACCOUNT_SUSPENDED"
@@ -45,7 +43,8 @@ export type ErrorCode =
   | "INVALID_NICKNAME_LENGTH"
   | "INVALID_NICKNAME_FORMAT"
   | "NICKNAME_CHANGE_COOLDOWN"
-  | "ALREADY_USED_NICKNAME";
+  | "ALREADY_USED_NICKNAME"
+  | (string & {});
 
 export type ErrorHandlingResult =
   | { type: "REDIRECT"; to: string }

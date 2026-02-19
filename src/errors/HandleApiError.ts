@@ -94,11 +94,6 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "DIALOG",
           message: "이메일 또는 비밀번호가 일치하지 않습니다.",
         };
-      case "ACCOUNT_SUSPENDED":
-        return {
-          type: "WARNING",
-          message: `정지된 계정입니다. ${error.additionalInfo}`,
-        };
       /** 닉네임 변경 */
       case "USER_TEMPORARY_RESTRICTED":
         return {
@@ -135,7 +130,8 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
       case "ACCOUNT_WARNING_STATE":
         return {
           type: "WARNING",
-          message: error.message || "임시 제한 상태라 리뷰를 작성할 수 없습니다.",
+          message:
+            error.message || "임시 제한 상태라 리뷰를 작성할 수 없습니다.",
         };
 
       case "ACCOUNT_SUSPENDED": {
@@ -144,7 +140,7 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "DIALOG",
           message: until
             ? `${error.message}\n정지 해제: ${until}`
-            : (error.message || "정지된 계정은 리뷰를 작성할 수 없습니다."),
+            : error.message || "정지된 계정은 리뷰를 작성할 수 없습니다.",
         };
       }
 
