@@ -34,7 +34,7 @@ export type ErrorCode =
   | "RATING_STEP_INVALID"
   | "TAG_REQUIRED"
 
-  | (string & {});
+
 
   /** 로그인 */
   | "INVALID_LOGIN_CREDENTIALS"
