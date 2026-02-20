@@ -26,7 +26,9 @@ import {
   type ReviewDetailDto,
 } from "./reviewTypes";
 import ReviewWriteModal from "./ReviewWriteModal";
-import { handleApiError } from "@/errors/HandleApiError";
+// import { handleApiError } from "@/errors/HandleApiError";
+import { applyUiError } from "@/hooks/applyUiError";
+import { useModal } from "@/contexts/ModalContext";
 
 function isReviewTag(x: unknown): x is ReviewTag {
   return typeof x === "string" && x in REVIEW_TAG_LABEL;
@@ -36,36 +38,10 @@ type TabKey = "PENDING" | "MINE";
 
 const LOGIN_PATH = "/login";
 
-function applyUiError(
-  e: unknown,
-  nav: ReturnType<typeof useNavigate>,
-  setDialogMsg?: (msg: string | null) => void,
-  onAuth?: () => void,
-) {
-  console.error(e);
-
-  const r = handleApiError(e);
-
-  if (r.type === "IGNORE") return;
-
-  if (r.type === "AUTH") {
-    setDialogMsg?.(r.message ?? "로그인이 필요합니다.");
-    if (onAuth) onAuth();
-    else nav(LOGIN_PATH, { replace: true });
-    return;
-  }
-
-  if (r.type === "REDIRECT") {
-    nav(r.to);
-    return;
-  }
-  const msg = r.message ?? "알 수 없는 오류가 발생했습니다. 관리자에게 문의해주세요.";
-  setDialogMsg?.(msg);
-}
 
 export default function MyShopReviewsPage() {
   const nav = useNavigate();
-
+  const { showError } = useModal();
   const [token, setToken] = useState(() => localStorage.getItem("accessToken") ?? "");
 
   const [tab, setTab] = useState<TabKey>("PENDING");
@@ -143,6 +119,37 @@ export default function MyShopReviewsPage() {
     setLbIndex(index);
     setLbOpen(true);
   }
+  const LIST_INTERNAL_MSG = "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.";
+
+  function makeListDeps(setMessage?: (m: string | null) => void) {
+    return {
+      showLogin: () => {},
+
+      logout: forceReauth,
+
+      showWarning: (_msg: string) => {
+        setMessage?.(LIST_INTERNAL_MSG);
+        showError(LIST_INTERNAL_MSG);
+      },
+
+      showError: (_msg?: string) => {
+        setMessage?.(LIST_INTERNAL_MSG);
+        showError(LIST_INTERNAL_MSG);
+      },
+
+      navigate: (to: string) => nav(to),
+    };
+  }
+
+  function makeDetailDeps(setMessage?: (m: string | null) => void) {
+    return {
+      showLogin: () => {},
+      logout: forceReauth,
+      showWarning: (msg: string) => setMessage?.(msg),
+      showError: (msg?: string) => setMessage?.(msg ?? LIST_INTERNAL_MSG),
+      navigate: (to: string) => nav(to),
+    };
+  }
 
   async function loadPending() {
     if (!token) {
@@ -157,7 +164,7 @@ export default function MyShopReviewsPage() {
       const pageObj = unwrap<SpringPage<PendingReviewRowDto>>(res);
       setPending(pageObj);
     } catch (e: any) {
-      applyUiError(e, nav, setErr, forceReauth);
+      applyUiError(e, makeListDeps(setErr));
     } finally {
       setLoading(false);
     }
@@ -176,7 +183,7 @@ export default function MyShopReviewsPage() {
       const pageObj = unwrap<SpringPage<ReviewListDto>>(res);
       setMine(pageObj);
     } catch (e: any) {
-      applyUiError(e, nav, setErr, forceReauth);
+      applyUiError(e, makeListDeps(setErr));
     } finally {
       setLoading(false);
     }
@@ -231,9 +238,7 @@ export default function MyShopReviewsPage() {
         setDetail(dto);
       } catch (e: any) {
         if (!ac.signal.aborted) {
-          // 디테일 모달 내부도 모달 띄우지 않고 문구로만 보여주되,
-          // AUTH면 디테일 닫고 로그인 화면 이동
-          applyUiError(e, nav, setDetailErr, forceReauth);
+          applyUiError(e, makeDetailDeps(setDetailErr));
         }
       } finally {
         if (!ac.signal.aborted) setDetailLoading(false);
@@ -393,14 +398,14 @@ export default function MyShopReviewsPage() {
                 const p = await fetchMyPendingReviews(token, 0, 10);
                 setPending(unwrap(p));
               } catch (e: any) {
-                applyUiError(e, nav, setErr, forceReauth);
+                applyUiError(e, makeListDeps(setErr));
               }
 
               try {
                 const m = await fetchMyReviews(token, 0, 10);
                 setMine(unwrap(m));
               } catch (e: any) {
-                applyUiError(e, nav, setErr, forceReauth);
+                applyUiError(e, makeListDeps(setErr));
               }
             }}
           />

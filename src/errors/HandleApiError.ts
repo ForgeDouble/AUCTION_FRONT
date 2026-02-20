@@ -135,7 +135,7 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
       case "REVIEW_TEMPORARY_RESTRICTED":
         return {
           type: "WARNING",
-          message: error.message || "임시 제한 상태라 리뷰를 작성할 수 없습니다.",
+          message: "임시 제한(view-only) 상태라 리뷰를 작성할 수 없습니다.",
         };
       case "PRODUCT_NOT_FOUND":
         return { 
