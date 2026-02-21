@@ -158,12 +158,15 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
       case "RATING_REQUIRED":
       case "RATING_OUT_OF_RANGE":
       case "RATING_STEP_INVALID":
-      case "PRODUCT_ID_REQUIRED":
       case "SELLER_ID_REQUIRED":
       case "REVIEW_ID_REQUIRED":
         return { 
           type: "WARNING", 
           message: error.message 
+        };
+      case "PRODUCT_ID_REQUIRED":
+        return { 
+          type: "WARNING", message: error.message || "상품 ID가 올바르지 않습니다." 
         };
 
       case "REVIEW_IMAGE_UPLOAD_FAILED":
@@ -222,12 +225,29 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "WARNING", 
           message: error.message || "중요도는 0~100 범위여야 합니다." 
         };
-        
+      case "NOTICE_CREATE_FAILED":
+      case "NOTICE_UPDATE_FAILED":
+      case "NOTICE_DELETE_FAILED":
+        return {
+          type: "ERROR",
+          message: error.message || "처리 중 오류가 발생했습니다. 서버 로그를 확인해 주세요.",
+        };  
+
+      case "ADMIN_AUCTION_SUSPEND_FAILED":
+        return { 
+          type: "ERROR", 
+          message: error.message || "경매 임시차단 처리 중 오류가 발생했습니다." 
+        };
+      case "ADMIN_AUCTION_FORCE_END_FAILED":
+        return { type: "ERROR", 
+          message: error.message || "경매 강제종료 처리 중 오류가 발생했습니다." 
+        };
+
       case "UNAUTHORIZED_ACCESS":
         return {
           type: "ERROR",
           message: "권한이 없습니다. ADMIN/INQUIRY 계정인지 확인해 주세요.",
-        }; 
+        };
 
 
       /** 기본 */

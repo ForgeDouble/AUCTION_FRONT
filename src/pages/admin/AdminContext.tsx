@@ -145,7 +145,7 @@ export interface AdminStore {
   auctionsTotalPages: number;
   auctionsTotalElements: number;
 
-  setAuctionsPagingFromUrl: (pageUi: number, size: number) => void;
+  setAuctionsPagingFromUrl: (pageUi: number, size: number) => Promise<void>;
   refreshAuctionsPage: () => Promise<void>;
 
   overviewTopAuctions: AuctionRow[];
@@ -195,7 +195,7 @@ export interface AdminStore {
   ) => Promise<void>;
   deleteNotice: (id: number) => Promise<void>;
 
-  
+  auctionsLoadErr: string | null;
 
   // 캘린더
   events: CalendarEventRow[];
@@ -212,8 +212,8 @@ export interface AdminStore {
   reportsOpenCount: number;
 
   // 경매 조치
-  suspendAuction: (auctionId: string) => void;
-  forceEndAuction: (auctionId: string) => void;
+  suspendAuction: (auctionId: string) => Promise<void>;
+  forceEndAuction: (auctionId: string) => Promise<void>;
 
   // 카테고리 확인용(overview)
   categoryDistribution: CategoryDistributionRow[];
@@ -333,6 +333,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [usersCounts, setUsersCounts] = useState<AdminUserCounts>({ ADMIN: 0, INQUIRY: 0, USER: 0 });
 
   const [chatRooms, setChatRooms] = useState<AdminChatRoomRow[]>([]);
+
+  const [auctionsLoadErr, setAuctionsLoadErr] = useState<string | null>(null);
+  
   type AdminRealtimePayload = {
     realtimeUsers?: number;
     todayActiveUsers?: number;
@@ -538,18 +541,31 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const p = Math.max(0, pageIndex);
     const s = Math.max(1, Math.min(size, 100));
 
-    const pg = await adminApi.getAuctionsPage({ page: p, size: s });
-    setAuctionsPage(pg);
+      try {
+      setAuctionsLoadErr(null);
 
-    const content = Array.isArray(pg?.content) ? pg.content : [];
-    setAuctions(content);
+      const pg = await adminApi.getAuctionsPage({ page: p, size: s });
+      setAuctionsPage(pg);
 
-    const tp = (pg as any)?.totalPages ?? 1;
-    const te = (pg as any)?.totalElements ?? content.length;
+      const content = Array.isArray(pg?.content) ? pg.content : [];
+      setAuctions(content);
 
-    setAuctionsTotalPages(Math.max(1, Number(tp) || 1));
-    setAuctionsTotalElements(Number(te) || 0);
-  }, []);
+      const tp = (pg as any)?.totalPages ?? 1;
+      const te = (pg as any)?.totalElements ?? content.length;
+
+      setAuctionsTotalPages(Math.max(1, Number(tp) || 1));
+      setAuctionsTotalElements(Number(te) || 0);
+
+      } catch (e) {
+        setAuctionsLoadErr("경매 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+
+        setAuctionsPage(null);
+        setAuctions([]);
+        setAuctionsTotalPages(1);
+        setAuctionsTotalElements(0);
+        throw e;
+      }
+    }, []);
 
   const refreshAuctionsPage = useCallback(async (): Promise<void> => {
     await fetchAuctionsPage(auctionsPageIndex, auctionsPageSize);
@@ -566,7 +582,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const setAuctionsPagingFromUrl = useCallback((pageUi: number, size: number) => {
+  const setAuctionsPagingFromUrl = useCallback(async (pageUi: number, size: number): Promise<void> =>
+  {
     const uiPage = Number.isFinite(pageUi) ? pageUi : 1;
     const uiSize = Number.isFinite(size) ? size : 10;
 
@@ -576,7 +593,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAuctionsPageIndex(nextIndex);
     setAuctionsPageSize(nextSize);
 
-    void fetchAuctionsPage(nextIndex, nextSize);
+    // void fetchAuctionsPage(nextIndex, nextSize);
+    await fetchAuctionsPage(nextIndex, nextSize);
   }, [fetchAuctionsPage]);
 
   const refreshBlockedProducts = async (): Promise<void> => {
@@ -808,44 +826,65 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [notifEnabled, fcmTokenKey, rtTokenVersion]);
 
-  const suspendAuction = (auctionId: string): void => {
-    (async () => {
-      const reason = window.prompt("임시차단 사유를 입력하세요") || "";
-      if (!reason.trim()) return;
+  // const suspendAuction = (auctionId: string): void => {
+  //   (async () => {
+  //     const reason = window.prompt("임시차단 사유를 입력하세요") || "";
+  //     if (!reason.trim()) return;
 
-      try {
-        await adminApi.suspendAuction(auctionId, reason.trim());
-        // setAuctions((prev) => prev.map((a) => (a.id === auctionId ? { ...a, status: "SUSPENDED" } : a)));
-        await refreshAuctionsPage();
-        await refreshOverviewTopAuctions();
-      } catch (e) {
-        console.error(e);
-        alert("임시차단에 실패했습니다. 서버 로그/응답을 확인하세요.");
-      }
-    })();
-  };
+  //     try {
+  //       await adminApi.suspendAuction(auctionId, reason.trim());
+  //       // setAuctions((prev) => prev.map((a) => (a.id === auctionId ? { ...a, status: "SUSPENDED" } : a)));
+  //       await refreshAuctionsPage();
+  //       await refreshOverviewTopAuctions();
+  //     } catch (e) {
+  //       console.error(e);
+  //       alert("임시차단에 실패했습니다. 서버 로그/응답을 확인하세요.");
+  //     }
+  //   })();
+  // };
+  const suspendAuction = useCallback(async (auctionId: string): Promise<void> => {
+    const reason = window.prompt("임시차단 사유를 입력하세요") || "";
+    if (!reason.trim()) return;
 
-  const forceEndAuction = (auctionId: string): void => {
-    (async () => {
-      const reason = window.prompt("강제종료 사유를 입력하세요") || "";
-      if (!reason.trim()) return;
+    await adminApi.suspendAuction(auctionId, reason.trim());
+    await refreshAuctionsPage();
+    await refreshOverviewTopAuctions();
+  }, [refreshAuctionsPage, refreshOverviewTopAuctions]);
+  // const forceEndAuction = (auctionId: string): void => {
+  //   (async () => {
+  //     const reason = window.prompt("강제종료 사유를 입력하세요") || "";
+  //     if (!reason.trim()) return;
 
-      try {
-        await adminApi.forceEndAuction(auctionId, reason.trim());
-        // setAuctions((prev) => prev.filter((a) => a.id !== auctionId));
-        await refreshAuctionsPage();
-        await refreshOverviewTopAuctions();
-        setStats((s) => ({
-          ...s,
-          todayEndedAuctions: s.todayEndedAuctions + 1,
-          ongoingAuctions: Math.max(0, s.ongoingAuctions - 1),
-        }));
-      } catch (e) {
-        console.error(e);
-        alert("강제종료에 실패했습니다. 서버 로그/응답을 확인하세요.");
-      }
-    })();
-  };
+  //     try {
+  //       await adminApi.forceEndAuction(auctionId, reason.trim());
+  //       // setAuctions((prev) => prev.filter((a) => a.id !== auctionId));
+  //       await refreshAuctionsPage();
+  //       await refreshOverviewTopAuctions();
+  //       setStats((s) => ({
+  //         ...s,
+  //         todayEndedAuctions: s.todayEndedAuctions + 1,
+  //         ongoingAuctions: Math.max(0, s.ongoingAuctions - 1),
+  //       }));
+  //     } catch (e) {
+  //       console.error(e);
+  //       alert("강제종료에 실패했습니다. 서버 로그/응답을 확인하세요.");
+  //     }
+  //   })();
+  // };
+  const forceEndAuction = useCallback(async (auctionId: string): Promise<void> => {
+    const reason = window.prompt("강제종료 사유를 입력하세요") || "";
+    if (!reason.trim()) return;
+
+    await adminApi.forceEndAuction(auctionId, reason.trim());
+    await refreshAuctionsPage();
+    await refreshOverviewTopAuctions();
+
+    setStats((s) => ({
+      ...s,
+      todayEndedAuctions: s.todayEndedAuctions + 1,
+      ongoingAuctions: Math.max(0, s.ongoingAuctions - 1),
+    }));
+  }, [refreshAuctionsPage, refreshOverviewTopAuctions, setStats]);
 
  const fetchGroupReports: AdminStore["fetchGroupReports"] = async (targetUserId, category, page, size) => {
     return await adminApi.getGroupReports(targetUserId, category, page, size);
@@ -1065,6 +1104,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     birthdayOpen,
     setBirthdayOpen,
+    auctionsLoadErr,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
