@@ -148,24 +148,50 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           to: "/404" 
         };
 
+      case "DUPLICATE_REVIEW":
+      case "SELF_REVIEW_FORBIDDEN":
+      case "REVIEWER_NOT_WINNER":
+      case "WINNER_BID_NOT_FOUND":
+      case "PRODUCT_NOT_SELLED":
+      case "TAG_REQUIRED":
+      case "TAG_INVALID":
       case "RATING_REQUIRED":
       case "RATING_OUT_OF_RANGE":
       case "RATING_STEP_INVALID":
-      case "TAG_REQUIRED":
-      case "TAG_INVALID":
-      case "REVIEW_ID_REQUIRED":
       case "PRODUCT_ID_REQUIRED":
       case "SELLER_ID_REQUIRED":
-        return { type: "WARNING", message: error.message };
+      case "REVIEW_ID_REQUIRED":
+        return { 
+          type: "WARNING", 
+          message: error.message 
+        };
 
       case "REVIEW_IMAGE_UPLOAD_FAILED":
-      case "WINNER_USER_MISSING":
       case "BID_PRODUCT_MISSING":
-      case "SELLER_NOT_FOUND":
+      case "WINNER_USER_MISSING":
+        return {
+          type: "DIALOG",
+          message: error.message || "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        };  
+        
+      case "TITLE_REQUIRED":
+      case "DATE_REQUIRED":
+      case "EVENT_ID_REQUIRED":
+      case "EVENT_ID_INVALID":
+        return { type: "WARNING", message: error.message };  
+      case "CALENDAR_EVENT_NOT_FOUND":
+        return {
+          type: "WARNING",
+          message: error.message || "이미 삭제되었거나 존재하지 않는 일정입니다.",
+        };
+
+      case "UNAUTHORIZED_ACCESS":
         return {
           type: "ERROR",
-          message: "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-        };
+          message: "권한이 없습니다. ADMIN/INQUIRY 계정인지 확인해 주세요.",
+        }; 
+
+        
       /** 기본 */
       default:
         return {

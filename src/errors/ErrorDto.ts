@@ -39,6 +39,14 @@ export type ErrorCode =
   | "REVIEW_IMAGE_UPLOAD_FAILED"
   | "BID_PRODUCT_MISSING"
 
+  /** 관리자 */
+  | "UNAUTHORIZED_ACCESS"
+  // 캘린더
+  | "EVENT_ID_REQUIRED"
+  | "EVENT_ID_INVALID"
+  | "CALENDAR_EVENT_NOT_FOUND"
+  | "TITLE_REQUIRED"
+  | "DATE_REQUIRED"
 
 
   /** 로그인 */

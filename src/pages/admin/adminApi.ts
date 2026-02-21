@@ -25,6 +25,7 @@ import type {
   AdminChatMemberRow,
   AdminChatInviteReq,
 } from "./adminTypes";
+import { ApiError, UnauthorizedError } from "@/errors/Errors";
 
 const BASE = import.meta.env.VITE_API_BASE as string | undefined;
 
@@ -32,7 +33,7 @@ function getToken(): string | null {
   return localStorage.getItem("accessToken");
 }
 
-type ApiError = { status: number; message: string };
+// type ApiError = { status: number; message: string };
 
 type CommonResDto<T> = {
   status_code?: number;
@@ -62,6 +63,70 @@ type ExtendSessionRes = {
   accessToken: string;
   expiresInSec: number;
 };
+
+async function throwApiError(res: Response, fallback: string): Promise<never> {
+  const text = await res.text().catch(() => "");
+  let json: any = null;
+
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+
+  const code =
+  json?.errorCode ??
+  json?.statusCode ??
+  json?.code ??
+  json?.result?.errorCode ??
+  json?.result?.statusCode ??
+  json?.result?.code;
+
+  const message =
+  json?.message ??
+  json?.errorMessage ??
+  json?.statusMessage ??
+  json?.status_message ??
+  json?.result?.message ??
+  json?.result?.errorMessage ??
+  json?.result?.statusMessage ??
+  fallback;
+
+  const additionalInfo =
+  json?.additionalInfo ??
+  json?.result?.additionalInfo ??
+  undefined;
+
+  if (res.status === 401) {
+    throw new UnauthorizedError(additionalInfo);
+  }
+
+  const finalCode = (code ? String(code) : "INTERNAL_SERVER_ERROR") as any;
+  const finalMessage = String(message || fallback);
+
+  throw new ApiError(res.status, finalCode, finalMessage, additionalInfo);
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getToken();
+
+  const res = await fetch((BASE ?? "") + path, {
+    ...init,
+    headers: {
+      ...(init?.headers || {}),
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    await throwApiError(res, `HTTP ${res.status}`);
+  }
+
+  if (res.status === 204) return undefined as unknown as T;
+  return (await res.json()) as T;
+}
 
 function unwrap<T>(raw: CommonResDto<T> | T): T {
   if (raw && typeof raw === "object" && "result" in (raw as any)) {
@@ -160,27 +225,27 @@ function normalizeActiveHourBucket(x: any): ActiveHourBucketRow {
 }
 
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getToken();
+// async function request<T>(path: string, init?: RequestInit): Promise<T> {
+//   const token = getToken();
 
-  const res = await fetch((BASE ?? "") + path, {
-    ...init,
-    headers: {
-      ...(init?.headers || {}),
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+//   const res = await fetch((BASE ?? "") + path, {
+//     ...init,
+//     headers: {
+//       ...(init?.headers || {}),
+//       "Content-Type": "application/json",
+//       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+//     },
+//   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    const msg = text?.trim() ? text : `HTTP ${res.status}`;
-    throw { status: res.status, message: msg } satisfies ApiError;
-  }
+//   if (!res.ok) {
+//     const text = await res.text().catch(() => "");
+//     const msg = text?.trim() ? text : `HTTP ${res.status}`;
+//     throw { status: res.status, message: msg } satisfies ApiError;
+//   }
 
-  if (res.status === 204) return undefined as unknown as T;
-  return (await res.json()) as T;
-}
+//   if (res.status === 204) return undefined as unknown as T;
+//   return (await res.json()) as T;
+// }
 
 // 관리자 유저 생성 관련 
 function normalizeAdminUser(x: any): AdminUserRow {
