@@ -174,15 +174,15 @@ export interface AdminStore {
   noticeSize: number;
   noticeTotalPages: number;
   noticeTotalElements: number;
-  goNoticePage: (page: number) => void;
-
+  // goNoticePage: (page: number) => void;
+  goNoticePage: (page: number) => Promise<void>;
   addNotice: (payload: {
     category: NoticeCategory;
     title: string;
     content: string;
     pinned?: boolean;
     importance?: number;
-  }) => void;
+  }) => Promise<void>;
   updateNotice: (
     id: number,
     payload: {
@@ -192,8 +192,10 @@ export interface AdminStore {
       pinned?: boolean;
       importance?: number;
     }
-  ) => void;
-  deleteNotice: (id: number) => void;
+  ) => Promise<void>;
+  deleteNotice: (id: number) => Promise<void>;
+
+  
 
   // 캘린더
   events: CalendarEventRow[];
@@ -480,10 +482,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     const t = window.setTimeout(() => {
-      void fetchNoticesPage(0, noticeSize);
+      void fetchNoticesPage(0, noticeSize).catch((e) => console.error(e));
     }, 250);
     return () => window.clearTimeout(t);
-  }, [query]);
+  }, [query, noticeSize]);
 
   const usersPagingRef = useRef<{ page: number; size: number; role: "ALL" | Authority; q: string }>({
     page: 0,
@@ -746,56 +748,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void refreshAll();
   }, []);
 
-  // useEffect(() => {
-  //   const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
-  //   const token = localStorage.getItem("accessToken");
-
-  //   if (!token) return;
-
-  //   if (rtClientRef.current) {
-  //     try { rtClientRef.current.deactivate(); } catch {}
-  //     rtClientRef.current = null;
-  //   }
-
-  //   const urlBase = base.replace(/\/$/, "");
-  //   const sock = new SockJS(`${urlBase}/ws-admin`);
-
-  //   const client = new Client({
-  //     webSocketFactory: () => sock as any,
-  //     connectHeaders: {
-  //       Authorization: `Bearer ${token}`,
-  //     },
-  //     reconnectDelay: 2000,
-  //     debug: () => {},
-  //     onConnect: () => {
-  //       client.subscribe("/topic/admin/realtime", (frame) => {
-  //         try {
-  //           const data = JSON.parse(frame.body || "{}") as AdminRealtimePayload;
-
-  //           setStats((prev) => ({
-  //             ...prev,
-  //             realtimeUsers: Number(data.realtimeUsers ?? prev.realtimeUsers ?? 0),
-  //             todayActiveUsers: Number(data.todayActiveUsers ?? prev.todayActiveUsers ?? 0),
-  //             ongoingAuctions: Number(data.ongoingAuctions ?? prev.ongoingAuctions ?? 0),
-  //           }));
-
-  //           setLastUpdatedAt(nowIso());
-  //         } catch (e) {
-  //           console.error("admin realtime parse error", e);
-  //         }
-  //       });
-  //     },
-  //   });
-
-  //   rtClientRef.current = client;
-  //   client.activate();
-
-  //   return () => {
-  //     try { client.deactivate(); } catch {}
-  //     rtClientRef.current = null;
-  //   };
-  // }, [rtTokenVersion]);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -922,41 +874,32 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await refreshBlockedProducts();
   };
 
-  const addNotice: AdminStore["addNotice"] = (payload) => {
-    (async () => {
-      try {
-        await adminApi.createNotice(payload);
-        await fetchNoticesPage(0, noticeSize);
-      } catch (e) {
-        console.error(e);
-        alert("공지 등록에 실패했습니다.");
-      }
-    })();
+  const addNotice: AdminStore["addNotice"] = async (payload) => {
+    await adminApi.createNotice(payload);
+    await fetchNoticesPage(0, noticeSize);
   };
-  const updateNotice: AdminStore["updateNotice"] = (id, payload) => {
-    (async () => {
-      try {
-        await adminApi.updateNotice(id, payload);
-        await fetchNoticesPage(noticePage, noticeSize);
-      } catch (e) {
-        console.error(e);
-        alert("공지 수정에 실패했습니다.");
-      }
-    })();
-  };
-  const deleteNotice: AdminStore["deleteNotice"] = (id) => {
-    (async () => {
-      try {
-        await adminApi.deleteNotice(id);
 
-        const nextPage = noticePage > 0 && notices.length === 1 ? noticePage - 1 : noticePage;
-        await fetchNoticesPage(nextPage, noticeSize);
-      } catch (e) {
-        console.error(e);
-        alert("공지 삭제에 실패했습니다.");
-      }
-    })();
+  const updateNotice: AdminStore["updateNotice"] = async (id, payload) => {
+    await adminApi.updateNotice(id, payload);
+    await fetchNoticesPage(noticePage, noticeSize);
   };
+
+  const deleteNotice: AdminStore["deleteNotice"] = async (id) => {
+    await adminApi.deleteNotice(id);
+
+    const nextPage = noticePage > 0 && notices.length === 1 ? noticePage - 1 : noticePage;
+    await fetchNoticesPage(nextPage, noticeSize);
+  };
+
+  const goNoticePage: AdminStore["goNoticePage"] = async (page) => {
+    const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
+    await fetchNoticesPage(pg, noticeSize);
+  };
+  // const goNoticePage = (page: number) => {
+  //   const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
+  //   void fetchNoticesPage(pg, noticeSize);
+  // };
+
   const addEvent: AdminStore["addEvent"] = async (e) => {
     const payload = {
       date: e.date,
@@ -984,10 +927,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, date: newDate } : e)));
   };
 
-  const goNoticePage = (page: number) => {
-    const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
-    void fetchNoticesPage(pg, noticeSize);
-  };
+
   const extendAdminSession = useCallback(async (): Promise<void> => {
     const res = await adminApi.extendAdminSession();
     const token = res?.accessToken;

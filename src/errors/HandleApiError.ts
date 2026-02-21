@@ -173,7 +173,8 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "DIALOG",
           message: error.message || "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
         };  
-        
+      
+      // 관리자
       case "TITLE_REQUIRED":
       case "DATE_REQUIRED":
       case "EVENT_ID_REQUIRED":
@@ -184,14 +185,51 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "WARNING",
           message: error.message || "이미 삭제되었거나 존재하지 않는 일정입니다.",
         };
+      
 
+      case "NOTICE_NOT_FOUND":
+        return {
+          type: "WARNING",
+          message: error.message || "해당 공지가 존재하지 않거나 삭제되었습니다.",
+        };
+
+      case "NOTICE_ID_REQUIRED":
+        return { 
+          type: "WARNING", 
+          message: error.message || "공지 ID가 필요합니다." 
+        };
+
+      case "TITLE_REQUIRED":
+        return { 
+          type: "WARNING", 
+          message: error.message || "제목은 필수입니다." 
+        };
+
+      case "CONTENT_REQUIRED":
+        return { 
+          type: "WARNING", 
+          message: error.message || "내용은 필수입니다." 
+        };
+
+      case "CATEGORY_REQUIRED":
+        return { 
+          type: "WARNING", 
+          message: error.message || "카테고리를 선택해 주세요." 
+        };
+
+      case "IMPORTANCE_OUT_OF_RANGE":
+        return { 
+          type: "WARNING", 
+          message: error.message || "중요도는 0~100 범위여야 합니다." 
+        };
+        
       case "UNAUTHORIZED_ACCESS":
         return {
           type: "ERROR",
           message: "권한이 없습니다. ADMIN/INQUIRY 계정인지 확인해 주세요.",
         }; 
 
-        
+
       /** 기본 */
       default:
         return {
