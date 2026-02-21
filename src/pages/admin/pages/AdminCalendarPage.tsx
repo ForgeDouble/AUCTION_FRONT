@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, XCircle, Trash2, Save } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import { SectionTitle } from "../components/AdminUi";
@@ -74,7 +74,7 @@ const AdminCalendarPage: React.FC = () => {
     };
   }, [showError, showLogin, logout, nav]);
 
-  const {events, addEvent, updateEvent, deleteEvent, moveEventDate, query, } = useAdminStore();
+  const {events, addEvent, updateEvent, deleteEvent, moveEventDate, query, calendarLoadErr, refreshEvents } = useAdminStore();
 
   const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [open, setOpen] = useState<boolean>(false);
@@ -83,6 +83,8 @@ const AdminCalendarPage: React.FC = () => {
 
   const [moreDate, setMoreDate] = useState<string | null>(null);
 
+  const shownErrRef = useRef<string | null>(null);
+  
   const selected = useMemo(() => {
     if (!selectedId) return null;
     return events.find((e) => e.id === selectedId) ?? null;
@@ -137,9 +139,53 @@ const AdminCalendarPage: React.FC = () => {
     while (cells.length < 42) cells.push({ date: null, inMonth: false });
     return cells;
 
-
   }, [calStart, calEnd]);
 
+  // 같은 에러 문구면 모달 중복 방지
+  useEffect(() => {
+    if (!calendarLoadErr) {
+      shownErrRef.current = null;
+      return;
+    }
+    if (shownErrRef.current === calendarLoadErr) return;
+
+    shownErrRef.current = calendarLoadErr;
+    uiDeps.showError(calendarLoadErr);
+  }, [calendarLoadErr, uiDeps]);
+  const retryLoad = async () => {
+  // 사용자가 '다시 시도' 눌렀을 때는 다시 모달 뜰 수 있게 리셋
+  shownErrRef.current = null;
+
+  try {
+    await refreshEvents(); // 여기서 실패하면 store가 calendarLoadErr 세팅 + throw
+  } catch {
+    // 여기서 applyUiError 호출하면 모달이 2번 뜰 수 있어서 NO-OP 권장
+    // (calendarLoadErr effect가 모달을 띄우게 맡기는 구조)
+  }
+};
+
+if (calendarLoadErr) {
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+      <SectionTitle
+        title="운영 캘린더"
+        right={
+          <button
+            onClick={retryLoad}
+            className="px-3 py-2 rounded-xl bg-[rgb(118_90_255)] hover:bg-[rgb(104_79_224)] text-white text-sm"
+          >
+            다시 시도
+          </button>
+        }
+      />
+
+      <div className="mt-4 bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+        <div className="text-red-700 font-semibold mb-1">캘린더 데이터를 불러올 수 없습니다</div>
+        <div className="text-sm text-red-600 whitespace-pre-line">{calendarLoadErr}</div>
+      </div>
+    </div>
+  );
+}
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEventRow[]>();
     for (const e of events) {

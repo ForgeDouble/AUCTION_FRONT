@@ -1,5 +1,5 @@
 // src/pages/admin/pages/AdminNoticesPage.tsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Pencil, Trash2, Pin, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import { SectionTitle } from "../components/AdminUi";
@@ -34,6 +34,8 @@ const AdminNoticesPage: React.FC = () => {
   const nav = useNavigate();
   const { showError, showLogin, showLoading, showWarning } = useModal();
   const { logout } = useAuth();
+  const { noticesLoadErr } = useAdminStore();
+  const shownErrRef = useRef<string | null>(null);
 
   const uiDeps = useMemo(() => {
     const fallback = "요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
@@ -45,6 +47,14 @@ const AdminNoticesPage: React.FC = () => {
       navigate: (to: string) => nav(to),
     };
   }, [showError, showLogin, logout, nav]);
+
+  useEffect(() => {
+    if (!noticesLoadErr) return;
+    if (shownErrRef.current === noticesLoadErr) return;
+
+    shownErrRef.current = noticesLoadErr;
+    showError(noticesLoadErr);
+  }, [noticesLoadErr, showError]);
 
   const {notices, query, addNotice, updateNotice, deleteNotice, noticePage, noticeTotalPages, noticeTotalElements, goNoticePage, } = useAdminStore();
 
@@ -98,7 +108,7 @@ const AdminNoticesPage: React.FC = () => {
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => goNoticePage(noticePage - 1)}
+          onClick={() => onGoPage(noticePage - 1)}
           disabled={noticePage <= 0}
           className={
             "px-2 py-1 rounded-lg border text-sm flex items-center gap-1 " +
@@ -115,7 +125,7 @@ const AdminNoticesPage: React.FC = () => {
           {pageButtons.map((p) => (
             <button
               key={p}
-              onClick={() => goNoticePage(p)}
+              onClick={() => onGoPage(p)}
               className={
                 "min-w-[32px] px-2 py-1 rounded-lg border text-[12px] " +
                 (p === noticePage
@@ -129,7 +139,7 @@ const AdminNoticesPage: React.FC = () => {
         </div>
 
         <button
-          onClick={() => goNoticePage(noticePage + 1)}
+          onClick={() => onGoPage(noticePage + 1)}
           disabled={noticePage + 1 >= Math.max(1, noticeTotalPages)}
           className={
             "px-2 py-1 rounded-lg border text-sm flex items-center gap-1 " +

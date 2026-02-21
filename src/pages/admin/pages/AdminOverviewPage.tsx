@@ -158,8 +158,6 @@ const AdminOverviewPage: React.FC = () => {
     setHoursErr("");
     setTrendErr("");
     setTradeErr("");
-
-    // 1) 핵심(overview) 실패하면 페이지 전체를 막아야 하니까 먼저 단독 try/catch
     try {
       const ov = await adminApi.getOverview();
       setStats(ov);
@@ -168,8 +166,6 @@ const AdminOverviewPage: React.FC = () => {
       setLoading(false);
       return;
     }
-
-    // 2) 나머지는 섹션별로 실패 허용
     try {
       const pg = await adminApi.getAuctionsPage({ page: 0, size: 5 });
       setTopAuctionsData(Array.isArray(pg?.content) ? pg.content : []);
@@ -233,7 +229,6 @@ const AdminOverviewPage: React.FC = () => {
     loadAll();
   }, [loadAll]);
 
-  // ✅ “Home처럼” 핵심 실패면 내부 요소 전부 숨기고 에러 박스만
   if (overviewErr) {
     return (
       <AdminInlineErrorBox
@@ -364,7 +359,6 @@ const AdminOverviewPage: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* 로딩(원하면 스켈레톤으로 교체) */}
       {loading && (
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm text-sm text-gray-500">
           불러오는 중...

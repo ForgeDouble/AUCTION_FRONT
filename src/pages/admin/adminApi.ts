@@ -100,7 +100,14 @@ async function throwApiError(res: Response, fallback: string): Promise<never> {
   if (res.status === 401) {
     throw new UnauthorizedError(additionalInfo);
   }
-
+  if (res.status === 403 && !code) {
+    throw new ApiError(
+      403,
+      "UNAUTHORIZED_ACCESS" as any,
+      "권한이 없습니다. ADMIN/INQUIRY 계정인지 확인해 주세요.",
+      additionalInfo
+    );
+  }
   const finalCode = (code ? String(code) : "INTERNAL_SERVER_ERROR") as any;
   const finalMessage = String(message || fallback);
 

@@ -196,7 +196,8 @@ export interface AdminStore {
   deleteNotice: (id: number) => Promise<void>;
 
   auctionsLoadErr: string | null;
-
+  noticesLoadErr: string | null;
+  calendarLoadErr: string | null;
   // 캘린더
   events: CalendarEventRow[];
   setEvents: React.Dispatch<React.SetStateAction<CalendarEventRow[]>>;
@@ -335,7 +336,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [chatRooms, setChatRooms] = useState<AdminChatRoomRow[]>([]);
 
   const [auctionsLoadErr, setAuctionsLoadErr] = useState<string | null>(null);
-  
+  const [noticesLoadErr, setNoticesLoadErr] = useState<string | null>(null);
+  const [calendarLoadErr, setCalendarLoadErr] = useState<string | null>(null);
+
   type AdminRealtimePayload = {
     realtimeUsers?: number;
     todayActiveUsers?: number;
@@ -523,18 +526,24 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const fetchNoticesPage = async (pg: number, sz: number): Promise<void> => {
     const qv = query.trim();
+    try {
+      setNoticesLoadErr(null);
 
-    const res = await adminApi.getNoticesPage({
-      page: pg,
-      size: sz,
-      q: qv ? qv : undefined,
-    });
+      const res = await adminApi.getNoticesPage({
+        page: pg,
+        size: sz,
+        q: qv ? qv : undefined,
+      });
 
-    setNotices(res.items);
-    setNoticePage(res.page);
-    setNoticeSize(res.size);
-    setNoticeTotalPages(Math.max(1, res.totalPages));
-    setNoticeTotalElements(res.totalElements);
+      setNotices(res.items);
+      setNoticePage(res.page);
+      setNoticeSize(res.size);
+      setNoticeTotalPages(Math.max(1, res.totalPages));
+      setNoticeTotalElements(res.totalElements);
+    } catch (e) {
+      setNoticesLoadErr("공지 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.");
+      throw e; 
+    }
   };
 
   const fetchAuctionsPage = useCallback(async (pageIndex: number, size: number): Promise<void> => {
@@ -609,8 +618,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const list = await adminApi.getEvents();
       setEvents(list);
+      setCalendarLoadErr(null);
     } catch (e) {
       console.error(e);
+      setCalendarLoadErr("운영 캘린더 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.");
+      throw e;
     }
   };
 
@@ -737,10 +749,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (groupR.status === "fulfilled") setReportGroups(groupR.value);
     if (blockedR.status === "fulfilled") setBlockedProducts(blockedR.value);
     if (evR.status === "fulfilled") setEvents(evR.value);
+    if (evR.status === "rejected") setCalendarLoadErr("캘린더 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.");
     if (catR.status === "fulfilled") setCategoryDistribution(catR.value);
     if (hourR.status === "fulfilled") setTodayActiveHours(hourR.value);
     if (trendR.status === "fulfilled") setAuctionTrendRows(trendR.value);
-    if(tradeR.status === "fulfilled") setMonthlyTradeRows(tradeR.value);
+    if (tradeR.status === "fulfilled") setMonthlyTradeRows(tradeR.value);
     if (chatR.status === "fulfilled") setChatRooms(chatR.value ?? []);
 
     const uiPage = opts?.auctionsPageUi;
@@ -1105,6 +1118,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     birthdayOpen,
     setBirthdayOpen,
     auctionsLoadErr,
+    noticesLoadErr,
+    calendarLoadErr,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
