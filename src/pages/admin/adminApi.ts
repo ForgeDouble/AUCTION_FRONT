@@ -114,18 +114,29 @@ async function throwApiError(res: Response, fallback: string): Promise<never> {
   throw new ApiError(res.status, finalCode, finalMessage, additionalInfo);
 }
 
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
 
-  const res = await fetch((BASE ?? "") + path, {
-    ...init,
-    headers: {
-      ...(init?.headers || {}),
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch((BASE ?? "") + path, {
+      ...init,
+      headers: {
+        ...(init?.headers || {}),
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  } catch (e) {
+    throw new ApiError(
+      0,
+      "NETWORK_ERROR" as any,
+      "네트워크 오류가 발생했습니다. 연결 상태를 확인해 주세요.",
+      undefined
+    );
+  }
 
   if (!res.ok) {
     await throwApiError(res, `HTTP ${res.status}`);

@@ -542,7 +542,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setNoticeTotalElements(res.totalElements);
     } catch (e) {
       setNoticesLoadErr("공지 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.");
-      throw e; 
+      // throw e; 
     }
   };
 
@@ -572,7 +572,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setAuctions([]);
         setAuctionsTotalPages(1);
         setAuctionsTotalElements(0);
-        throw e;
+        // throw e;
       }
     }, []);
 

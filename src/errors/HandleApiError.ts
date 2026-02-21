@@ -43,7 +43,12 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "REDIRECT",
           to: "/404",
         };
-
+        
+      case "NETWORK_ERROR":
+        return {
+          type: "ERROR",
+          message: "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+        };
       /** 위시리스트 */
       case "SELF_WISHLIST_FORBIDDEN":
         return {
