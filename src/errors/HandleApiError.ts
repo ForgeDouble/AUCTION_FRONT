@@ -178,7 +178,6 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
         };  
       
       // 관리자
-      case "TITLE_REQUIRED":
       case "DATE_REQUIRED":
       case "EVENT_ID_REQUIRED":
       case "EVENT_ID_INVALID":
@@ -248,7 +247,32 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "ERROR",
           message: "권한이 없습니다. ADMIN/INQUIRY 계정인지 확인해 주세요.",
         };
+      
+      case "ADMIN_OVERVIEW_FAILED":
+        return {
+          type: "ERROR",
+          message: "대시보드 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        };
 
+      case "ADMIN_METRICS_AUCTION_TREND_FAILED":
+      case "ADMIN_METRICS_MONTHLY_TRADE_FAILED":
+        return {
+          type: "ERROR",
+          message: "지표 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        };
+
+      case "ADMIN_CATEGORY_DISTRIBUTION_FAILED":
+        return {
+          type: "ERROR",
+          message: "카테고리 분포 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        };
+
+      case "ADMIN_TODAY_GMV_FAILED":
+      case "ADMIN_MONTHLY_AVG_GMV_FAILED":
+        return {
+          type: "ERROR",
+          message: "거래 금액 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        };  
 
       /** 기본 */
       default:
