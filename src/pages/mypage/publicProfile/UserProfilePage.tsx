@@ -1,5 +1,5 @@
 // src/pages/mypage/publicProfile/UserProfilePage.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import {
@@ -31,6 +31,7 @@ import type { SeasonUserAwardsDto } from "@/components/season/seasonTypes";
 import SeasonAwardChips from "@/components/season/SeasonAwardChips";
 import { handleApiError } from "@/errors/HandleApiError";
 import { useModal } from "@/contexts/ModalContext";
+
 type ProductRow = {
   productId: number;
   productName: string;
@@ -141,6 +142,17 @@ export default function UserProfilePage() {
   const [seasonAwards, setSeasonAwards] = useState<SeasonUserAwardsDto | null>(null);
   const [seasonLoading, setSeasonLoading] = useState(false);
 
+  const [listLoadErr, setListLoadErr] = useState<string | null>(null);
+
+  const shownModalErrRef = useRef<string | null>(null);
+
+  function showErrorModalOnce(msg: string) {
+    const m = String(msg ?? "").trim();
+    if (!m) return;
+    if (shownModalErrRef.current === m) return;
+    shownModalErrRef.current = m;
+    modal.showError(m);
+  }
   const modal = useModal();
 
   function calcChipMax() {
@@ -196,12 +208,29 @@ export default function UserProfilePage() {
     }
 
     setLoadingProfile(true);
+
     try {
       const res = await fetchPublicProfile(t, targetUserId);
       const data = unwrap<PublicProfileDto>(res);
       setProfile(data);
     } catch (e: any) {
-      applyUiError(e);
+      const r = handleApiError(e);
+
+      if (r.type === "REDIRECT" && r.to === "/404") {
+        nav("/404");
+        return;
+      }
+      if (r.type === "AUTH") {
+        modal.showLogin("navigation");
+        return;
+      }
+      if (r.type === "WARNING") {
+        modal.showWarning(r.message);
+        return;
+      }
+      if (r.type === "IGNORE") return;
+
+      modal.showError("서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.");
     } finally {
       setLoadingProfile(false);
     }
@@ -245,6 +274,8 @@ export default function UserProfilePage() {
     }
 
     setLoadingList(true);
+    setListLoadErr(null);
+
     try {
       const res = await fetchProductsByTargetUser(t, targetUserId, {
         page,
@@ -260,11 +291,25 @@ export default function UserProfilePage() {
       setRows((pageObj?.content ?? []) as ProductRow[]);
       setTotalPages(Number(pageObj?.totalPages ?? 0));
       setTotalElements(Number(pageObj?.totalElements ?? 0));
-    } catch (e: any) {
-      applyUiError(e);
-    } finally {
-      setLoadingList(false);
-    }
+      } catch (e: any) {
+        const r = handleApiError(e);
+
+        if (r.type === "REDIRECT" && r.to === "/404") {
+          nav("/404");
+          return;
+        }
+        if (r.type === "AUTH") {
+          modal.showLogin("navigation");
+          return;
+        }
+
+        const msg = (r as any).message ?? "상품 목록을 불러올 수 없습니다.";
+        setListLoadErr(msg);
+
+        showErrorModalOnce(msg);
+      } finally {
+        setLoadingList(false);
+      }
   };
 
   // 프로필 로드
@@ -279,7 +324,7 @@ export default function UserProfilePage() {
     if (!token) return;
     if (section !== "PRODUCTS") return;
     loadList();
-  }, [targetUserId, token, page, sortBy, statuses, section]);
+  }, [targetUserId, token, page, sortBy, statuses, section, searchKey]);
 
   const applySearch = () => {
     if (section !== "PRODUCTS") return;
@@ -491,8 +536,18 @@ export default function UserProfilePage() {
                 </div>
               </div>
             </div>
-
-            {loadingList ? (
+            {listLoadErr ? (
+              <div className="py-20 text-center bg-white rounded-3xl border border-red-200 shadow-sm">
+                <div className="text-red-700 font-bold mb-1">상품 목록을 불러올 수 없습니다</div>
+                <div className="text-sm text-red-600 whitespace-pre-line">{listLoadErr}</div>
+                <button
+                  onClick={() => void loadList()}
+                  className="mt-4 px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm"
+                >
+                  다시 시도
+                </button>
+              </div>
+            ) : loadingList ? (
               <div className="py-20 text-center">
                 <div className="animate-spin w-8 h-8 border-4 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full mx-auto mb-4" />
                 <p className="text-gray-500 text-sm">상품 정보를 불러오고 있습니다...</p>
