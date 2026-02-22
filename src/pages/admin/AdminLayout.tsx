@@ -1,5 +1,5 @@
 // src/pages/admin/AdminLayout.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { NavLink, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import AdminSettingsModal from "./components/AdminSettingsModal";
 import {
@@ -21,6 +21,9 @@ import {
   MessagesSquare,
 } from "lucide-react";
 import { useAdminStore } from "./AdminContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useModal } from "@/contexts/ModalContext";
+import { applyUiError } from "@/hooks/applyUiError";
 
 function formatKST(iso: string): string {
   const d = new Date(iso);
@@ -122,7 +125,41 @@ const SideItem: React.FC<{
 const AdminLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
+  const { showError, showWarning, showLogin } = useModal();
 
+  const uiDeps = useMemo(() => {
+    const fallback = "요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+    return {
+      showLogin: (mode?: "navigation" | "confirm") => showLogin(mode ?? "confirm"),
+      showWarning: (msg: string) => showWarning(msg),
+      showError: (msg?: string) => showError(msg ?? fallback),
+      logout: () => logout(),
+      navigate: (to: string) => navigate(to),
+    };
+  }, [showError, showWarning, showLogin, logout, navigate]);
+
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const onLogout = async () => {
+    if (loggingOut) return;
+
+    const ok = window.confirm("로그아웃 하시겠습니까?");
+    if (!ok) return;
+
+    setLoggingOut(true);
+    try {
+      await logout();
+    } catch (e) {
+      applyUiError(e, uiDeps);
+    } finally {
+      localStorage.removeItem("accessToken");
+
+      navigate("/", { replace: true });
+
+      setLoggingOut(false);
+    }
+  };
   const {
     adminEmail,
     adminNick,
@@ -347,9 +384,16 @@ const AdminLayout: React.FC = () => {
               <Settings className="w-4 h-4" />
               설정
             </button>
-            <button className="flex-1 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm flex items-center justify-center gap-2">
+            <button
+              onClick={onLogout}
+              disabled={loggingOut}
+              className={
+                "flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm flex items-center justify-center gap-2 " +
+                (loggingOut ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
+              }
+            >
               <LogOut className="w-4 h-4" />
-              로그아웃
+              {loggingOut ? "로그아웃 중" : "로그아웃"}
             </button>
           </div>
 

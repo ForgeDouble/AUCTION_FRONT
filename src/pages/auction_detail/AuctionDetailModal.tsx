@@ -30,14 +30,14 @@ const AuctionDetailModal: React.FC = () => {
         onMouseDown={(e) => e.stopPropagation()}
       >
         {/* 닫기 버튼 (X 아이콘) */}
-        <button
-          onClick={close}
-          className="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center"
-          aria-label="닫기"
-          title="닫기 (ESC)"
-        >
-          <X className="w-5 h-5" />
-        </button>
+      < button 
+        onClick={close} 
+        className="absolute top-3 right-3 z-[10000] w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center" 
+        aria-label="닫기" 
+        title="닫기 (ESC)" 
+      >
+        <X className="w-5 h-5" />
+      </button>
 
         {/* 내용(스크롤 가능) */}
         <div className="w-full h-full overflow-y-auto">

@@ -6,6 +6,11 @@ import { SectionTitle } from "../components/AdminUi";
 import { auctionBadge } from "../components/badges";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
+import { applyUiError } from "@/hooks/applyUiError";
+import { useModal } from "@/contexts/ModalContext";
+import { useAuth } from "@/hooks/useAuth";
+import type { ErrorState } from "@/errors/ErrorDto";
+
 function formatKST(iso: string): string {
   const d = new Date(iso);
   const yyyy = d.getFullYear();
@@ -54,7 +59,54 @@ const AdminAuctionsPage: React.FC = () => {
     auctionsTotalPages,
     auctionsTotalElements,
     setAuctionsPagingFromUrl,
+    auctionsLoadErr,
+    refreshAuctionsPage,
   } = useAdminStore();
+
+  const { showError, showLogin } = useModal();
+  const { logout } = useAuth();
+
+  const uiDeps = useMemo(() => {
+    const defaultAdminError = "요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+
+  const normalizeAdminMsg = (m?: string) => {
+    const msg = (m ?? "").trim();
+    if (!msg) return defaultAdminError;
+    if (msg.includes("관리자에게 문의")) return defaultAdminError;
+    return msg;
+  };
+    return {
+      showLogin: (mode?: "navigation" | "confirm") => showLogin(mode ?? "confirm"),
+      showWarning: (message: string) => showError(normalizeAdminMsg(message)),
+      showError: (message?: string) => showError(normalizeAdminMsg(message)),
+      logout: () => logout(),
+      setErrorState: (s: ErrorState | null) => {
+        if (!s) return;
+        showError(normalizeAdminMsg(s.message));
+      },
+    };
+  }, [showError, showLogin, logout]);
+  const uiDepsRef = useRef(uiDeps);
+
+  useEffect(() => {
+    uiDepsRef.current = uiDeps;
+  }, [uiDeps]);
+  const shownLoadErrKeyRef = useRef<string | null>(null);
+  const onSuspend = async (auctionId: string) => {
+    try {
+      await suspendAuction(auctionId);
+    } catch (e) {
+      applyUiError(e, uiDeps);
+    }
+  };
+
+  const onForceEnd = async (auctionId: string) => {
+    try {
+      await forceEndAuction(auctionId);
+    } catch (e) {
+      applyUiError(e, uiDeps);
+    }
+  };
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,7 +130,18 @@ const AdminAuctionsPage: React.FC = () => {
   const prevQueryRef = useRef(query);
   
   useEffect(() => {
-    setAuctionsPagingFromUrl(page1, pageSize);
+    const key = `${page1}:${pageSize}`;
+
+    setAuctionsPagingFromUrl(page1, pageSize)
+      .then(() => {
+        if (shownLoadErrKeyRef.current === key) shownLoadErrKeyRef.current = null;
+      })
+      .catch((e) => {
+        if (shownLoadErrKeyRef.current === key) return;
+
+        shownLoadErrKeyRef.current = key;
+        applyUiError(e, uiDepsRef.current);
+      });
   }, [page1, pageSize, setAuctionsPagingFromUrl]);
 
 
@@ -222,7 +285,7 @@ const AdminAuctionsPage: React.FC = () => {
 
                       <button
                         type="button"
-                        onClick={() => suspendAuction(String(a.id))}
+                        onClick={() => onSuspend(String(a.id))}
                         disabled={disableActions}
                         className={btnBase + " " + (disableActions ? btnDisabled : btnAble)}
                         title={isBlocked ? "이미 차단된 경매" : isEnded ? "종료된 경매" : "임시차단"}
@@ -232,7 +295,7 @@ const AdminAuctionsPage: React.FC = () => {
 
                       <button
                         type="button"
-                        onClick={() => forceEndAuction(String(a.id))}
+                        onClick={() => onForceEnd(String(a.id))}
                         disabled={disableActions}
                         className={btnBase + " " + (disableActions ? btnDisabled : btnAble)}
                         title={isBlocked ? "이미 차단된 경매" : isEnded ? "종료된 경매" : "강제종료"}
@@ -247,10 +310,15 @@ const AdminAuctionsPage: React.FC = () => {
 
             {auctions.length === 0 && (
               <tr>
-                <td colSpan={9} className="py-10 text-center text-gray-500">
-                  검색 결과가 없습니다.
-                </td>
-              </tr>
+                <td colSpan={9} className="py-10 text-center text-gray-500"> {auctionsLoadErr ? ( 
+                  <div className="space-y-3"> 
+                    <div className="font-semibold text-gray-700">{auctionsLoadErr}</div> 
+                    <button type="button" onClick={() => refreshAuctionsPage().catch((e) => applyUiError(e, uiDeps))} 
+                    className="px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm" > 다시 시도 </button> 
+                  </div>
+                ) : ( "검색 결과가 없습니다." )} 
+                </td> 
+              </tr> 
             )}
           </tbody>
         </table>

@@ -1,11 +1,14 @@
 // src/pages/admin/pages/AdminNoticesPage.tsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Pencil, Trash2, Pin, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import { SectionTitle } from "../components/AdminUi";
 import type { NoticeCategory, NoticeRow } from "../adminTypes";
 import { ImportanceBlocks } from "../components/ImportanceBlocks";
-
+import { applyUiError } from "@/hooks/applyUiError";
+import { useModal } from "@/contexts/ModalContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 function formatKST(iso: string): string {
   const d = new Date(iso);
@@ -28,6 +31,31 @@ function categoryLabel(c: NoticeCategory): string {
 }
 
 const AdminNoticesPage: React.FC = () => {
+  const nav = useNavigate();
+  const { showError, showLogin, showLoading, showWarning } = useModal();
+  const { logout } = useAuth();
+  const { noticesLoadErr } = useAdminStore();
+  const shownErrRef = useRef<string | null>(null);
+
+  const uiDeps = useMemo(() => {
+    const fallback = "요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+    return {
+      showLogin: (mode?: "navigation" | "confirm") => showLogin(mode ?? "confirm"),
+      showWarning: (msg: string) => showError(msg),
+      showError: (msg?: string) => showError(msg ?? fallback),
+      logout: () => logout(),
+      navigate: (to: string) => nav(to),
+    };
+  }, [showError, showLogin, logout, nav]);
+
+  useEffect(() => {
+    if (!noticesLoadErr) return;
+    if (shownErrRef.current === noticesLoadErr) return;
+
+    shownErrRef.current = noticesLoadErr;
+    showError(noticesLoadErr);
+  }, [noticesLoadErr, showError]);
+
   const {notices, query, addNotice, updateNotice, deleteNotice, noticePage, noticeTotalPages, noticeTotalElements, goNoticePage, } = useAdminStore();
 
   const [createForm, setCreateForm] = useState({
@@ -80,7 +108,7 @@ const AdminNoticesPage: React.FC = () => {
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => goNoticePage(noticePage - 1)}
+          onClick={() => onGoPage(noticePage - 1)}
           disabled={noticePage <= 0}
           className={
             "px-2 py-1 rounded-lg border text-sm flex items-center gap-1 " +
@@ -97,7 +125,7 @@ const AdminNoticesPage: React.FC = () => {
           {pageButtons.map((p) => (
             <button
               key={p}
-              onClick={() => goNoticePage(p)}
+              onClick={() => onGoPage(p)}
               className={
                 "min-w-[32px] px-2 py-1 rounded-lg border text-[12px] " +
                 (p === noticePage
@@ -111,7 +139,7 @@ const AdminNoticesPage: React.FC = () => {
         </div>
 
         <button
-          onClick={() => goNoticePage(noticePage + 1)}
+          onClick={() => onGoPage(noticePage + 1)}
           disabled={noticePage + 1 >= Math.max(1, noticeTotalPages)}
           className={
             "px-2 py-1 rounded-lg border text-sm flex items-center gap-1 " +
@@ -143,39 +171,89 @@ const AdminNoticesPage: React.FC = () => {
     setEditForm(null);
   };
 
-  const submitCreate = () => {
-    if (!createForm.title.trim() || !createForm.content.trim()) return;
+  const submitCreate = async () => {
+    
+    if (!createForm.title.trim()) {
+      showWarning("제목은 필수입니다.");
+      return;
+    }
+    if (!createForm.content.trim()) {
+      showWarning("내용은 필수입니다.");
+      return;
+    }
+    if (createForm.importance < 0 || createForm.importance > 100) {
+      showWarning("중요도는 0~100 범위여야 합니다.");
+      return;
+    }
 
-    addNotice({
-      category: createForm.category,
-      title: createForm.title.trim(),
-      content: createForm.content.trim(),
-      pinned: createForm.pinned,
-      importance: createForm.importance,
-    });
+    try {
+      await addNotice({
+        category: createForm.category,
+        title: createForm.title.trim(),
+        content: createForm.content.trim(),
+        pinned: createForm.pinned,
+        importance: createForm.importance,
+      });
 
-    setCreateForm({
-      category: "HANDOVER",
-      title: "",
-      content: "",
-      pinned: false,
-      importance: 50,
-    });
+      setCreateForm({
+        category: "HANDOVER",
+        title: "",
+        content: "",
+        pinned: false,
+        importance: 50,
+      });
+    } catch (e) {
+      applyUiError(e, uiDeps);
+    }
   };
 
-  const submitEdit = () => {
+  const submitEdit = async () => {
     if (editingId === null || !editForm) return;
-    if (!editForm.title.trim() || !editForm.content.trim()) return;
 
-    updateNotice(editingId, {
-      category: editForm.category,
-      title: editForm.title.trim(),
-      content: editForm.content.trim(),
-      pinned: editForm.pinned,
-      importance: editForm.importance,
-    });
+    if (!editForm.title.trim()) {
+      showWarning("제목은 필수입니다.");
+      return;
+    }
+    if (!editForm.content.trim()) {
+      showWarning("내용은 필수입니다.");
+      return;
+    }
+    if (editForm.importance < 0 || editForm.importance > 100) {
+      showWarning("중요도는 0~100 범위여야 합니다.");
+      return;
+    }
 
-    cancelEdit();
+    try {
+      await updateNotice(editingId, {
+        category: editForm.category,
+        title: editForm.title.trim(),
+        content: editForm.content.trim(),
+        pinned: editForm.pinned,
+        importance: editForm.importance,
+      });
+      cancelEdit();
+    } catch (e) {
+      applyUiError(e, uiDeps);
+    }
+  };
+
+  const onDelete = async (id: number) => {
+    const ok = window.confirm("정말 삭제할까요?");
+    if (!ok) return;
+
+    try {
+      await deleteNotice(id);
+    } catch (e) {
+      applyUiError(e, uiDeps);
+    }
+  };
+
+  const onGoPage = async (p: number) => {
+    try {
+      await goNoticePage(p);
+    } catch (e) {
+      applyUiError(e, uiDeps);
+    }
   };
 
   return (
@@ -322,8 +400,8 @@ const AdminNoticesPage: React.FC = () => {
       </div>
 
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-        <SectionTitle title="공지 작성(관리자 인수인계)" />
-
+        <SectionTitle title="공지 작성" />
+        <br></br>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>

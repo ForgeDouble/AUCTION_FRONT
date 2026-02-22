@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { X, ImagePlus, Save, Bell, Cake, User2, Trash2, Camera, Settings } from "lucide-react";
 import { adminApi } from "../adminApi";
+import { useModal } from "@/contexts/ModalContext";
 
 type Props = {
   open: boolean;
@@ -188,6 +189,12 @@ const AdminSettingsModal: React.FC<Props> = ({
 
   const [myBirthday, setMyBirthday] = useState<string | null>(null);
   const [loadingMy, setLoadingMy] = useState(false);
+  const { showError, showWarning } = useModal();
+
+  // 실패(저장/이미지)만 모달
+  const showFail = (msg: string) => showError(msg);
+  // 성공은 굳이 모달 아니어도 되면(토스트/경고용)
+  const showOk = (msg: string) => showWarning(msg);
 
   useEffect(() => {
     if (!open) return;
@@ -347,10 +354,11 @@ const AdminSettingsModal: React.FC<Props> = ({
     try {
       const url = await adminApi.uploadAdminProfileImage(f);
       setProfileImageUrl(url);
-      alert("프로필 이미지가 저장되었습니다.");
+
+      showOk("프로필 이미지가 저장되었습니다.");
     } catch (e) {
       console.error(e);
-      alert("프로필 이미지 업로드에 실패했습니다. API 경로/응답을 확인하세요.");
+      showFail("프로필 이미지 업로드에 실패했습니다.\n잠시 후 다시 시도해 주세요.");
     } finally {
       setBusyUpload(false);
     }
@@ -364,10 +372,11 @@ const AdminSettingsModal: React.FC<Props> = ({
     try {
       await adminApi.deleteMyProfileImage();
       setProfileImageUrl(null);
-      alert("프로필 이미지가 삭제되었습니다.");
+
+      showOk("프로필 이미지가 삭제되었습니다.");
     } catch (e) {
       console.error(e);
-      alert("프로필 이미지 삭제에 실패했습니다. 서버 응답을 확인하세요.");
+      showFail("프로필 이미지 삭제에 실패했습니다.\n잠시 후 다시 시도해 주세요.");
     } finally {
       setBusyDeleteImage(false);
     }
@@ -382,10 +391,11 @@ const AdminSettingsModal: React.FC<Props> = ({
     try {
       await adminApi.updateMyNickname(next);
       setAdminNick(next);
-      alert("닉네임이 변경되었습니다.");
+
+      showOk("닉네임이 변경되었습니다.");
     } catch (e) {
       console.error(e);
-      alert("닉네임 변경에 실패했습니다. 서버 응답을 확인하세요.");
+      showFail("닉네임 변경에 실패했습니다.\n잠시 후 다시 시도해 주세요.");
     } finally {
       setBusyNick(false);
     }
@@ -395,7 +405,7 @@ const AdminSettingsModal: React.FC<Props> = ({
     setBusySave(true);
     try {
       if (notifEnabled && "Notification" in window) {
-        try {
+        try { 
           if (Notification.permission === "default") {
             await Notification.requestPermission();
           }
@@ -403,11 +413,11 @@ const AdminSettingsModal: React.FC<Props> = ({
       }
       await ensureBirthdayCalendar();
 
-      alert("환경설정이 저장되었습니다.");
+      showOk("환경설정이 저장되었습니다.");
       onClose();
     } catch (e) {
       console.error(e);
-      alert("저장 중 오류가 발생했습니다.");
+      showFail("환경설정 저장에 실패했습니다.\n잠시 후 다시 시도해 주세요.");
     } finally {
       setBusySave(false);
     }

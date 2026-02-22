@@ -145,7 +145,7 @@ export interface AdminStore {
   auctionsTotalPages: number;
   auctionsTotalElements: number;
 
-  setAuctionsPagingFromUrl: (pageUi: number, size: number) => void;
+  setAuctionsPagingFromUrl: (pageUi: number, size: number) => Promise<void>;
   refreshAuctionsPage: () => Promise<void>;
 
   overviewTopAuctions: AuctionRow[];
@@ -174,15 +174,15 @@ export interface AdminStore {
   noticeSize: number;
   noticeTotalPages: number;
   noticeTotalElements: number;
-  goNoticePage: (page: number) => void;
-
+  // goNoticePage: (page: number) => void;
+  goNoticePage: (page: number) => Promise<void>;
   addNotice: (payload: {
     category: NoticeCategory;
     title: string;
     content: string;
     pinned?: boolean;
     importance?: number;
-  }) => void;
+  }) => Promise<void>;
   updateNotice: (
     id: number,
     payload: {
@@ -192,9 +192,12 @@ export interface AdminStore {
       pinned?: boolean;
       importance?: number;
     }
-  ) => void;
-  deleteNotice: (id: number) => void;
+  ) => Promise<void>;
+  deleteNotice: (id: number) => Promise<void>;
 
+  auctionsLoadErr: string | null;
+  noticesLoadErr: string | null;
+  calendarLoadErr: string | null;
   // 캘린더
   events: CalendarEventRow[];
   setEvents: React.Dispatch<React.SetStateAction<CalendarEventRow[]>>;
@@ -210,8 +213,8 @@ export interface AdminStore {
   reportsOpenCount: number;
 
   // 경매 조치
-  suspendAuction: (auctionId: string) => void;
-  forceEndAuction: (auctionId: string) => void;
+  suspendAuction: (auctionId: string) => Promise<void>;
+  forceEndAuction: (auctionId: string) => Promise<void>;
 
   // 카테고리 확인용(overview)
   categoryDistribution: CategoryDistributionRow[];
@@ -331,6 +334,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [usersCounts, setUsersCounts] = useState<AdminUserCounts>({ ADMIN: 0, INQUIRY: 0, USER: 0 });
 
   const [chatRooms, setChatRooms] = useState<AdminChatRoomRow[]>([]);
+
+  const [auctionsLoadErr, setAuctionsLoadErr] = useState<string | null>(null);
+  const [noticesLoadErr, setNoticesLoadErr] = useState<string | null>(null);
+  const [calendarLoadErr, setCalendarLoadErr] = useState<string | null>(null);
+
   type AdminRealtimePayload = {
     realtimeUsers?: number;
     todayActiveUsers?: number;
@@ -480,10 +488,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     const t = window.setTimeout(() => {
-      void fetchNoticesPage(0, noticeSize);
+      void fetchNoticesPage(0, noticeSize).catch((e) => console.error(e));
     }, 250);
     return () => window.clearTimeout(t);
-  }, [query]);
+  }, [query, noticeSize]);
 
   const usersPagingRef = useRef<{ page: number; size: number; role: "ALL" | Authority; q: string }>({
     page: 0,
@@ -518,36 +526,55 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const fetchNoticesPage = async (pg: number, sz: number): Promise<void> => {
     const qv = query.trim();
+    try {
+      setNoticesLoadErr(null);
 
-    const res = await adminApi.getNoticesPage({
-      page: pg,
-      size: sz,
-      q: qv ? qv : undefined,
-    });
+      const res = await adminApi.getNoticesPage({
+        page: pg,
+        size: sz,
+        q: qv ? qv : undefined,
+      });
 
-    setNotices(res.items);
-    setNoticePage(res.page);
-    setNoticeSize(res.size);
-    setNoticeTotalPages(Math.max(1, res.totalPages));
-    setNoticeTotalElements(res.totalElements);
+      setNotices(res.items);
+      setNoticePage(res.page);
+      setNoticeSize(res.size);
+      setNoticeTotalPages(Math.max(1, res.totalPages));
+      setNoticeTotalElements(res.totalElements);
+    } catch (e) {
+      setNoticesLoadErr("공지 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.");
+      // throw e; 
+    }
   };
 
   const fetchAuctionsPage = useCallback(async (pageIndex: number, size: number): Promise<void> => {
     const p = Math.max(0, pageIndex);
     const s = Math.max(1, Math.min(size, 100));
 
-    const pg = await adminApi.getAuctionsPage({ page: p, size: s });
-    setAuctionsPage(pg);
+      try {
+      setAuctionsLoadErr(null);
 
-    const content = Array.isArray(pg?.content) ? pg.content : [];
-    setAuctions(content);
+      const pg = await adminApi.getAuctionsPage({ page: p, size: s });
+      setAuctionsPage(pg);
 
-    const tp = (pg as any)?.totalPages ?? 1;
-    const te = (pg as any)?.totalElements ?? content.length;
+      const content = Array.isArray(pg?.content) ? pg.content : [];
+      setAuctions(content);
 
-    setAuctionsTotalPages(Math.max(1, Number(tp) || 1));
-    setAuctionsTotalElements(Number(te) || 0);
-  }, []);
+      const tp = (pg as any)?.totalPages ?? 1;
+      const te = (pg as any)?.totalElements ?? content.length;
+
+      setAuctionsTotalPages(Math.max(1, Number(tp) || 1));
+      setAuctionsTotalElements(Number(te) || 0);
+
+      } catch (e) {
+        setAuctionsLoadErr("경매 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+
+        setAuctionsPage(null);
+        setAuctions([]);
+        setAuctionsTotalPages(1);
+        setAuctionsTotalElements(0);
+        // throw e;
+      }
+    }, []);
 
   const refreshAuctionsPage = useCallback(async (): Promise<void> => {
     await fetchAuctionsPage(auctionsPageIndex, auctionsPageSize);
@@ -564,7 +591,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const setAuctionsPagingFromUrl = useCallback((pageUi: number, size: number) => {
+  const setAuctionsPagingFromUrl = useCallback(async (pageUi: number, size: number): Promise<void> =>
+  {
     const uiPage = Number.isFinite(pageUi) ? pageUi : 1;
     const uiSize = Number.isFinite(size) ? size : 10;
 
@@ -574,7 +602,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAuctionsPageIndex(nextIndex);
     setAuctionsPageSize(nextSize);
 
-    void fetchAuctionsPage(nextIndex, nextSize);
+    // void fetchAuctionsPage(nextIndex, nextSize);
+    await fetchAuctionsPage(nextIndex, nextSize);
   }, [fetchAuctionsPage]);
 
   const refreshBlockedProducts = async (): Promise<void> => {
@@ -589,8 +618,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const list = await adminApi.getEvents();
       setEvents(list);
+      setCalendarLoadErr(null);
     } catch (e) {
       console.error(e);
+      setCalendarLoadErr("운영 캘린더 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.");
+      throw e;
     }
   };
 
@@ -717,10 +749,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (groupR.status === "fulfilled") setReportGroups(groupR.value);
     if (blockedR.status === "fulfilled") setBlockedProducts(blockedR.value);
     if (evR.status === "fulfilled") setEvents(evR.value);
+    if (evR.status === "rejected") setCalendarLoadErr("캘린더 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.");
     if (catR.status === "fulfilled") setCategoryDistribution(catR.value);
     if (hourR.status === "fulfilled") setTodayActiveHours(hourR.value);
     if (trendR.status === "fulfilled") setAuctionTrendRows(trendR.value);
-    if(tradeR.status === "fulfilled") setMonthlyTradeRows(tradeR.value);
+    if (tradeR.status === "fulfilled") setMonthlyTradeRows(tradeR.value);
     if (chatR.status === "fulfilled") setChatRooms(chatR.value ?? []);
 
     const uiPage = opts?.auctionsPageUi;
@@ -745,56 +778,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     void refreshAll();
   }, []);
-
-  // useEffect(() => {
-  //   const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
-  //   const token = localStorage.getItem("accessToken");
-
-  //   if (!token) return;
-
-  //   if (rtClientRef.current) {
-  //     try { rtClientRef.current.deactivate(); } catch {}
-  //     rtClientRef.current = null;
-  //   }
-
-  //   const urlBase = base.replace(/\/$/, "");
-  //   const sock = new SockJS(`${urlBase}/ws-admin`);
-
-  //   const client = new Client({
-  //     webSocketFactory: () => sock as any,
-  //     connectHeaders: {
-  //       Authorization: `Bearer ${token}`,
-  //     },
-  //     reconnectDelay: 2000,
-  //     debug: () => {},
-  //     onConnect: () => {
-  //       client.subscribe("/topic/admin/realtime", (frame) => {
-  //         try {
-  //           const data = JSON.parse(frame.body || "{}") as AdminRealtimePayload;
-
-  //           setStats((prev) => ({
-  //             ...prev,
-  //             realtimeUsers: Number(data.realtimeUsers ?? prev.realtimeUsers ?? 0),
-  //             todayActiveUsers: Number(data.todayActiveUsers ?? prev.todayActiveUsers ?? 0),
-  //             ongoingAuctions: Number(data.ongoingAuctions ?? prev.ongoingAuctions ?? 0),
-  //           }));
-
-  //           setLastUpdatedAt(nowIso());
-  //         } catch (e) {
-  //           console.error("admin realtime parse error", e);
-  //         }
-  //       });
-  //     },
-  //   });
-
-  //   rtClientRef.current = client;
-  //   client.activate();
-
-  //   return () => {
-  //     try { client.deactivate(); } catch {}
-  //     rtClientRef.current = null;
-  //   };
-  // }, [rtTokenVersion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -856,44 +839,65 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [notifEnabled, fcmTokenKey, rtTokenVersion]);
 
-  const suspendAuction = (auctionId: string): void => {
-    (async () => {
-      const reason = window.prompt("임시차단 사유를 입력하세요") || "";
-      if (!reason.trim()) return;
+  // const suspendAuction = (auctionId: string): void => {
+  //   (async () => {
+  //     const reason = window.prompt("임시차단 사유를 입력하세요") || "";
+  //     if (!reason.trim()) return;
 
-      try {
-        await adminApi.suspendAuction(auctionId, reason.trim());
-        // setAuctions((prev) => prev.map((a) => (a.id === auctionId ? { ...a, status: "SUSPENDED" } : a)));
-        await refreshAuctionsPage();
-        await refreshOverviewTopAuctions();
-      } catch (e) {
-        console.error(e);
-        alert("임시차단에 실패했습니다. 서버 로그/응답을 확인하세요.");
-      }
-    })();
-  };
+  //     try {
+  //       await adminApi.suspendAuction(auctionId, reason.trim());
+  //       // setAuctions((prev) => prev.map((a) => (a.id === auctionId ? { ...a, status: "SUSPENDED" } : a)));
+  //       await refreshAuctionsPage();
+  //       await refreshOverviewTopAuctions();
+  //     } catch (e) {
+  //       console.error(e);
+  //       alert("임시차단에 실패했습니다. 서버 로그/응답을 확인하세요.");
+  //     }
+  //   })();
+  // };
+  const suspendAuction = useCallback(async (auctionId: string): Promise<void> => {
+    const reason = window.prompt("임시차단 사유를 입력하세요") || "";
+    if (!reason.trim()) return;
 
-  const forceEndAuction = (auctionId: string): void => {
-    (async () => {
-      const reason = window.prompt("강제종료 사유를 입력하세요") || "";
-      if (!reason.trim()) return;
+    await adminApi.suspendAuction(auctionId, reason.trim());
+    await refreshAuctionsPage();
+    await refreshOverviewTopAuctions();
+  }, [refreshAuctionsPage, refreshOverviewTopAuctions]);
+  // const forceEndAuction = (auctionId: string): void => {
+  //   (async () => {
+  //     const reason = window.prompt("강제종료 사유를 입력하세요") || "";
+  //     if (!reason.trim()) return;
 
-      try {
-        await adminApi.forceEndAuction(auctionId, reason.trim());
-        // setAuctions((prev) => prev.filter((a) => a.id !== auctionId));
-        await refreshAuctionsPage();
-        await refreshOverviewTopAuctions();
-        setStats((s) => ({
-          ...s,
-          todayEndedAuctions: s.todayEndedAuctions + 1,
-          ongoingAuctions: Math.max(0, s.ongoingAuctions - 1),
-        }));
-      } catch (e) {
-        console.error(e);
-        alert("강제종료에 실패했습니다. 서버 로그/응답을 확인하세요.");
-      }
-    })();
-  };
+  //     try {
+  //       await adminApi.forceEndAuction(auctionId, reason.trim());
+  //       // setAuctions((prev) => prev.filter((a) => a.id !== auctionId));
+  //       await refreshAuctionsPage();
+  //       await refreshOverviewTopAuctions();
+  //       setStats((s) => ({
+  //         ...s,
+  //         todayEndedAuctions: s.todayEndedAuctions + 1,
+  //         ongoingAuctions: Math.max(0, s.ongoingAuctions - 1),
+  //       }));
+  //     } catch (e) {
+  //       console.error(e);
+  //       alert("강제종료에 실패했습니다. 서버 로그/응답을 확인하세요.");
+  //     }
+  //   })();
+  // };
+  const forceEndAuction = useCallback(async (auctionId: string): Promise<void> => {
+    const reason = window.prompt("강제종료 사유를 입력하세요") || "";
+    if (!reason.trim()) return;
+
+    await adminApi.forceEndAuction(auctionId, reason.trim());
+    await refreshAuctionsPage();
+    await refreshOverviewTopAuctions();
+
+    setStats((s) => ({
+      ...s,
+      todayEndedAuctions: s.todayEndedAuctions + 1,
+      ongoingAuctions: Math.max(0, s.ongoingAuctions - 1),
+    }));
+  }, [refreshAuctionsPage, refreshOverviewTopAuctions, setStats]);
 
  const fetchGroupReports: AdminStore["fetchGroupReports"] = async (targetUserId, category, page, size) => {
     return await adminApi.getGroupReports(targetUserId, category, page, size);
@@ -922,41 +926,32 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await refreshBlockedProducts();
   };
 
-  const addNotice: AdminStore["addNotice"] = (payload) => {
-    (async () => {
-      try {
-        await adminApi.createNotice(payload);
-        await fetchNoticesPage(0, noticeSize);
-      } catch (e) {
-        console.error(e);
-        alert("공지 등록에 실패했습니다.");
-      }
-    })();
+  const addNotice: AdminStore["addNotice"] = async (payload) => {
+    await adminApi.createNotice(payload);
+    await fetchNoticesPage(0, noticeSize);
   };
-  const updateNotice: AdminStore["updateNotice"] = (id, payload) => {
-    (async () => {
-      try {
-        await adminApi.updateNotice(id, payload);
-        await fetchNoticesPage(noticePage, noticeSize);
-      } catch (e) {
-        console.error(e);
-        alert("공지 수정에 실패했습니다.");
-      }
-    })();
-  };
-  const deleteNotice: AdminStore["deleteNotice"] = (id) => {
-    (async () => {
-      try {
-        await adminApi.deleteNotice(id);
 
-        const nextPage = noticePage > 0 && notices.length === 1 ? noticePage - 1 : noticePage;
-        await fetchNoticesPage(nextPage, noticeSize);
-      } catch (e) {
-        console.error(e);
-        alert("공지 삭제에 실패했습니다.");
-      }
-    })();
+  const updateNotice: AdminStore["updateNotice"] = async (id, payload) => {
+    await adminApi.updateNotice(id, payload);
+    await fetchNoticesPage(noticePage, noticeSize);
   };
+
+  const deleteNotice: AdminStore["deleteNotice"] = async (id) => {
+    await adminApi.deleteNotice(id);
+
+    const nextPage = noticePage > 0 && notices.length === 1 ? noticePage - 1 : noticePage;
+    await fetchNoticesPage(nextPage, noticeSize);
+  };
+
+  const goNoticePage: AdminStore["goNoticePage"] = async (page) => {
+    const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
+    await fetchNoticesPage(pg, noticeSize);
+  };
+  // const goNoticePage = (page: number) => {
+  //   const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
+  //   void fetchNoticesPage(pg, noticeSize);
+  // };
+
   const addEvent: AdminStore["addEvent"] = async (e) => {
     const payload = {
       date: e.date,
@@ -984,10 +979,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, date: newDate } : e)));
   };
 
-  const goNoticePage = (page: number) => {
-    const pg = Math.max(0, Math.min(page, noticeTotalPages - 1));
-    void fetchNoticesPage(pg, noticeSize);
-  };
+
   const extendAdminSession = useCallback(async (): Promise<void> => {
     const res = await adminApi.extendAdminSession();
     const token = res?.accessToken;
@@ -1125,6 +1117,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     birthdayOpen,
     setBirthdayOpen,
+    auctionsLoadErr,
+    noticesLoadErr,
+    calendarLoadErr,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
