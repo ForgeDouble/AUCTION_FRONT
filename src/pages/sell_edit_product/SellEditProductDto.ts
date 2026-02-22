@@ -21,7 +21,7 @@ export interface ParentCategoriesDto {
 }
 
 export interface UpdateImageDto {
-  id: string;
+  id: number;
   position: number;
   url: string;
 }

@@ -65,7 +65,6 @@ export type ErrorCode =
   | "ADMIN_METRICS_AUCTION_TREND_FAILED"
   | "ADMIN_METRICS_MONTHLY_TRADE_FAILED"
   | "ADMIN_CATEGORY_DISTRIBUTION_FAILED"
-
   | "ADMIN_TODAY_GMV_FAILED"
   | "ADMIN_MONTHLY_AVG_GMV_FAILED"
 
@@ -78,7 +77,8 @@ export type ErrorCode =
   | "INVALID_NICKNAME_LENGTH"
   | "INVALID_NICKNAME_FORMAT"
   | "NICKNAME_CHANGE_COOLDOWN"
-  | "ALREADY_USED_NICKNAME";
+  | "ALREADY_USED_NICKNAME"
+  | (string & {});
 
 export type ErrorHandlingResult =
   | { type: "REDIRECT"; to: string }

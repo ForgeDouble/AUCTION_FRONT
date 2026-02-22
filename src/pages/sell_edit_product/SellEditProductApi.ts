@@ -4,8 +4,10 @@ import type {
   ProductCreateDto,
   ProductReadUpdateDto,
   ProductUpdateDto,
-} from "./SellProductDto";
+} from "./SellEditProductDto";
+import { ApiError, UnauthorizedError } from "@/errors/Errors";
 
+/** 물건 판매 등록 */
 export const fetchCreateProduct = async (
   productData: ProductCreateDto,
   files: File[],
@@ -36,12 +38,19 @@ export const fetchCreateProduct = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch product: ${response.status}`);
+    const body = await response.json();
+    if (response.status === 401) throw new UnauthorizedError();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
-
-  return await response.json();
+  return response.json();
 };
 
+/** 카테고리 조회 */
 export const fetchParentCategories = async (): Promise<
   ApiResponse<ParentCategoriesDto[]>
 > => {
@@ -53,12 +62,18 @@ export const fetchParentCategories = async (): Promise<
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch categories: ${response.status}`);
+    const body = await response.json();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
-
   return response.json();
 };
 
+/** 상품 조회 (수정시 기존 상품 조회) */
 export const fetchProductByProductId = async (
   productId: number | null,
   token: string | null,
@@ -75,12 +90,19 @@ export const fetchProductByProductId = async (
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch categories: ${response.status}`);
+    const body = await response.json();
+    if (response.status === 401) throw new UnauthorizedError();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
-
   return response.json();
 };
 
+/** 상품 수정 */
 export const fetchUpdateProduct = async (
   productData: ProductUpdateDto,
   addFiles: File[],
@@ -89,12 +111,6 @@ export const fetchUpdateProduct = async (
   token: string,
 ) => {
   const formData = new FormData();
-
-  // ProductUpdateDto를 Blob으로 변환하여 추가
-  // const productBlob = new Blob([JSON.stringify(productData)], {
-  //   type: "application/json",
-  // });
-  // formData.append("productUpdateDto", productBlob);
 
   formData.append("productId", productData.productId.toString());
   formData.append("productName", productData.productName);
@@ -135,9 +151,14 @@ export const fetchUpdateProduct = async (
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || "상품 수정에 실패했습니다.");
+    const body = await response.json();
+    if (response.status === 401) throw new UnauthorizedError();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
-
-  return await response.json();
+  return response.json();
 };

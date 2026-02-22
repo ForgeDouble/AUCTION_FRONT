@@ -14,17 +14,21 @@ import {
   type NewImageDto,
   type ParentCategoriesDto,
   type ProductEditImageDto,
-} from "./SellProductDto";
+  type UpdateImageDto,
+} from "./SellEditProductDto";
 import CategorySelector from "@/components/category_selector/CategorySelector";
 import {
   fetchParentCategories,
   fetchProductByProductId,
   fetchUpdateProduct,
-} from "./SellProductApi";
+} from "./SellEditProductApi";
 import { useNavigate } from "react-router-dom";
 import { useModal } from "@/contexts/ModalContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useNumberParam } from "@/hooks/useNumberParam";
+import { handleApiError } from "@/errors/HandleApiError";
+import type { ErrorState } from "@/errors/ErrorDto";
+import ErrorPage from "@/errors/ErrorPage";
 
 const EditProductPage = () => {
   const productId = useNumberParam("productId");
@@ -45,7 +49,8 @@ const EditProductPage = () => {
   const [categoryError, setCategoryError] = useState<string>("");
   const [priceError, setPriceError] = useState<string>("");
   const [contentError, setContentError] = useState<string>("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errorState, setErrorState] = useState<ErrorState>();
 
   const imageRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -54,7 +59,7 @@ const EditProductPage = () => {
 
   const navigate = useNavigate();
 
-  const { authority } = useAuth();
+  const { authority, logout } = useAuth();
 
   /* 상품 제목 검증 함수 */
   const isValidProductName = (name: string) => {
@@ -154,12 +159,34 @@ const EditProductPage = () => {
 
   /* 부모 카테고리 조회 */
   const loadParentCategories = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      showLogin("confirm");
+      logout();
+      return;
+    }
+
     try {
       const data = await fetchParentCategories();
       setParentCategories(data.result);
-    } catch (error) {
-      console.error(error);
-      showError();
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+
+        default:
+          setErrorState({
+            show: true,
+            type: "500",
+            title: "해당 페이지에 접근할 수 없습니다",
+            message: "서버 내부에서 오류가 발생했습니다.",
+          });
+      }
     }
   };
 
@@ -167,16 +194,16 @@ const EditProductPage = () => {
   const loadProduct = async () => {
     try {
       const token = localStorage.getItem("accessToken");
-      if (token == null) {
-        console.error("Missing AccessToken");
-        showLogin();
+      if (!token) {
+        showLogin("confirm");
+        logout();
         return;
       }
       const data = await fetchProductByProductId(productId, token);
       const result = data.result;
 
       const existingImages: ExistingImageDto[] = result.images.map(
-        (img: any, index: number) => ({
+        (img: UpdateImageDto, index: number) => ({
           id: img.id,
           url: img.url,
           position: index,
@@ -197,9 +224,28 @@ const EditProductPage = () => {
         productContent: result.productContent,
       });
       console.log(data);
-    } catch (error) {
-      console.error(error);
-      showError();
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+
+        case "WARNING":
+          showWarning(result.message);
+          break;
+
+        default:
+          setErrorState({
+            show: true,
+            type: "500",
+            title: "해당 페이지에 접근할 수 없습니다",
+            message: "서버 내부에서 오류가 발생했습니다.",
+          });
+      }
     }
   };
 
@@ -278,7 +324,7 @@ const EditProductPage = () => {
       console.log("productData before API call:", productData);
 
       const token = localStorage.getItem("accessToken");
-      if (token == null) {
+      if (!token) {
         console.error("Missing AccessToken");
         showLogin();
         return;
@@ -297,9 +343,9 @@ const EditProductPage = () => {
         .filter((img): img is ExistingImageDto => img.isExisting)
         .map((img) => img.id);
 
-      console.log("productData addFiles:", addFiles);
-      console.log("productData deleteIds:", deleteIds);
-      console.log("productData orderIds:", orderIds);
+      // console.log("productData addFiles:", addFiles);
+      // console.log("productData deleteIds:", deleteIds);
+      // console.log("productData orderIds:", orderIds);
       await fetchUpdateProduct(
         productData,
         addFiles,
@@ -309,10 +355,25 @@ const EditProductPage = () => {
       );
 
       showWarning("상품이 수정되었습니다.");
-      // navigate(`/auction_detail/${productId}`);
-    } catch (error) {
-      console.error("상품 수정 실패:", error);
-      showError("상품 수정에 실패했습니다. 다시 시도해주세요");
+      navigate(`/auction_detail/${productId}`);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+        case "WARNING":
+          showWarning(result.message);
+          break;
+
+        default:
+          showError(
+            "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+          );
+      }
     } finally {
       setLoading(false);
     }
@@ -322,6 +383,16 @@ const EditProductPage = () => {
     loadParentCategories();
     loadProduct();
   }, []);
+
+  if (errorState?.show) {
+    return (
+      <ErrorPage
+        type={errorState.type}
+        title={errorState.title}
+        message={errorState.message}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 pt-20">
