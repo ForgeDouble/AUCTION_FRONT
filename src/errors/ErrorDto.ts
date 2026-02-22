@@ -5,6 +5,7 @@ export type ErrorCode =
   | "INVALID_TOKEN"
   | "INVALID_USER"
   | "DATA_NOT_FOUND"
+  | "NETWORK_ERROR"
   /** 이메일 전송 */
   | "INVALID_PS_TOKEN"
   /** 위시리스트 */
