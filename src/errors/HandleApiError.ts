@@ -138,14 +138,13 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           message: "임시 제한(view-only) 상태라 리뷰를 작성할 수 없습니다.",       
         };
 
-      case "ACCOUNT_SUSPENDED": {
+      case "ACCOUNT_SUSPENDED": 
         const until = error.additionalInfo;
         return {
           type: "DIALOG",
           message: until
             ? `${error.message}\n정지 해제: ${until}`
             : error.message || "정지된 계정은 리뷰를 작성할 수 없습니다.",
-
         };
       case "PRODUCT_NOT_FOUND":
         return { 
