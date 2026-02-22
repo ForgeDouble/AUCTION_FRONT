@@ -1,7 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ShieldCheck, UserPlus, RefreshCw, ChevronLeft, ChevronRight, List } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import type { AdminUserCreateReq, Authority, Gender } from "../adminTypes";
+
+import { applyUiError } from "@/hooks/applyUiError";
+import { useModal } from "@/contexts/ModalContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { handleApiError } from "@/errors/HandleApiError";
 
 type RoleTab = "ALL" | "ADMIN" | "INQUIRY" | "USER";
 
@@ -17,14 +23,28 @@ function authorityBadge(role: Authority) {
 function onlyDigits(v: string) {
   return v.replace(/\D/g, "");
 }
-
 function pad2(v: string) {
   return v.padStart(2, "0");
 }
 
 export default function AdminUsersPage() {
+  const nav = useNavigate();
+  const { showError, showWarning, showLogin } = useModal();
+  const { logout } = useAuth();
+
+  const uiDeps = useMemo(() => {
+    const fallback = "요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+    return {
+      showLogin: (mode?: "navigation" | "confirm") => showLogin(mode ?? "confirm"),
+      showWarning: (msg: string) => showWarning(msg),
+      showError: (msg?: string) => showError(msg ?? fallback),
+      logout: () => logout(),
+      navigate: (to: string) => nav(to),
+    };
+  }, [showError, showWarning, showLogin, logout, nav]);
+
   const {
-    users, // 현재 페이지 items
+    users,
     usersCounts,
     usersPageIndex,
     usersPageSize,
@@ -38,9 +58,9 @@ export default function AdminUsersPage() {
   } = useAdminStore();
 
   const [loading, setLoading] = useState(false);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
   const [listOnly, setListOnly] = useState(false);
-
   const [createRole, setCreateRole] = useState<"ADMIN" | "INQUIRY">("INQUIRY");
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleTab>("ALL");
@@ -60,35 +80,56 @@ export default function AdminUsersPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const touch = (k: string) => setTouched((p) => ({ ...p, [k]: true }));
 
-  // 최초 로드 + roleFilter 변경 시 즉시 로드
-  useEffect(() => {
-    void (async () => {
+  // 늦게 온 응답이 상태를 덮어쓰는 문제 방지
+  const reqSeqRef = useRef(0);
+
+  const pickMessage = (r: any, fallback: string) => {
+    const msg = r && typeof r === "object" && "message" in r ? (r as any).message : "";
+    return typeof msg === "string" && msg.trim() ? msg : fallback;
+  };
+
+  const loadUsers = useCallback(
+    async (opts?: { clearError?: boolean }) => {
+      const seq = ++reqSeqRef.current;
+
       setLoading(true);
+      if (opts?.clearError) setLoadErr(null);
+
       try {
         await refreshUsersPage({ page: 0, size: usersPageSize, role: roleFilter, q });
-      } finally {
-        setLoading(false);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roleFilter]);
 
-  // 검색은 디바운스
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      void (async () => {
-        setLoading(true);
-        try {
-          await refreshUsersPage({ page: 0, size: usersPageSize, role: roleFilter, q });
-        } finally {
-          setLoading(false);
+        if (seq !== reqSeqRef.current) return;
+        setLoadErr(null);
+      } catch (e) {
+        if (seq !== reqSeqRef.current) return;
+
+        const r = handleApiError(e);
+        if (r.type === "AUTH" || r.type === "REDIRECT") {
+          applyUiError(e, uiDeps);
+          return;
         }
-      })();
-    }, 250);
+
+        setLoadErr(pickMessage(r, "계정 목록을 불러올 수 없습니다."));
+      } finally {
+        if (seq === reqSeqRef.current) setLoading(false);
+      }
+    },
+    [refreshUsersPage, usersPageSize, roleFilter, q, uiDeps]
+  );
+
+  // roleFilter는 즉시, q/usersPageSize는 디바운스
+  const prevRoleRef = useRef<RoleTab>(roleFilter);
+  useEffect(() => {
+    const isRoleChanged = prevRoleRef.current !== roleFilter;
+    prevRoleRef.current = roleFilter;
+
+    const delay = isRoleChanged ? 0 : 250;
+    const t = window.setTimeout(() => {
+      void loadUsers({ clearError: true });
+    }, delay);
 
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, usersPageSize]);
+  }, [roleFilter, q, usersPageSize, loadUsers]);
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -173,19 +214,20 @@ export default function AdminUsersPage() {
 
       if (createRole === "ADMIN") {
         await createAdminUser(payload);
-        alert("ADMIN 계정 생성 성공");
+        showWarning("ADMIN 계정 생성 완료");
       } else {
         await createInquiryUser(payload);
-        alert("INQUIRY 계정 생성 성공");
+        showWarning("INQUIRY 계정 생성 완료");
       }
 
       setForm((p) => ({ ...p, email: "", name: "", password: "", address: "", nickname: "" }));
       setBirth({ yyyy: "", mm: "", dd: "" });
       setPhone({ p1: "010", p2: "", p3: "" });
       setTouched({});
+
+      await loadUsers({ clearError: true });
     } catch (e) {
-      console.error(e);
-      alert("생성 실패. 서버 응답/로그를 확인해 주세요.");
+      applyUiError(e, uiDeps);
     } finally {
       setLoading(false);
     }
@@ -193,12 +235,7 @@ export default function AdminUsersPage() {
 
   const onRefresh = async () => {
     if (loading) return;
-    setLoading(true);
-    try {
-      await refreshUsersPage({ page: 0, size: usersPageSize, role: roleFilter, q });
-    } finally {
-      setLoading(false);
-    }
+    await loadUsers({ clearError: true });
   };
 
   const pill = (active: boolean) =>
@@ -214,7 +251,6 @@ export default function AdminUsersPage() {
   const inputErr = "border-red-300 focus:ring-red-100";
   const inputOk = "border-gray-200";
 
-  // 페이징 정보 표시
   const pageUi = usersPageIndex + 1;
   const startNo = usersTotalElements === 0 ? 0 : usersPageIndex * usersPageSize + 1;
   const endNo = Math.min(usersTotalElements, usersPageIndex * usersPageSize + users.length);
@@ -225,45 +261,67 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-[rgb(118_90_255)] flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-gray-900 break-keep">유저/권한 관리</div>
-              <div className="text-[11px] text-gray-500 break-keep">
-                {listOnly ? "전체 계정 목록(페이징) 조회" : "ADMIN / INQUIRY 계정 생성 및 목록 확인"}
-              </div>
-            </div>
-          </div>
+      {loadErr ? (
+        <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+          <div className="text-sm font-bold text-gray-900">유저/권한 관리</div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setListOnly((v) => !v)}
-              className="px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 hover:bg-gray-50 break-keep"
-              title="목록만 보기"
-            >
-              <List className="w-4 h-4" />
-              {listOnly ? "계정 생성" : "리스트 보기"}
-            </button>
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+            <div className="text-red-700 font-semibold mb-1">데이터를 불러올 수 없습니다</div>
+            <div className="text-sm text-red-600 whitespace-pre-line">{loadErr}</div>
 
             <button
-              onClick={onRefresh}
+              onClick={() => void loadUsers({ clearError: true })}
               disabled={loading}
               className={
-                "px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 break-keep " +
-                (loading ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
+                "mt-4 px-6 py-2 rounded-lg text-white " +
+                (loading ? "bg-red-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700")
               }
             >
-              <RefreshCw className={"w-4 h-4 " + (loading ? "animate-spin" : "")} />
-              새로고침
+              다시 시도
             </button>
           </div>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* ====== 여기 아래는 기존 UI 그대로 ====== */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-[rgb(118_90_255)] flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-gray-900 break-keep">유저/권한 관리</div>
+                  <div className="text-[11px] text-gray-500 break-keep">
+                    {listOnly ? "전체 계정 목록(페이징) 조회" : "ADMIN / INQUIRY 계정 생성 및 목록 확인"}
+                  </div>
+                </div>
+              </div>
 
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setListOnly((v) => !v)}
+                  className="px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 hover:bg-gray-50 break-keep"
+                  title="목록만 보기"
+                >
+                  <List className="w-4 h-4" />
+                  {listOnly ? "계정 생성" : "리스트 보기"}
+                </button>
+
+                <button
+                  onClick={onRefresh}
+                  disabled={loading}
+                  className={
+                    "px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm flex items-center gap-2 break-keep " +
+                    (loading ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50")
+                  }
+                >
+                  <RefreshCw className={"w-4 h-4 " + (loading ? "animate-spin" : "")} />
+                  새로고침
+                </button>
+              </div>
+            </div>
+          </div>
 
       {!listOnly && (
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
@@ -318,7 +376,9 @@ export default function AdminUsersPage() {
                 className={inputBase + " " + (showErr("password") ? inputErr : inputOk)}
                 placeholder="알파벳 + 숫자"
               />
-              {showErr("password") ? <div className="mt-1 text-[11px] text-red-600 break-keep">{errors.password}</div> : null}
+              {showErr("password") ? (
+                <div className="mt-1 text-[11px] text-red-600 break-keep">{errors.password}</div>
+              ) : null}
             </div>
 
             <div>
@@ -361,7 +421,9 @@ export default function AdminUsersPage() {
                   placeholder="DD"
                 />
               </div>
-              {showErr("birthday") ? <div className="mt-1 text-[11px] text-red-600 break-keep">{errors.birthday}</div> : null}
+              {showErr("birthday") ? (
+                <div className="mt-1 text-[11px] text-red-600 break-keep">{errors.birthday}</div>
+              ) : null}
             </div>
 
             <div>
@@ -432,7 +494,6 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* 목록 */}
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -485,6 +546,7 @@ export default function AdminUsersPage() {
                 <th className="py-2 pr-3 w-[160px]">상태</th>
               </tr>
             </thead>
+
             <tbody>
               {users.map((u) => {
                 const roleCls = authorityBadge(u.authority);
@@ -501,15 +563,10 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
 
-                    <td className="py-2 pr-3 text-gray-900 break-keep whitespace-nowrap truncate">
-                      {u.email}
-                    </td>
-
+                    <td className="py-2 pr-3 text-gray-900 break-keep whitespace-nowrap truncate">{u.email}</td>
                     <td className="py-2 pr-3 text-gray-900 break-keep whitespace-nowrap">{u.name}</td>
 
-                    <td className="py-2 pr-3 text-gray-700 break-keep whitespace-nowrap truncate">
-                      {u.nickname ?? "-"}
-                    </td>
+                    <td className="py-2 pr-3 text-gray-700 break-keep whitespace-nowrap truncate">{u.nickname ?? "-"}</td>
 
                     <td className="py-2 pr-3 text-gray-700 break-keep whitespace-nowrap">
                       {(u.phone ?? "-").replace(/\D/g, "")}
@@ -549,7 +606,6 @@ export default function AdminUsersPage() {
           </table>
         </div>
 
-        {/* 페이저 */}
         <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div className="text-[11px] text-gray-500 break-keep">
             총 {usersTotalElements.toLocaleString()}명 · {startNo}-{endNo} · {pageUi}/{usersTotalPages} 페이지
@@ -593,6 +649,8 @@ export default function AdminUsersPage() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -1,13 +1,13 @@
 // pages/mypage/reviews/reviewApi.ts
 import type { ApiResponse } from "@/type/CommonType";
 import type {
-CanWriteReviewDto,
-PendingReviewRowDto,
-ReviewCreateReq,
-ReviewDetailDto,
-ReviewListDto,
-ReviewSellerSummaryDto,
-SpringPage
+  CanWriteReviewDto,
+  PendingReviewRowDto,
+  ReviewCreateReq,
+  ReviewDetailDto,
+  ReviewListDto,
+  ReviewSellerSummaryDto,
+  SpringPage,
 } from "./reviewTypes";
 import { ApiError, DataReadError, UnauthorizedError } from "@/errors/Errors";
 
