@@ -52,20 +52,15 @@ export default function ChatRoomPopup() {
     rooms?.find((r) => r.roomId === roomId)?.title ||
     "채팅";
 
-  // ✅ 요구사항 그대로:
-  // - 기존 페이지(opener) 절대 이동시키지 않음
-  // - 채팅 리스트 팝업 새로 띄움
-  // - 현재 채팅방 팝업 닫음
   const goChatListAfterLeave = () => {
     const listWin = openChatListPopup();
 
-    // 팝업 차단이면 listWin이 null일 수 있음
     if (!listWin) {
       alert("팝업이 차단되어 채팅 목록을 열 수 없습니다.\n브라우저 팝업 허용 후 다시 시도해주세요.");
       return;
     }
 
-    // 현재 창 닫기 (window.open으로 열린 팝업이면 정상적으로 닫힘)
+    // 현재 창 닫기
     window.close();
   };
 
@@ -77,7 +72,6 @@ export default function ChatRoomPopup() {
       await leaveRoom(roomId);
       setLeaveOpen(false);
 
-      // ✅ 여기서 팝업 리스트 띄우고 현재 채팅방 팝업 닫기
       goChatListAfterLeave();
     } catch (e: any) {
       console.error(e);
