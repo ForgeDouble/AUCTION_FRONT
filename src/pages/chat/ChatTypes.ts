@@ -12,6 +12,7 @@ export interface ChatRoomDto {
   productId?: number;
 
   inquiry?: boolean;
+  userKeywords?: string;
 }
 
 export interface ChatMessageDto {

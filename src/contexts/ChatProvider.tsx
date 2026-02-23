@@ -109,32 +109,39 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshRooms = async () => {
     if (!token || !myEmail) return;
+
+    const norm = (s: any) => String(s ?? "").trim().toLowerCase();
+    const normRole = (s: any) => String(s ?? "").trim().toUpperCase();
+
     const list = await myRooms(token);
 
     const enriched = await Promise.all(
       list.map(async (r) => {
-      if (!r.adminChat) {
-      return { ...r, inquiry: false };
-    }
+        try {
+          const members = await getChatRoomMembers(token, r.roomId);
+          const me = norm(myEmail);
 
-      try {
-        const members = await getChatRoomMembers(token, r.roomId);
+          const others = (members || []).filter((m) => norm(m.email) !== me);
 
-        const memberCount = Array.isArray(members) ? members.length : 0;
-        const hasUser = Array.isArray(members)
-          && members.some((m) => String(m.authority ?? "").trim().toUpperCase() === "USER");
+          const userKeywords = others
+            .map((m) => `${m.nickname ?? ""} ${m.email ?? ""}`.trim()).join(" ").trim();
 
-        const inquiry = memberCount === 2 && hasUser;
+          const memberCount = Array.isArray(members) ? members.length : 0;
+          const hasUser =
+            Array.isArray(members) &&
+            members.some((m) => normRole(m.authority) === "USER");
 
-        return { ...r, inquiry };
-      } catch (e) {
-        console.error("[getChatRoomMembers fail]", r.roomId, e);
-        return { ...r, inquiry: false };
-      }
-    })
+          const inquiry = !!r.adminChat && memberCount === 2 && hasUser;
 
+          return { ...r, inquiry, userKeywords };
+        } catch (e) {
+          console.error("[getChatRoomMembers fail]", r.roomId, e);
+          return { ...r, inquiry: false, userKeywords: "" };
+        }
+      })
     );
     setRooms(enriched);
+
     const initUnread: Record<string, number> = {};
     enriched.forEach((r) => (initUnread[r.roomId] = r.unread || 0));
     setUnread(initUnread);
