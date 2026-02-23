@@ -1,4 +1,4 @@
-import type { ApiResponse } from "@/api/registerapi";
+import type { ApiResponse } from "@/pages/register/RegisteApi";
 import { ApiError } from "@/errors/Errors";
 
 export const fetchForgotPassword = async (
