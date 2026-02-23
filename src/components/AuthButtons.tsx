@@ -10,6 +10,8 @@ import {
   type NotificationItem,
   type NotificationCategory,
 } from "@/hooks/useNotifications";
+import { deleteUserAccount } from "@/api/deleteApi";
+import { handleApiError } from "@/errors/HandleApiError";
 
 function useClickOutside(
   ref: React.RefObject<HTMLDivElement | null>,
@@ -272,13 +274,14 @@ function NotificationMenu(props: {
     </div>
   );
 }
-
+// 로그인 후 유저 메뉴
 function UserMenu(props: {
   nickname: string;
   profileUrl?: string | null;
   onLogout: () => void;
+  onDeleteAccount: () => void;
 }) {
-  const { nickname, profileUrl, onLogout } = props;
+  const { nickname, profileUrl, onLogout, onDeleteAccount } = props;
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -384,6 +387,17 @@ function UserMenu(props: {
           >
             로그아웃
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onDeleteAccount();
+            }}
+            className="w-full text-left px-4 py-3 text-sm text-rose-600 hover:bg-rose-50 font-semibold"
+          >
+            회원탈퇴
+          </button>
         </div>
       )}
     </div>
@@ -392,13 +406,14 @@ function UserMenu(props: {
 
 export default function AuthButtons() {
   const navigate = useNavigate();
-  const { userEmail, isAuthenticated, logout, nickname, profileImageUrl } =
+  const { userEmail, isAuthenticated, logout, nickname, profileImageUrl, userId } =
     useAuth() as {
       userEmail: string | null;
       isAuthenticated: boolean;
       logout: () => void;
       nickname?: string;
       profileImageUrl?: string | null;
+      userId?: number;
     };
 
   const { unread } = useChat();
@@ -413,6 +428,45 @@ export default function AuthButtons() {
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!userId) {
+      alert("유저 정보를 확인할 수 없습니다. 다시 로그인 후 시도해주세요.");
+      return;
+    }
+
+    const ok = window.confirm(
+      "정말 회원 탈퇴 하시겠습니까?\n탈퇴 후에는 계정 복구가 어려울 수 있습니다."
+    );
+    if (!ok) return;
+
+    try {
+      await deleteUserAccount(userId);
+      logout();
+      alert("회원 탈퇴가 완료되었습니다.");
+      navigate("/");
+    } catch (e: any) {
+      console.error(e);
+
+      const r = handleApiError(e);
+
+      if (r.type === "AUTH") {
+        logout();
+        navigate("/login");
+        return;
+      }
+      if (r.type === "REDIRECT") {
+        navigate(r.to);
+        return;
+      }
+
+      if ("message" in r && r.message) {
+        alert(r.message);
+      } else {
+        alert("탈퇴 처리 중 오류가 발생했습니다.");
+      }
+    }
   };
 
   const openChatListPopup = () => {
@@ -532,6 +586,7 @@ export default function AuthButtons() {
         nickname={displayName}
         profileUrl={profileImageUrl}
         onLogout={handleLogout}
+        onDeleteAccount={handleDeleteAccount}
       />
     </div>
   );
