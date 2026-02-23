@@ -43,7 +43,7 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "REDIRECT",
           to: "/404",
         };
-        
+
       case "NETWORK_ERROR":
         return {
           type: "ERROR",
@@ -99,6 +99,62 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "DIALOG",
           message: "이메일 또는 비밀번호가 일치하지 않습니다.",
         };
+      /** 회원 가입 */
+      case "EMAIL_ALREADY_EXISTS":
+        return {
+          type: "DIALOG",
+          message: "이미 존재하는 이메일입니다.",
+          to: "email",
+        };
+      case "INVALID_EMAIL_FORMAT":
+        return {
+          type: "DIALOG",
+          message: "유효한 이메일 형식이 아닙니다.",
+          to: "email",
+        };
+      case "INVALID_NAME_FORMAT":
+        return {
+          type: "DIALOG",
+          message: "유효한 이름 형식이 아닙니다.",
+          to: "name",
+        };
+      case "INVALID_NICKNAME_FORMAT":
+        return {
+          type: "DIALOG",
+          message: "유효한 닉네임 형식이 아닙니다.",
+          to: "nickname",
+        };
+      case "INVALID_BIRTHDAY_FORMAT":
+        return {
+          type: "DIALOG",
+          message: "유효한 생일 형식이 아닙니다.",
+          to: "birthdayInput",
+        };
+      case "INVALID_PHONE_FORMAT":
+        return {
+          type: "DIALOG",
+          message: "유효한 전화번호 형식이 아닙니다.",
+          to: "phone",
+        };
+      case "INVALID_ADDRESS_FORMAT":
+        return {
+          type: "DIALOG",
+          message: "유효한 주소 형식이 아닙니다.",
+          to: "address",
+        };
+      case "INVALID_PASSWORD_FORMAT":
+        return {
+          type: "DIALOG",
+          message: "영문과 숫자를 포함해 8자 이상이어야 합니다.",
+          to: "password",
+        };
+      case "INVALID_GENDER_FORMAT":
+        return {
+          type: "DIALOG",
+          message: "유효한 성별 형식이 아닙니다.",
+          to: "gender",
+        };
+
       /** 닉네임 변경 */
       case "USER_TEMPORARY_RESTRICTED":
         return {
@@ -115,11 +171,11 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "DIALOG",
           message: "닉네임은 2~8자로 입력해 주세요.",
         };
-      case "INVALID_NICKNAME_FORMAT":
-        return {
-          type: "DIALOG",
-          message: "닉네임은 영문,숫자,한글,_ 만 사용가능합니다.",
-        };
+      // case "INVALID_NICKNAME_FORMAT":
+      //   return {
+      //     type: "DIALOG",
+      //     message: "닉네임은 영문,숫자,한글,_ 만 사용가능합니다.",
+      //   };
       case "NICKNAME_CHANGE_COOLDOWN":
         return {
           type: "WARNING",
@@ -135,10 +191,10 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
       case "REVIEW_TEMPORARY_RESTRICTED":
         return {
           type: "WARNING",
-          message: "임시 제한(view-only) 상태라 리뷰를 작성할 수 없습니다.",       
+          message: "임시 제한(view-only) 상태라 리뷰를 작성할 수 없습니다.",
         };
 
-      case "ACCOUNT_SUSPENDED": 
+      case "ACCOUNT_SUSPENDED": {
         const until = error.additionalInfo;
         return {
           type: "DIALOG",
@@ -146,15 +202,16 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
             ? `${error.message}\n정지 해제: ${until}`
             : error.message || "정지된 계정은 리뷰를 작성할 수 없습니다.",
         };
+      }
       case "PRODUCT_NOT_FOUND":
-        return { 
-          type: "REDIRECT", 
-          to: "/404" 
+        return {
+          type: "REDIRECT",
+          to: "/404",
         };
       case "REVIEW_NOT_FOUND":
-        return { 
-          type: "REDIRECT", 
-          to: "/404" 
+        return {
+          type: "REDIRECT",
+          to: "/404",
         };
 
       case "DUPLICATE_REVIEW":
@@ -169,13 +226,14 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
       case "RATING_STEP_INVALID":
       case "SELLER_ID_REQUIRED":
       case "REVIEW_ID_REQUIRED":
-        return { 
-          type: "WARNING", 
-          message: error.message 
+        return {
+          type: "WARNING",
+          message: error.message,
         };
       case "PRODUCT_ID_REQUIRED":
-        return { 
-          type: "WARNING", message: error.message || "상품 ID가 올바르지 않습니다." 
+        return {
+          type: "WARNING",
+          message: error.message || "상품 ID가 올바르지 않습니다.",
         };
 
       case "REVIEW_IMAGE_UPLOAD_FAILED":
@@ -183,72 +241,80 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
       case "WINNER_USER_MISSING":
         return {
           type: "DIALOG",
-          message: error.message || "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-        };  
-      
+          message:
+            error.message ||
+            "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        };
+
       // 관리자
       case "DATE_REQUIRED":
       case "EVENT_ID_REQUIRED":
       case "EVENT_ID_INVALID":
-        return { type: "WARNING", message: error.message };  
+        return { type: "WARNING", message: error.message };
       case "CALENDAR_EVENT_NOT_FOUND":
         return {
           type: "WARNING",
-          message: error.message || "이미 삭제되었거나 존재하지 않는 일정입니다.",
+          message:
+            error.message || "이미 삭제되었거나 존재하지 않는 일정입니다.",
         };
-      
 
       case "NOTICE_NOT_FOUND":
         return {
           type: "WARNING",
-          message: error.message || "해당 공지가 존재하지 않거나 삭제되었습니다.",
+          message:
+            error.message || "해당 공지가 존재하지 않거나 삭제되었습니다.",
         };
 
       case "NOTICE_ID_REQUIRED":
-        return { 
-          type: "WARNING", 
-          message: error.message || "공지 ID가 필요합니다." 
+        return {
+          type: "WARNING",
+          message: error.message || "공지 ID가 필요합니다.",
         };
 
       case "TITLE_REQUIRED":
-        return { 
-          type: "WARNING", 
-          message: error.message || "제목은 필수입니다." 
+        return {
+          type: "WARNING",
+          message: error.message || "제목은 필수입니다.",
         };
 
       case "CONTENT_REQUIRED":
-        return { 
-          type: "WARNING", 
-          message: error.message || "내용은 필수입니다." 
+        return {
+          type: "WARNING",
+          message: error.message || "내용은 필수입니다.",
         };
 
       case "CATEGORY_REQUIRED":
-        return { 
-          type: "WARNING", 
-          message: error.message || "카테고리를 선택해 주세요." 
+        return {
+          type: "WARNING",
+          message: error.message || "카테고리를 선택해 주세요.",
         };
 
       case "IMPORTANCE_OUT_OF_RANGE":
-        return { 
-          type: "WARNING", 
-          message: error.message || "중요도는 0~100 범위여야 합니다." 
+        return {
+          type: "WARNING",
+          message: error.message || "중요도는 0~100 범위여야 합니다.",
         };
       case "NOTICE_CREATE_FAILED":
       case "NOTICE_UPDATE_FAILED":
       case "NOTICE_DELETE_FAILED":
         return {
           type: "ERROR",
-          message: error.message || "처리 중 오류가 발생했습니다. 서버 로그를 확인해 주세요.",
-        };  
+          message:
+            error.message ||
+            "처리 중 오류가 발생했습니다. 서버 로그를 확인해 주세요.",
+        };
 
       case "ADMIN_AUCTION_SUSPEND_FAILED":
-        return { 
-          type: "ERROR", 
-          message: error.message || "경매 임시차단 처리 중 오류가 발생했습니다." 
+        return {
+          type: "ERROR",
+          message:
+            error.message || "경매 임시차단 처리 중 오류가 발생했습니다.",
         };
       case "ADMIN_AUCTION_FORCE_END_FAILED":
-        return { type: "ERROR", 
-          message: error.message || "경매 강제종료 처리 중 오류가 발생했습니다." 
+        return {
+          type: "ERROR",
+          message:
+            error.message || "경매 강제종료 처리 중 오류가 발생했습니다.",
         };
 
       case "UNAUTHORIZED_ACCESS":
@@ -256,32 +322,36 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "ERROR",
           message: "권한이 없습니다. ADMIN/INQUIRY 계정인지 확인해 주세요.",
         };
-      
+
       case "ADMIN_OVERVIEW_FAILED":
         return {
           type: "ERROR",
-          message: "대시보드 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+          message:
+            "대시보드 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
         };
 
       case "ADMIN_METRICS_AUCTION_TREND_FAILED":
       case "ADMIN_METRICS_MONTHLY_TRADE_FAILED":
         return {
           type: "ERROR",
-          message: "지표 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+          message:
+            "지표 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
         };
 
       case "ADMIN_CATEGORY_DISTRIBUTION_FAILED":
         return {
           type: "ERROR",
-          message: "카테고리 분포 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+          message:
+            "카테고리 분포 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
         };
 
       case "ADMIN_TODAY_GMV_FAILED":
       case "ADMIN_MONTHLY_AVG_GMV_FAILED":
         return {
           type: "ERROR",
-          message: "거래 금액 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
-        };  
+          message:
+            "거래 금액 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        };
 
       /** 기본 */
       default:
