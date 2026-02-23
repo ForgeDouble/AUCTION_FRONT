@@ -4,7 +4,7 @@ import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import { useAuth } from "@/hooks/useAuth";
 import type { ChatMessageDto, ChatRoomDto, ChatMessageType } from "@/pages/chat/ChatTypes";
-import {myRooms, openInquiryRoom, openRoom, recentMessages, sendMessage, enterRoom, exitRoom, uploadChatImage, getChatRoomMembers } from "@/api/chatApi";
+import {myRooms, openInquiryRoom, openRoom, recentMessages, sendMessage, enterRoom, exitRoom, uploadChatImage, getChatRoomMembers,leaveChatRoom } from "@/api/chatApi";
 
 export interface ChatContextType {
   connected: boolean;
@@ -17,6 +17,7 @@ export interface ChatContextType {
   send: (roomId: string, content: string) => Promise<void>;
   sendImage: (roomId: string, file: File) => Promise<void>;
   openAdminAndSelect: () => Promise<void>;
+  leaveRoom: (roomId: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -45,7 +46,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [unread, setUnread] = useState<Record<string, number>>({});
   const subscriptionsRef = useRef<Record<string, Stomp.Subscription | undefined>>({});
   const retryRef = useRef(0);
-
+  
   // STOMP 연결
   useEffect(() => {
     if (!token) return;
@@ -331,6 +332,35 @@ console.log("[ChatProvider.sendImage] start", { roomId, fileName: file.name });
       alert("이미지 전송 중 오류가 발생했습니다.");
     }
   };
+  const leaveRoom = async (roomId: string) => {
+    if (!token) return;
+
+    // 사용자 서버 상태 정리 + 참가자 제거
+    await leaveChatRoom(token, roomId);
+
+    // STOMP 구독 해제(중복 수신 방지)
+    const sub = subscriptionsRef.current[roomId];
+    if (sub) {
+      try { sub.unsubscribe(); } catch {}
+    }
+    delete subscriptionsRef.current[roomId];
+
+    setMessages((prev) => {
+      const next = { ...prev };
+      delete next[roomId];
+      return next;
+    });
+    setUnread((prev) => {
+      const next = { ...prev };
+      delete next[roomId];
+      return next;
+    });
+    setRooms((prev) => prev.filter((r) => r.roomId !== roomId));
+
+    setCurrentRoomId((cur) => (cur === roomId ? undefined : cur));
+
+    await refreshRooms();
+  };
 
   useEffect(() => {
     if (!connected || !currentRoomId) return;
@@ -350,6 +380,7 @@ console.log("[ChatProvider.sendImage] start", { roomId, fileName: file.name });
     send,
     sendImage,
     openAdminAndSelect,
+    leaveRoom,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
