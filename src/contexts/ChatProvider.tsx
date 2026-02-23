@@ -121,29 +121,49 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const members = await getChatRoomMembers(token, r.roomId);
           const me = norm(myEmail);
 
-          const others = (members || []).filter((m) => norm(m.email) !== me);
+          const others = (Array.isArray(members) ? members : []).filter(
+            (m) => norm(m?.email) && norm(m.email) !== me
+          );
+
+          const peer = others.length === 1 ? others[0] : null;
 
           const userKeywords = others
-            .map((m) => `${m.nickname ?? ""} ${m.email ?? ""}`.trim()).join(" ").trim();
+            .map((m) => `${m?.nickname ?? ""} ${m?.email ?? ""}`.trim())
+            .join(" ")
+            .trim();
 
           const memberCount = Array.isArray(members) ? members.length : 0;
           const hasUser =
-            Array.isArray(members) &&
-            members.some((m) => normRole(m.authority) === "USER");
+            Array.isArray(members) && members.some((m) => normRole(m?.authority) === "USER");
 
           const inquiry = !!r.adminChat && memberCount === 2 && hasUser;
 
-          return { ...r, inquiry, userKeywords };
+          return {
+            ...r,
+            inquiry,
+            userKeywords,
+
+            peerNickname: peer?.nickname ?? "",
+            peerEmail: peer?.email ?? "",
+            peerProfileImageUrl: peer?.profileImageUrl ?? null,
+          };
         } catch (e) {
           console.error("[getChatRoomMembers fail]", r.roomId, e);
-          return { ...r, inquiry: false, userKeywords: "" };
+          return {
+            ...r,
+            inquiry: false,
+            userKeywords: "",
+            peerNickname: "",
+            peerEmail: "",
+            peerProfileImageUrl: null,
+          };
         }
       })
     );
     setRooms(enriched);
 
     const initUnread: Record<string, number> = {};
-    enriched.forEach((r) => (initUnread[r.roomId] = r.unread || 0));
+    enriched.forEach((x) => (initUnread[x.roomId] = x.unread || 0));
     setUnread(initUnread);
   };
 

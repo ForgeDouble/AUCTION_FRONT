@@ -61,6 +61,8 @@ export default function ChatListPopup() {
     );
   };
 
+  
+
   const [q, setQ] = useState("");
 
   const filteredRooms = useMemo(() => {
@@ -151,6 +153,12 @@ export default function ChatListPopup() {
             const lastMsg = String(r.lastMessage ?? "");
             const msgMatched =
               !!query && lastMsg.toLowerCase().includes(query.toLowerCase());
+            const displayName =
+              (r.peerNickname && String(r.peerNickname).trim()) ||
+              (r.peerEmail && String(r.peerEmail).trim()) ||
+              (r.title || "대화");
+
+            const initial = displayName.slice(0, 1);  
 
             return (
               <button
@@ -158,9 +166,17 @@ export default function ChatListPopup() {
                 onClick={() => openRoomWindow(r.roomId)}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-black/5 transition text-left"
               >
-                <div className="w-10 h-10 rounded-full bg-[rgb(118_90_255)]/10 flex items-center justify-center text-[rgb(118_90_255)] font-semibold">
-                  {(r.title || "?").slice(0, 1)}
-                </div>
+              <div className="w-10 h-10 rounded-full bg-[rgb(118_90_255)]/10 flex items-center justify-center text-[rgb(118_90_255)] font-semibold overflow-hidden">
+                {r.peerProfileImageUrl ? (
+                  <img
+                    src={r.peerProfileImageUrl}
+                    alt={displayName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  initial
+                )}
+              </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">

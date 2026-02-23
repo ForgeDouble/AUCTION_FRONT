@@ -13,6 +13,9 @@ export interface ChatRoomDto {
 
   inquiry?: boolean;
   userKeywords?: string;
+
+  peerEmail?: string;
+  peerProfileImageUrl?: string | null;
 }
 
 export interface ChatMessageDto {
