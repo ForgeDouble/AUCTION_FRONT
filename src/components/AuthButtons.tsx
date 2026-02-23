@@ -1,3 +1,5 @@
+// AuthButtons.tsx 
+
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
@@ -64,10 +66,13 @@ function IconBadge(props: { count: number }) {
 function NotificationMenu(props: {
   notifications: NotificationItem[];
   unreadCount: number;
+  loading: boolean;
+  error?: string;
+  onReload: () => void;
   onClickItem: (n: NotificationItem) => void;
   onMarkAllRead: () => void;
 }) {
-  const { notifications, unreadCount, onClickItem, onMarkAllRead } = props;
+  const { notifications,unreadCount, loading, error, onReload, onClickItem, onMarkAllRead, } = props;
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotificationCategory>("ALL");
   const ref = useRef<HTMLDivElement | null>(null);
@@ -131,7 +136,13 @@ function NotificationMenu(props: {
             <button
               type="button"
               onClick={() => onMarkAllRead()}
-              className="text-[11px] font-semibold text-black/45 hover:text-black/80 transition"
+              disabled={loading || !!error}
+              className={
+                "text-[11px] font-semibold transition " +
+                (loading || !!error
+                  ? "text-black/25 cursor-not-allowed"
+                  : "text-black/45 hover:text-black/80")
+              }
             >
               모두 읽음
             </button>
@@ -170,68 +181,91 @@ function NotificationMenu(props: {
             ref={listRef}
             className="max-h-[420px] overflow-y-auto p-2 bg-white notif-scroll"
           >
-            {filtered.length === 0 && (
+            {loading && (
               <div className="py-10 text-center text-xs text-black/40">
-                표시할 알림이 없습니다.
+                알림을 불러오는 중입니다...
               </div>
             )}
 
-            <div className="space-y-2">
-              {filtered.map((n) => {
-                const meta = categoryMeta[n.category];
-                const itemCls = n.read
-                  ? "bg-white ring-1 ring-black/5 hover:bg-black/5"
-                  : "bg-purple-600/5 ring-1 ring-purple-600/15 hover:bg-purple-600/10";
+            {!loading && error && (
+              <div className="py-10 text-center">
+                <div className="text-xs text-black/60">{error}</div>
+                <button
+                  type="button"
+                  onClick={() => onReload()}
+                  className="mt-3 inline-flex items-center justify-center h-8 px-3 rounded-full bg-black/5 text-[11px] font-semibold text-black/70 hover:bg-black/10 transition"
+                >
+                  다시 시도
+                </button>
+              </div>
+            )}
 
-                return (
-                  <button
-                    key={n.id}
-                    type="button"
-                    onClick={() => {
-                      setOpen(false);
-                      onClickItem(n);
-                    }}
-                    className={
-                      "w-full text-left px-3 py-2.5 rounded-xl transition " +
-                      itemCls
-                    }
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {!n.read && (
-                          <span className="w-2 h-2 rounded-full bg-purple-600 flex-shrink-0" />
-                        )}
-                        <span className="text-[13px] font-semibold text-black/90 truncate">
-                          {n.title}
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-black/40 flex-shrink-0">
-                        {formatRelativeTime(n.createdAt)}
-                      </span>
-                    </div>
+            {!loading && !error && (
+              <>
+                {filtered.length === 0 && (
+                  <div className="py-10 text-center text-xs text-black/40">
+                    표시할 알림이 없습니다.
+                  </div>
+                )}
 
-                    <div className="mt-1.5 flex items-start justify-between gap-3">
-                      {n.body ? (
-                        <p className="text-xs text-black/60 leading-snug flex-1">
-                          {n.body}
-                        </p>
-                      ) : (
-                        <span className="flex-1" />
-                      )}
+                <div className="space-y-2">
+                  {filtered.map((n) => {
+                    const meta = categoryMeta[n.category];
+                    const itemCls = n.read
+                      ? "bg-white ring-1 ring-black/5 hover:bg-black/5"
+                      : "bg-purple-600/5 ring-1 ring-purple-600/15 hover:bg-purple-600/10";
 
-                      <span
+                    return (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => {
+                          setOpen(false);
+                          onClickItem(n);
+                        }}
                         className={
-                          "px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap " +
-                          meta.className
+                          "w-full text-left px-3 py-2.5 rounded-xl transition " +
+                          itemCls
                         }
                       >
-                        {meta.label}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {!n.read && (
+                              <span className="w-2 h-2 rounded-full bg-purple-600 flex-shrink-0" />
+                            )}
+                            <span className="text-[13px] font-semibold text-black/90 truncate">
+                              {n.title}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-black/40 flex-shrink-0">
+                            {formatRelativeTime(n.createdAt)}
+                          </span>
+                        </div>
+
+                        <div className="mt-1.5 flex items-start justify-between gap-3">
+                          {n.body ? (
+                            <p className="text-xs text-black/60 leading-snug flex-1">
+                              {n.body}
+                            </p>
+                          ) : (
+                            <span className="flex-1" />
+                          )}
+
+                          <span
+                            className={
+                              "px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap " +
+                              meta.className
+                            }
+                          >
+                            {meta.label}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -339,8 +373,6 @@ function UserMenu(props: {
             내 입찰 보기
           </button>
 
-
-
           <div className="border-t border-slate-200" />
           <button
             type="button"
@@ -370,8 +402,8 @@ export default function AuthButtons() {
     };
 
   const { unread } = useChat();
-  const { notifications, unreadCount, markAsRead, markAllRead } =
-    useNotifications();
+
+  const { notifications, unreadCount, loading, error, reload, markAsRead, markAllRead, } = useNotifications();
 
   const unreadTotal = Object.values(unread || {}).reduce(
     (a, b) => a + (b || 0),
@@ -488,6 +520,9 @@ export default function AuthButtons() {
       <NotificationMenu
         notifications={notifications}
         unreadCount={unreadCount}
+        loading={loading}
+        error={error}
+        onReload={reload}
         onClickItem={handleNotificationClick}
         onMarkAllRead={() => markAllRead()}
       />
