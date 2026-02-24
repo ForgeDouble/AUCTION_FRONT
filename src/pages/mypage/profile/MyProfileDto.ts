@@ -22,6 +22,7 @@ export interface ProfileFieldProps {
   icon: React.ComponentType<{ className?: string }>;
   isEditable?: boolean;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   type?: string;
   options?: { value: string; label: string }[];
   isEditing: boolean;
@@ -35,3 +36,11 @@ export interface MenuItemProps {
   label: string;
   colorClass?: string;
 }
+
+export type FormState = {
+  phone: string;
+  address: string;
+  nickname: string;
+};
+
+export type Errors = Partial<Record<keyof FormState, string>>;
