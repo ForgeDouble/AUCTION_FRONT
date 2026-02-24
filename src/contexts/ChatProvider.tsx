@@ -125,6 +125,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             (m) => norm(m?.email) && norm(m.email) !== me
           );
 
+          const avatarStack = others.slice(0, 2).map((m) => ({
+            nickname: m?.nickname ?? "",
+            email: m?.email ?? "",
+            profileImageUrl: m?.profileImageUrl ?? null,
+          }));
+
+          const avatarMoreCount = Math.max(0, others.length - 2);
+
           const peer = others.length === 1 ? others[0] : null;
 
           const userKeywords = others
@@ -146,6 +154,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             peerNickname: peer?.nickname ?? "",
             peerEmail: peer?.email ?? "",
             peerProfileImageUrl: peer?.profileImageUrl ?? null,
+
+            avatarStack,
+            avatarMoreCount,
           };
         } catch (e) {
           console.error("[getChatRoomMembers fail]", r.roomId, e);
@@ -156,10 +167,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             peerNickname: "",
             peerEmail: "",
             peerProfileImageUrl: null,
+            avatarStack: [],
+            avatarMoreCount: 0,
           };
         }
       })
     );
+
     setRooms(enriched);
 
     const initUnread: Record<string, number> = {};

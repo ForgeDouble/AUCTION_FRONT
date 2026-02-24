@@ -34,6 +34,43 @@ function HighlightMessage(props: { text: string; query: string }) {
   );
 }
 
+// 아바타 관련(리스트에서 상대 MULTI 프로필 보기)
+function pickName(m: any) {
+  const nick = String(m?.nickname ?? "").trim();
+  const email = String(m?.email ?? "").trim();
+  return nick || email || "U";
+}
+
+function AvatarCircle(props: {
+  item: any;
+  className: string;
+}) {
+  const { item, className } = props;
+  const name = pickName(item);
+  const initial = name.slice(0, 1);
+
+  return (
+    <div
+      className={
+        className +
+        " rounded-full overflow-hidden flex items-center justify-center " +
+        "bg-[rgb(118_90_255)]/10 text-[rgb(118_90_255)] font-semibold"
+      }
+      title={name}
+    >
+      {item?.profileImageUrl ? (
+        <img
+          src={item.profileImageUrl}
+          alt={name}
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        initial
+      )}
+    </div>
+  );
+}
+
 export default function ChatListPopup() {
   const { rooms, openAdminAndSelect } = useChat();
   const { isAuthenticated, authority } = useAuth();
@@ -76,6 +113,8 @@ export default function ChatListPopup() {
       return (titleText + " " + msgText + " " + userText).includes(query);
     });
   }, [rooms, q]);
+
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fbf3ff] to-[#f7eefb]">
@@ -160,23 +199,47 @@ export default function ChatListPopup() {
 
             const initial = displayName.slice(0, 1);  
 
+            const stack = Array.isArray(r.avatarStack) ? r.avatarStack : [];
+            const isGroup = stack.length >= 2;
+            const more = Number(r.avatarMoreCount ?? 0);
+
             return (
               <button
                 key={r.roomId}
                 onClick={() => openRoomWindow(r.roomId)}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-black/5 transition text-left"
               >
-              <div className="w-10 h-10 rounded-full bg-[rgb(118_90_255)]/10 flex items-center justify-center text-[rgb(118_90_255)] font-semibold overflow-hidden">
-                {r.peerProfileImageUrl ? (
-                  <img
-                    src={r.peerProfileImageUrl}
-                    alt={displayName}
-                    className="w-full h-full object-cover"
-                  />
+
+                {isGroup ? (
+                  <div className="relative w-10 h-10">
+                    <AvatarCircle
+                      item={stack[0]}
+                      className="absolute left-0 top-0 w-8 h-8 ring-2 ring-white"
+                    />
+                    <AvatarCircle
+                      item={stack[1]}
+                      className="absolute right-0 bottom-0 w-8 h-8 ring-2 ring-white"
+                    />
+
+                    {more > 0 && (
+                      <div className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-[rgb(118_90_255)] text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
+                        +{more > 9 ? "9" : more}
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  initial
+                  <div className="w-10 h-10 rounded-full bg-[rgb(118_90_255)]/10 flex items-center justify-center text-[rgb(118_90_255)] font-semibold overflow-hidden">
+                    {r.peerProfileImageUrl ? (
+                      <img
+                        src={r.peerProfileImageUrl}
+                        alt={displayName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      initial
+                    )}
+                  </div>
                 )}
-              </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">

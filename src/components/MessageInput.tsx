@@ -33,7 +33,6 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(f);
     setImagePreview(URL.createObjectURL(f));
-
     // 같은 파일 다시 선택 가능하게 value 리셋
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
