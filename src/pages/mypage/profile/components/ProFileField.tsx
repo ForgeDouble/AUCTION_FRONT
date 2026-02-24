@@ -5,7 +5,9 @@ const ProfileField = ({
   value,
   icon: Icon,
   isEditable = false,
+
   onChange,
+  onBlur,
   type = "text",
   options = [],
   isEditing,
@@ -59,6 +61,7 @@ const ProfileField = ({
               type={type}
               value={value ?? ""}
               onChange={onChange}
+              onBlur={onBlur}
               className="w-full h-12 px-5 bg-gray-50 border-0 rounded-2xl text-gray-900 font-medium focus:ring-2 focus:ring-[#765AFF]/20 focus:bg-white transition-all outline-none placeholder:text-gray-300"
             />
           )
