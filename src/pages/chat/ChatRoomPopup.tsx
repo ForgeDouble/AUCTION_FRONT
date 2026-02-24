@@ -41,9 +41,12 @@ export default function ChatRoomPopup() {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
+  // useEffect(() => {
+  //   if (roomId) selectRoom(roomId);
+  // }, [roomId, selectRoom]);
   useEffect(() => {
     if (roomId) selectRoom(roomId);
-  }, [roomId, selectRoom]);
+  }, [roomId]);
 
   const msgList = useMemo(() => (roomId ? messages[roomId] || [] : []), [messages, roomId]);
 

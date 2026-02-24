@@ -1,5 +1,5 @@
 //contests/ChatProvider.tsx
-import React, {createContext, useContext, useEffect, useMemo, useRef, useState,} from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "stompjs";
 import { useAuth } from "@/hooks/useAuth";
@@ -107,7 +107,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   //   setUnread(initUnread);
   // };
 
-  const refreshRooms = async () => {
+  const refreshRooms = useCallback(async () => {
     if (!token || !myEmail) return;
 
     const norm = (s: any) => String(s ?? "").trim().toLowerCase();
@@ -130,7 +130,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: m?.email ?? "",
             profileImageUrl: m?.profileImageUrl ?? null,
           }));
-
           const avatarMoreCount = Math.max(0, others.length - 2);
 
           const peer = others.length === 1 ? others[0] : null;
@@ -179,7 +178,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initUnread: Record<string, number> = {};
     enriched.forEach((x) => (initUnread[x.roomId] = x.unread || 0));
     setUnread(initUnread);
-  };
+  }, [token, myEmail]);
 
   // 로그인 / email 변동 시 방 목록 초기 로드
   useEffect(() => {
@@ -192,79 +191,57 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     subscribeRoom(currentRoomId);
   }, [connected, currentRoomId]);
 
-    const subscribeRoom = (roomId: string) => {
+  const subscribeRoom = useCallback((roomId: string) => {
     if (!clientRef.current || subscriptionsRef.current[roomId]) return;
 
-    console.log("[STOMP] subscribe room", roomId);
+    const sub = clientRef.current.subscribe("/topic/chat/room/" + roomId, (frame) => {
+      try {
+        const p = JSON.parse(frame.body) || {};
+        const senderEmail = String(p.senderId ?? p.sender ?? p.senderEmail ?? "");
+        const mine = !!myEmail && !!senderEmail && senderEmail === myEmail;
+        const type: ChatMessageType = (p.messageType as ChatMessageType) || "TALK";
 
-      const sub = clientRef.current.subscribe(
-        "/topic/chat/room/" + roomId,
-        (frame) => {
-          try {
-            const p = JSON.parse(frame.body) || {};
-            const senderEmail = String(p.senderId ?? p.sender ?? p.senderEmail ?? "");
-            const mine = !!myEmail && !!senderEmail && senderEmail === myEmail;
-            const type: ChatMessageType = (p.messageType as ChatMessageType) || "TALK";
-
-            // 기본 내용
-            let content: string = String(p.message ?? p.content ?? "");
-
-            // IMAGE 타입이면 fileUrl / files[0].fileUrl / url 중 하나를 우선
-            if (type === "IMAGE") {
-              const fileUrl =
-              (Array.isArray(p.files) && p.files[0] && p.files[0].fileUrl) ||
-              p.fileUrl ||
-              p.url;
-              if (fileUrl) {
-                content = String(fileUrl);
-              }
-            }
-
-            console.log("[STOMP] recv", { roomId, senderEmail, mine, type, content, raw: p });
-
-            const msg: ChatMessageDto = {
-              messageId: String(p.id ?? p.messageId ?? "stomp-" + Date.now()),
-              roomId: String(p.roomId || roomId),
-              senderId: senderEmail,
-              senderNickname: String(p.senderNickname ?? ""),
-              senderProfileImageUrl: p.senderProfileImageUrl || "",
-              content,
-              createdAt: String(p.createdAt ?? new Date().toISOString()),
-              type,
-              mine,
-            };
-
-            setMessages((prev) => {
-              const prevList = prev[roomId] || [];
-
-              if (prevList.some((m) => m.messageId === msg.messageId)) {
-                return prev;
-              }
-
-              const nextList = [...prevList, msg];
-
-              nextList.sort(
-                (a, b) =>
-                  new Date(a.createdAt).getTime() -
-                  new Date(b.createdAt).getTime()
-              );
-
-              return { ...prev, [roomId]: nextList };
-            });
-
-            setUnread((u) => ({
-              ...u,
-              [roomId]:
-                roomId === currentRoomId ? 0 : (u[roomId] || 0) + 1,
-            }));
-          } catch (e) {
-            console.error(e);
-          }
+        let content: string = String(p.message ?? p.content ?? "");
+        if (type === "IMAGE") {
+          const fileUrl =
+            (Array.isArray(p.files) && p.files[0] && p.files[0].fileUrl) ||
+            p.fileUrl ||
+            p.url;
+          if (fileUrl) content = String(fileUrl);
         }
-    );
+
+        const msg: ChatMessageDto = {
+          messageId: String(p.id ?? p.messageId ?? "stomp-" + Date.now()),
+          roomId: String(p.roomId || roomId),
+          senderId: senderEmail,
+          senderNickname: String(p.senderNickname ?? ""),
+          senderProfileImageUrl: p.senderProfileImageUrl || "",
+          content,
+          createdAt: String(p.createdAt ?? new Date().toISOString()),
+          type,
+          mine,
+        };
+
+        setMessages((prev) => {
+          const prevList = prev[roomId] || [];
+          if (prevList.some((m) => m.messageId === msg.messageId)) return prev;
+
+          const nextList = [...prevList, msg];
+          nextList.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          return { ...prev, [roomId]: nextList };
+        });
+
+        setUnread((u) => ({
+          ...u,
+          [roomId]: roomId === currentRoomId ? 0 : (u[roomId] || 0) + 1,
+        }));
+      } catch (e) {
+        console.error(e);
+      }
+    });
 
     subscriptionsRef.current[roomId] = sub;
-  };
+  }, [myEmail, currentRoomId]);
 
   const selectRoom = async (roomId: string) => {
     if (!token) return;
@@ -410,19 +387,22 @@ console.log("[ChatProvider.sendImage] start", { roomId, fileName: file.name });
     };
   }, [token]);
 
-  const value: ChatContextType = {
-    connected,
-    rooms,
-    currentRoom,
-    messages,
-    unread,
-    refreshRooms,
-    selectRoom,
-    send,
-    sendImage,
-    openAdminAndSelect,
-    leaveRoom,
-  };
+  const value = useMemo(
+    () => ({
+      connected,
+      rooms,
+      currentRoom,
+      messages,
+      unread,
+      refreshRooms,
+      selectRoom,
+      send,
+      sendImage,
+      openAdminAndSelect,
+      leaveRoom,
+    }),
+    [connected, rooms, currentRoom, messages, unread, refreshRooms, selectRoom, send, sendImage, openAdminAndSelect, leaveRoom]
+  );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
