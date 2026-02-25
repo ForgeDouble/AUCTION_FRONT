@@ -63,9 +63,9 @@ const AuctionDetail = () => {
   });
 
   const [bidLogs, setBidLogs] = useState<BidLogDto[]>([]);
-  // const [stompClient, setStompClient] = useState<any>(null);
-  const stompRef = useRef<any>(null);
-  const socketRef = useRef<any>(null);
+
+  const stompRef = useRef<Stomp.Client>(null);
+  const socketRef = useRef<WebSocket>(null);
   const [copied, setCopied] = useState(false);
 
   const [bidLoading, setBidLoading] = useState(false);
@@ -473,7 +473,7 @@ const AuctionDetail = () => {
     return parseInt(number, 10).toLocaleString("ko-KR");
   };
 
-  const handleBidAmountChange = (e: any) => {
+  const handleBidAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatNumber(e.target.value);
     setBidAmount(formatted);
   };
@@ -584,12 +584,16 @@ const AuctionDetail = () => {
       // 라이브가 아니면 혹시 남아있는 연결 정리
       try {
         if (stompRef.current) stompRef.current.disconnect(() => {});
-      } catch {}
+      } catch {
+        // ignore
+      }
       stompRef.current = null;
 
       try {
         if (socketRef.current) socketRef.current.close();
-      } catch {}
+      } catch {
+        // ignore
+      }
       socketRef.current = null;
 
       return;
@@ -600,12 +604,16 @@ const AuctionDetail = () => {
     // effect 시작 시 기존 연결 정리(중복 방지)
     try {
       if (stompRef.current) stompRef.current.disconnect(() => {});
-    } catch {}
+    } catch {
+      //ignore
+    }
     stompRef.current = null;
 
     try {
       if (socketRef.current) socketRef.current.close();
-    } catch {}
+    } catch {
+      //ignore
+    }
     socketRef.current = null;
 
     const token = localStorage.getItem("accessToken");
@@ -655,12 +663,16 @@ const AuctionDetail = () => {
 
       try {
         if (stompRef.current) stompRef.current.disconnect(() => {});
-      } catch {}
+      } catch {
+        //ignore
+      }
       stompRef.current = null;
 
       try {
         if (socketRef.current) socketRef.current.close();
-      } catch {}
+      } catch {
+        //ignore
+      }
       socketRef.current = null;
     };
   }, [product?.status, productId]);
@@ -743,6 +755,7 @@ const AuctionDetail = () => {
       if (bidTimeoutRef.current) clearTimeout(bidTimeoutRef.current);
       setBidLoading(false);
       showError("전송 실패");
+      console.error(error);
     }
   };
 
@@ -797,7 +810,8 @@ const AuctionDetail = () => {
         adminChat: false,
       });
       if (roomId) openRoomWindow(roomId);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      console.error(e);
       alert("채팅방 연결 실패");
     }
   };
