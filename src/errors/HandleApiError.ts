@@ -307,6 +307,25 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           type: "ERROR", 
           message: error.message || "탈퇴 처리 중 오류가 발생했습니다." 
         };  
+
+      case "DUPLICATE_REPORT":
+        return { 
+          type: "WARNING",
+          message: "이미 해당 대상에 대해 신고하셨습니다. (대상당 1회)" 
+        };
+
+      case "SELF_REPORT_FORBIDDEN":
+        return { 
+          type: "WARNING", 
+          message: "자기 자신을 신고할 수 없습니다." 
+        };
+
+      case "TARGET_USER_NOT_FOUND":
+        return { 
+          type: "WARNING", 
+          message: "대상 유저가 존재하지 않거나 비활성화 상태입니다."
+        };  
+        
       /** 기본 */
       default:
         return {

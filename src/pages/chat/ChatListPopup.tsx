@@ -3,6 +3,8 @@ import React, { useMemo, useState } from "react";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/hooks/useAuth";
 import { Plus, X } from "lucide-react";
+import { useModal } from "@/contexts/ModalContext";
+import { handleApiError } from "@/errors/HandleApiError";
 
 function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -70,6 +72,7 @@ function AvatarCircle(props: { item: any; className: string }) {
 
 export default function ChatListPopup() {
   const { rooms, openAdminAndSelect, roomsLoading, roomsError, refreshRooms } = useChat();
+  // const { showLogin, showError, showWarning } = useModal();
   const { isAuthenticated, authority } = useAuth();
 
   const canInquiry = isAuthenticated && authority === "USER";

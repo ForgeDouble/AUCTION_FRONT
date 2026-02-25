@@ -6,6 +6,9 @@ import {
   createUserReport,
   type ReportCategory,
 } from "@/pages/report/reportApi";
+import { useNavigate } from "react-router-dom";
+import { useModal } from "@/contexts/ModalContext";
+import { handleApiError } from "@/errors/HandleApiError";
 
 type Mode = "USER" | "PRODUCT";
 
@@ -78,13 +81,36 @@ export default function ReportModal(props: ReportModalProps) {
   const [content, setContent] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
-  // ✅ Hook이 아닌 일반 계산 (Rules of Hooks 문제 제거)
+  const navigate = useNavigate();
+  const { showLogin, showWarning, showError } = useModal();
+
+  const applyReportUiError = (e: unknown) => {
+    const r = handleApiError(e);
+
+    if (r.type === "AUTH") {
+      showLogin("confirm");
+      return;
+    }
+
+    if (r.type === "WARNING" || r.type === "DIALOG" || r.type === "MODAL") {
+      showWarning(r.message);
+      return;
+    }
+
+    if (r.type === "REDIRECT") {
+      navigate(r.to);
+      return;
+    }
+
+    showError(r.message);
+  };
+
   const canSubmit =
     mode === "USER"
       ? typeof targetUserId === "number" && targetUserId > 0
       : typeof productId === "number" && productId > 0;
 
-  // (선택) 모달 열릴 때마다 입력 초기화하고 싶으면
+  //  모달 열릴 때마다 입력 초기화
   useEffect(() => {
     if (!open) return;
     setContent("");
@@ -95,13 +121,7 @@ export default function ReportModal(props: ReportModalProps) {
 
   const submit = async () => {
     if (!canSubmit) {
-      alert("신고 대상 정보가 없습니다.");
-      return;
-    }
-
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      alert("로그인이 필요합니다.");
+      showWarning("신고 대상 정보가 없습니다.");
       return;
     }
 
@@ -121,18 +141,12 @@ export default function ReportModal(props: ReportModalProps) {
         });
       }
 
-      alert("신고가 접수되었습니다.");
+      showWarning("신고가 접수되었습니다.");
       onSubmitted?.();
       onClose();
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      const msg = String(e?.message ?? "신고 처리 실패");
-
-      if (msg.includes("이미") || msg.includes("중복")) {
-        alert("이미 신고한 대상입니다. (대상당 1회 신고 가능)");
-      } else {
-        alert("신고 처리에 실패했습니다. 서버 응답을 확인하세요.\n" + msg);
-      }
+      applyReportUiError(e);
     } finally {
       setSubmitting(false);
     }
