@@ -16,7 +16,7 @@ import RenderPagination from "../components/RenderPagination";
 import { useModal } from "@/contexts/ModalContext";
 import { useAuth } from "@/hooks/useAuth";
 import { deleteWishlist, fetchProductsByWishlist } from "./MyWishlistApi";
-import type { ProductListDto } from "./MywishlistDto";
+import type { ProductListDto } from "./MyWishlistDto";
 import { handleApiError } from "@/errors/HandleApiError";
 
 type StatusFilter = "ALL" | "READY" | "PROCESSING" | "NOTSELLED" | "SELLED";

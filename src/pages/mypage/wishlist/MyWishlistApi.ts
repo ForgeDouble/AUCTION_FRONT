@@ -1,6 +1,6 @@
 import { ApiError, UnauthorizedError } from "@/errors/Errors";
 import type { ApiResponse, PageResponse } from "@/type/CommonType";
-import type { ProductListDto } from "./MywishlistDto";
+import type { ProductListDto } from "./MyWishlistDto";
 
 const BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ??
