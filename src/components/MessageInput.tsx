@@ -1,10 +1,10 @@
 // src/components/MessageInput.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {Paperclip, Images, Send, X } from "lucide-react";
+import { Images, Send, X } from "lucide-react";
 
 type Props = {
-  onSend: (text: string) => void | Promise<void>;
-  onSendImage?: (file: File) => void | Promise<void>;
+  onSend: (text: string) => boolean | Promise<boolean>;
+  onSendImage?: (file: File) => boolean | Promise<boolean>;
 };
 
 type PickedImage = {
@@ -18,13 +18,15 @@ const MAX_FILE_MB = 10;
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
 function makeId() {
-  return (crypto?.randomUUID?.() ?? "img-" + Date.now() + "-" + Math.random().toString(16).slice(2));
+  return ((crypto?.randomUUID?.() ?? "img-" + Date.now() + "-" + Math.random().toString(16).slice(2)));
 }
 
 export default function MessageInput({ onSend, onSendImage }: Props) {
   const [text, setText] = useState("");
   const [picked, setPicked] = useState<PickedImage[]>([]);
   const [sending, setSending] = useState(false);
+
+  const [submitErr, setSubmitErr] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
@@ -40,6 +42,8 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
   const addImages = (files: FileList | File[]) => {
     const arr = Array.from(files || []);
     if (arr.length === 0) return;
+
+    setSubmitErr(null);
 
     const remain = Math.max(0, MAX_IMAGES - pickedCount);
     if (remain <= 0) {
@@ -89,7 +93,7 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
   };
 
   const canSubmit = useMemo(() => {
-    return (text.trim().length > 0) || picked.length > 0;
+    return text.trim().length > 0 || picked.length > 0;
   }, [text, picked.length]);
 
   const submit = async () => {
@@ -97,23 +101,46 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
     if (!canSubmit) return;
 
     setSending(true);
+    setSubmitErr(null);
+
     try {
-      // 1) 이미지들 먼저 순차 전송
+      //  이미지 순차 전송 -> 실패 시 유실
       if (picked.length > 0) {
         if (!onSendImage) {
-          alert("이미지 전송 기능이 설정되지 않았습니다.");
-        } else {
-          for (const p of picked) {
-            await Promise.resolve(onSendImage(p.file));
+          setSubmitErr("이미지 전송을 지원하지 않는 채팅입니다.");
+          return;
+        }
+
+        const remain: PickedImage[] = [...picked];
+
+        for (let i = 0; i < picked.length; i++) {
+          const item = picked[i];
+
+          const ok = await Promise.resolve(onSendImage(item.file));
+          if (!ok) {
+            setSubmitErr("메시지 전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+            setPicked(remain);
+            return;
+          }
+
+          const idx = remain.findIndex((x) => x.id === item.id);
+          if (idx >= 0) {
+            const target = remain[idx];
+            URL.revokeObjectURL(target.url);
+            remain.splice(idx, 1);
+            setPicked([...remain]);
           }
         }
-        clearAll();
       }
 
       // 텍스트 전송
       const t = text.trim();
       if (t) {
-        await Promise.resolve(onSend(t));
+        const ok = await Promise.resolve(onSend(t));
+        if (!ok) {
+          setSubmitErr("메시지 전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+          return;
+        }
         setText("");
       }
 
@@ -128,9 +155,7 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
       {picked.length > 0 && (
         <div className="px-1">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-600">
-              선택된 이미지 {picked.length}장
-            </div>
+            <div className="text-xs text-gray-600">선택된 이미지 {picked.length}장</div>
             <button
               type="button"
               onClick={clearAll}
@@ -146,11 +171,7 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
             {picked.map((p) => (
               <div key={p.id} className="relative">
                 <div className="aspect-square rounded-xl overflow-hidden border border-black/10 bg-gray-50">
-                  <img
-                    src={p.url}
-                    alt={p.file.name}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={p.url} alt={p.file.name} className="w-full h-full object-cover" />
                 </div>
 
                 <button
@@ -193,7 +214,7 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
           "
           title="이미지 첨부"
         >
-          <Paperclip className="w-5 h-5" />
+          <Images className="w-5 h-5 text-[rgb(118_90_255)]" />
         </button>
 
         <input
@@ -212,10 +233,10 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
           rows={1}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="메시지를 입력하세요 (Enter: 전송, Shift+Enter: 줄바꿈)"
+          placeholder="Enter: 전송, Shift+Enter: 줄바꿈"
           className="
             flex-1 resize-none
-            bg-white border border-black/5 rounded-2xl px-3 py-2
+            bg-white border border-black/5 rounded-xl px-3 py-2
             text-sm text-gray-700 placeholder-gray-400
             focus:outline-none focus:ring-2 focus:ring-[rgb(118_90_255)]/25
             leading-snug max-h-32 overflow-y-auto
@@ -244,6 +265,11 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
           <Send className="w-5 h-5" />
         </button>
       </div>
+      {submitErr && (
+        <div className="px-1 text-[11px] text-rose-600">
+          {submitErr}
+        </div>
+      )}
     </div>
   );
 }

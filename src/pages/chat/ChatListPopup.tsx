@@ -41,10 +41,7 @@ function pickName(m: any) {
   return nick || email || "U";
 }
 
-function AvatarCircle(props: {
-  item: any;
-  className: string;
-}) {
+function AvatarCircle(props: { item: any; className: string }) {
   const { item, className } = props;
   const name = pickName(item);
   const initial = name.slice(0, 1);
@@ -72,7 +69,7 @@ function AvatarCircle(props: {
 }
 
 export default function ChatListPopup() {
-  const { rooms, openAdminAndSelect } = useChat();
+  const { rooms, openAdminAndSelect, roomsLoading, roomsError, refreshRooms } = useChat();
   const { isAuthenticated, authority } = useAuth();
 
   const canInquiry = isAuthenticated && authority === "USER";
@@ -98,8 +95,6 @@ export default function ChatListPopup() {
     );
   };
 
-  
-
   const [q, setQ] = useState("");
 
   const filteredRooms = useMemo(() => {
@@ -113,8 +108,6 @@ export default function ChatListPopup() {
       return (titleText + " " + msgText + " " + userText).includes(query);
     });
   }, [rooms, q]);
-
-  
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fbf3ff] to-[#f7eefb]">
@@ -157,9 +150,10 @@ export default function ChatListPopup() {
               focus:outline-none focus:ring-2 focus:ring-[rgb(118_90_255)]/25
             "
             placeholder="채팅방 / 유저 / 메시지 검색"
+            disabled={roomsLoading}
           />
 
-          {q.trim() && (
+          {q.trim() && !roomsLoading && (
             <button
               type="button"
               onClick={() => setQ("")}
@@ -181,106 +175,137 @@ export default function ChatListPopup() {
 
       <div className="p-2">
         <div className="bg-white rounded-2xl shadow-sm border border-black/5 overflow-hidden">
-          {filteredRooms.length === 0 && (
+          {roomsLoading && (
             <div className="p-8 text-center text-gray-500">
-              {q.trim() ? "검색 결과가 없습니다." : "채팅 내역이 없습니다."}
+              채팅 리스트를 불러오는 중입니다...
             </div>
           )}
 
-          {filteredRooms.map((r: any) => {
-            const query = q.trim();
-            const lastMsg = String(r.lastMessage ?? "");
-            const msgMatched =
-              !!query && lastMsg.toLowerCase().includes(query.toLowerCase());
-            const displayName =
-              (r.peerNickname && String(r.peerNickname).trim()) ||
-              (r.peerEmail && String(r.peerEmail).trim()) ||
-              (r.title || "대화");
+          {!roomsLoading && roomsError && (
+            <div className="p-8 text-center">
+              <div className="text-sm font-semibold text-gray-900">
+                채팅 리스트를 불러오지 못했습니다
+              </div>
+              <div className="mt-1 text-xs text-gray-600">{roomsError}</div>
 
-            const initial = displayName.slice(0, 1);  
-
-            const stack = Array.isArray(r.avatarStack) ? r.avatarStack : [];
-            const isGroup = stack.length >= 2;
-            const more = Number(r.avatarMoreCount ?? 0);
-
-            return (
               <button
-                key={r.roomId}
-                onClick={() => openRoomWindow(r.roomId)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-black/5 transition text-left"
+                type="button"
+                onClick={() => void refreshRooms()}
+                className="
+                  mt-3 inline-flex items-center justify-center h-9 px-4 rounded-full
+                  bg-[rgb(118_90_255)] text-white text-sm font-semibold
+                  hover:bg-[rgb(118_90_255)]/90 transition
+                "
               >
-
-                {isGroup ? (
-                  <div className="relative w-10 h-10">
-                    <AvatarCircle
-                      item={stack[0]}
-                      className="absolute left-0 top-0 w-8 h-8 ring-2 ring-white"
-                    />
-                    <AvatarCircle
-                      item={stack[1]}
-                      className="absolute right-0 bottom-0 w-8 h-8 ring-2 ring-white"
-                    />
-
-                    {more > 0 && (
-                      <div className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-[rgb(118_90_255)] text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
-                        +{more > 9 ? "9" : more}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-[rgb(118_90_255)]/10 flex items-center justify-center text-[rgb(118_90_255)] font-semibold overflow-hidden">
-                    {r.peerProfileImageUrl ? (
-                      <img
-                        src={r.peerProfileImageUrl}
-                        alt={displayName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      initial
-                    )}
-                  </div>
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="font-medium text-gray-900 truncate">
-                        {r.title}
-                      </div>
-
-                      {r.inquiry && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgb(118_90_255)]/10 text-[rgb(118_90_255)] shrink-0">
-                          문의
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="text-xs text-gray-400">
-                      {(r.lastAt || "").replace("T", " ").slice(0, 16)}
-                    </div>
-                  </div>
-
-                  <div className="text-sm text-gray-500 truncate">
-                    {lastMsg ? (
-                      msgMatched ? (
-                        <HighlightMessage text={lastMsg} query={query} />
-                      ) : (
-                        lastMsg
-                      )
-                    ) : (
-                      "대화를 시작해 보세요"
-                    )}
-                  </div>
-                </div>
-
-                {!!(r.unread || 0) && (
-                  <span className="ml-2 inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-[rgb(118_90_255)] text-white text-xs">
-                    {r.unread}
-                  </span>
-                )}
+                다시 시도
               </button>
-            );
-          })}
+            </div>
+          )}
+
+          {!roomsLoading && !roomsError && (
+            <>
+              {filteredRooms.length === 0 && (
+                <div className="p-8 text-center text-gray-500">
+                  {q.trim() ? "검색 결과가 없습니다." : "채팅 내역이 없습니다."}
+                </div>
+              )}
+
+              {filteredRooms.map((r: any) => {
+                const query = q.trim();
+                const lastMsg = String(r.lastMessage ?? "");
+                const msgMatched =
+                  !!query && lastMsg.toLowerCase().includes(query.toLowerCase());
+
+                const displayName =
+                  (r.peerNickname && String(r.peerNickname).trim()) ||
+                  (r.peerEmail && String(r.peerEmail).trim()) ||
+                  (r.title || "대화");
+
+                const initial = displayName.slice(0, 1);
+
+                const stack = Array.isArray(r.avatarStack) ? r.avatarStack : [];
+                const isGroup = stack.length >= 2;
+                const more = Number(r.avatarMoreCount ?? 0);
+
+                return (
+                  <button
+                    key={r.roomId}
+                    onClick={() => openRoomWindow(r.roomId)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-black/5 transition text-left"
+                  >
+                    {isGroup ? (
+                      <div className="relative w-10 h-10">
+                        <AvatarCircle
+                          item={stack[0]}
+                          className="absolute left-0 top-0 w-8 h-8 ring-2 ring-white"
+                        />
+                        <AvatarCircle
+                          item={stack[1]}
+                          className="absolute right-0 bottom-0 w-8 h-8 ring-2 ring-white"
+                        />
+
+                        {more > 0 && (
+                          <div className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-[rgb(118_90_255)] text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
+                            +{more > 9 ? "9" : more}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-[rgb(118_90_255)]/10 flex items-center justify-center text-[rgb(118_90_255)] font-semibold overflow-hidden">
+                        {r.peerProfileImageUrl ? (
+                          <img
+                            src={r.peerProfileImageUrl}
+                            alt={displayName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          initial
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">
+                            {r.title}
+                          </div>
+
+                          {r.inquiry && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgb(118_90_255)]/10 text-[rgb(118_90_255)] shrink-0">
+                              문의
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-xs text-gray-400">
+                          {(r.lastAt || "").replace("T", " ").slice(0, 16)}
+                        </div>
+                      </div>
+
+                      <div className="text-sm text-gray-500 truncate">
+                        {lastMsg ? (
+                          msgMatched ? (
+                            <HighlightMessage text={lastMsg} query={query} />
+                          ) : (
+                            lastMsg
+                          )
+                        ) : (
+                          "대화를 시작해 보세요"
+                        )}
+                      </div>
+                    </div>
+
+                    {!!(r.unread || 0) && (
+                      <span className="ml-2 inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-[rgb(118_90_255)] text-white text-xs">
+                        {r.unread}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
       </div>
     </div>
