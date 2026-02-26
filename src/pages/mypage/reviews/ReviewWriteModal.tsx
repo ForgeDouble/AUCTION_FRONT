@@ -81,6 +81,10 @@ export default function ReviewWriteModal(props: {
     onClose: () => void;
     onSubmitted: () => void;
 }) {
+    const MAX_IMAGES = 12;
+    const MAX_FILE_MB = 10;
+    const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+    
     const { open, token, target, onClose, onSubmitted } = props;
 
     const [canWrite, setCanWrite] = useState<{ ok: boolean; reason?: string }>({ ok: true });
@@ -90,6 +94,8 @@ export default function ReviewWriteModal(props: {
     const [files, setFiles] = useState<File[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [err, setErr] = useState<string | null>(null);
+
+    const [imgHint, setImgHint] = useState<string | null>(null);
 
     const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
 
@@ -105,6 +111,7 @@ export default function ReviewWriteModal(props: {
         if (!open) return;
 
         setErr(null);
+        setImgHint(null);
         setRating(0.0);
         setTags([]);
         setContent("");
@@ -167,13 +174,53 @@ export default function ReviewWriteModal(props: {
 
     const onPickFiles = (list: FileList | null) => {
         if (!list) return;
-        const next = [...files];
-        for (const f of Array.from(list)) next.push(f);
-        setFiles(next);
+
+        const incoming = Array.from(list);
+
+        const remain = Math.max(0, MAX_IMAGES - files.length);
+        if (remain <= 0) {
+            setImgHint(`이미지는 최대 ${MAX_IMAGES}장까지 첨부할 수 있습니다. (현재 ${files.length}장)`);
+            return;
+        }
+
+        const next: File[] = [];
+        let rejectedBig = 0;
+        let rejectedType = 0;
+
+        for (const f of incoming) {
+            if (!f.type.startsWith("image/")) {
+                rejectedType += 1;
+                continue;
+            }
+
+            if (f.size > MAX_FILE_BYTES) {
+                rejectedBig += 1;
+                continue;
+            }
+
+            if (next.length >= remain) break;
+            next.push(f);
+        }
+
+        // 초과 선택 안내
+        if (incoming.length > remain) {
+            setImgHint(`최대 ${MAX_IMAGES}장까지 첨부 가능해서 ${remain}장만 추가되었습니다.`);
+        } else if (rejectedBig > 0) {
+            setImgHint(`용량이 큰 이미지(${rejectedBig}개)는 제외되었습니다. (최대 ${MAX_FILE_MB}MB)`);
+        } else if (rejectedType > 0) {
+            setImgHint(`이미지 파일만 첨부할 수 있습니다. (${rejectedType}개 제외)`);
+        } else {
+            setImgHint(null);
+        }
+
+        if (next.length === 0) return;
+        setFiles((prev) => [...prev, ...next]);
+
     };
 
     const removeFile = (idx: number) => {
         setFiles((prev) => prev.filter((_, i) => i !== idx));
+        setImgHint(null);
     };
 
     const submit = async () => {
@@ -317,7 +364,7 @@ export default function ReviewWriteModal(props: {
                 </div>
             </div>
 
-            {/* Content */}
+            {/* 내용 */}
             <div className="rounded-2xl border border-gray-100 p-5">
                 <div className="font-bold text-gray-900 mb-3">내용 (선택)</div>
                 <textarea
@@ -328,70 +375,98 @@ export default function ReviewWriteModal(props: {
                 />
             </div>
 
-            {/* Images */}
+            {/* 임지ㅣ */}
+
             <div className="rounded-2xl border border-gray-100 p-5">
                 <div className="flex items-center justify-between mb-3">
-                <div className="font-bold text-gray-900 flex items-center gap-2">
-                    <UploadCloud className="w-5 h-5 text-gray-400" />
-                    사진 (선택)
-                </div>
-                <label className="px-3 py-2 rounded-xl bg-black/5 hover:bg-black/10 text-xs font-bold text-gray-700 cursor-pointer">
+                    <div className="font-bold text-gray-900 flex items-center gap-2">
+                        <UploadCloud className="w-5 h-5 text-gray-400" />
+                        사진 (선택)
+                    </div>
+
+                    <label
+                        className={
+                            "px-3 py-2 rounded-xl text-xs font-bold " +
+                            (files.length >= MAX_IMAGES || submitting || !canWrite.ok
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "bg-black/5 hover:bg-black/10 text-gray-700 cursor-pointer")
+                        }
+                    >
                     추가하기
                     <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => onPickFiles(e.target.files)}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        disabled={files.length >= MAX_IMAGES || submitting || !canWrite.ok}
+                        onChange={(e) => onPickFiles(e.target.files)}
                     />
-                </label>
+                    </label>
                 </div>
 
-                {files.length === 0 ? (
-                <div className="text-sm text-gray-400">업로드할 이미지가 없습니다.</div>
-                ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {files.map((f, i) => (
-                    <div key={i} className="rounded-2xl border border-gray-200 overflow-hidden">
-                        <div className="aspect-square bg-gray-100 overflow-hidden">
-                        <img src={previews[i]} alt={f.name} className="w-full h-full object-cover" />
+                    <div className="flex items-center justify-between">
+                        <div className="text-[11px] text-gray-400">
+                            첨부 {files.length} / {MAX_IMAGES} · 이미지 1장당 최대 {MAX_FILE_MB}MB
                         </div>
-                        <div className="p-2 flex items-center justify-between gap-2">
-                        <div className="text-[11px] text-gray-500 truncate">{f.name}</div>
-                        <button
-                            onClick={() => removeFile(i)}
-                            className="w-8 h-8 rounded-xl hover:bg-rose-50 grid place-items-center"
-                            title="삭제"
-                        >
-                            <Trash2 className="w-4 h-4 text-rose-500" />
-                        </button>
-                        </div>
+
+                        {files.length >= MAX_IMAGES && (
+                            <div className="text-[11px] font-semibold text-[rgb(118,90,255)]">
+                                최대 첨부 수에 도달했어요
+                            </div>
+                        )}
                     </div>
-                    ))}
+
+                    {imgHint && (
+                        <div className="mt-2 text-[12px] font-semibold text-[rgb(118,90,255)] bg-[rgba(118,90,255,0.08)] border border-[rgba(118,90,255,0.20)] px-3 py-2 rounded-xl">
+                            {imgHint}
+                        </div>
+                    )}
+
+                    <div className="mt-3">
+                        {files.length === 0 ? (
+                            <div className="text-sm text-gray-400">업로드할 이미지가 없습니다.</div>
+                        ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {files.map((f, i) => (
+                                    <div key={i} className="rounded-2xl border border-gray-200 overflow-hidden">
+                                        <div className="aspect-square bg-gray-100 overflow-hidden">
+                                            <img src={previews[i]} alt={f.name} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="p-2 flex items-center justify-between gap-2">
+                                            <div className="text-[11px] text-gray-500 truncate">{f.name}</div>
+                                            <button
+                                                onClick={() => removeFile(i)}
+                                                className="w-8 h-8 rounded-xl hover:bg-rose-50 grid place-items-center"
+                                                title="삭제"
+                                            >
+                                                <Trash2 className="w-4 h-4 text-rose-500" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
-                )}
-            </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                onClick={onClose}
-                className="px-5 py-3 rounded-2xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50"
-                disabled={submitting}
-                >
-                취소
-                </button>
-                <button
-                onClick={submit}
-                disabled={submitting || !canWrite.ok}
-                className="px-6 py-3 rounded-2xl bg-[rgb(118,90,255)] text-white text-sm font-extrabold hover:bg-[rgb(98,72,235)] disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                {submitting ? "등록 중..." : "리뷰 등록"}
-                </button>
-            </div>
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                        <button
+                            onClick={onClose}
+                            className="px-5 py-3 rounded-2xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                            disabled={submitting}
+                        >
+                        취소
+                        </button>
+                        <button
+                            onClick={submit}
+                            disabled={submitting || !canWrite.ok}
+                            className="px-6 py-3 rounded-2xl bg-[rgb(118,90,255)] text-white text-sm font-extrabold hover:bg-[rgb(98,72,235)] disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                        {submitting ? "등록 중..." : "리뷰 등록"}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-        </div>
-
-
     );
 }
