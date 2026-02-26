@@ -88,6 +88,13 @@ export type ErrorCode =
   | "INVALID_NICKNAME_FORMAT"
   | "NICKNAME_CHANGE_COOLDOWN"
   | "ALREADY_USED_NICKNAME"
+
+  /** 탈퇴 */
+  | "USER_ID_REQUIRED"
+  | "USER_NOT_FOUND"
+  | "USER_DELETE_FORBIDDEN"
+  | "ADMIN_DELETE_FORBIDDEN"
+  | "USER_DELETE_FAILED"
   | (string & {});
 
 export type ErrorHandlingResult =

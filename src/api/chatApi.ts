@@ -106,7 +106,19 @@ export async function enterRoom(
     await handle<any>(res);
 }
 
-// POST /chat/room/exit (파라미터 없음)
+export async function leaveChatRoom(
+    token: string | null | undefined,
+    roomId: string
+) {
+    const res = await fetch(buildURL("/chat/room/" + encodeURIComponent(roomId) + "/leave"), {
+        method: "POST",
+        headers: authHeaders(token ?? undefined),
+        credentials: "include",
+    });
+    await handle<any>(res);
+}
+
+// POST /chat/room/exit 
 export async function exitRoom(token: string | null | undefined) {
     const res = await fetch(buildURL("/chat/room/exit"), {
         method: "POST",

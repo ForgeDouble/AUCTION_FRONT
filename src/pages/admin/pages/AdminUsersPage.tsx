@@ -8,6 +8,7 @@ import { useModal } from "@/contexts/ModalContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { handleApiError } from "@/errors/HandleApiError";
+import { deleteUserAccount } from "@/api/deleteApi";
 
 type RoleTab = "ALL" | "ADMIN" | "INQUIRY" | "USER";
 
@@ -117,7 +118,54 @@ export default function AdminUsersPage() {
     [refreshUsersPage, usersPageSize, roleFilter, q, uiDeps]
   );
 
-  // roleFilter는 즉시, q/usersPageSize는 디바운스
+  // 탈퇴 시키는 기능 구현
+  const onDeleteUser = useCallback(
+    async (targetUserId: number, targetEmail?: string, targetAuthority?: Authority) => {
+      if (loading) return;
+
+      const label = targetEmail ? `${targetEmail} (ID: ${targetUserId})` : `ID: ${targetUserId}`;
+      const extra =
+        targetAuthority === "ADMIN"
+          ? "\n(주의) 관리자 계정 삭제는 상위 관리자 만 가능합니다."
+          : "";
+
+      const ok = window.confirm(
+        `정말 이 계정을 탈퇴 처리할까요?\n${label}${extra}`
+      );
+      
+      if (!ok) return;
+
+      setLoading(true);
+      try {
+        await deleteUserAccount(targetUserId);
+        showWarning("탈퇴 처리 완료");
+        await refreshUsersPage({ page: usersPageIndex, size: usersPageSize, role: roleFilter, q });
+      } catch (e) {
+        const r = handleApiError(e);
+
+        if (r.type === "AUTH" || r.type === "REDIRECT") {
+          applyUiError(e, uiDeps);
+          return;
+        }
+
+        showError(pickMessage(r, "탈퇴 처리 중 오류가 발생했습니다."));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      loading,
+      showWarning,
+      showError,
+      refreshUsersPage,
+      usersPageIndex,
+      usersPageSize,
+      roleFilter,
+      q,
+      uiDeps,
+    ]
+  );
+
   const prevRoleRef = useRef<RoleTab>(roleFilter);
   useEffect(() => {
     const isRoleChanged = prevRoleRef.current !== roleFilter;
@@ -544,6 +592,7 @@ export default function AdminUsersPage() {
                 <th className="py-2 pr-3 w-[180px]">닉네임</th>
                 <th className="py-2 pr-3 w-[160px]">전화</th>
                 <th className="py-2 pr-3 w-[160px]">상태</th>
+                <th className="py-2 pr-3 w-[100px]">관리</th>
               </tr>
             </thead>
 
@@ -591,13 +640,30 @@ export default function AdminUsersPage() {
                         ) : null}
                       </div>
                     </td>
+
+                    <td className="py-2 pr-3 break-keep whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => void onDeleteUser(u.userId, u.email, u.authority)}
+                        disabled={loading}
+                        className={
+                          "px-3 py-1.5 rounded-xl text-xs font-semibold " +
+                          (loading
+                            ? "opacity-50 cursor-not-allowed border-rose-200 text-rose-400"
+                            : "border-rose-200 text-rose-600 hover:bg-rose-50")
+                        }
+                        title="탈퇴(soft delete)"
+                      >
+                        탈퇴
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
 
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-gray-500 break-keep">
+                  <td colSpan={8} className="py-6 text-center text-gray-500 break-keep">
                     목록이 없습니다.
                   </td>
                 </tr>
