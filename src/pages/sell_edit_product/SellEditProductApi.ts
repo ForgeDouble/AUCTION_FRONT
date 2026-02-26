@@ -1,4 +1,4 @@
-import type { ApiResponse } from "@/api/registerapi";
+import type { ApiResponse } from "@/type/CommonType";
 import type {
   ParentCategoriesDto,
   ProductCreateDto,

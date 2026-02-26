@@ -71,6 +71,16 @@ export type ErrorCode =
   /** 로그인 */
   | "INVALID_LOGIN_CREDENTIALS"
   | "ACCOUNT_SUSPENDED"
+  /** 회원 가입*/
+  | "EMAIL_ALREADY_EXISTS"
+  | "INVALID_EMAIL_FORMAT"
+  | "INVALID_NAME_FORMAT"
+  | "INVALID_NICKNAME_FORMAT"
+  | "INVALID_BIRTHDAY_FORMAT"
+  | "INVALID_PHONE_FORMAT"
+  | "INVALID_ADDRESS_FORMAT"
+  | "INVALID_PASSWORD_FORMAT"
+  | "INVALID_GENDER_FORMAT"
   /** 닉네임 변경 */
   | "USER_TEMPORARY_RESTRICTED"
   | "BLANK_NICKNAME"
@@ -93,7 +103,7 @@ export type ErrorHandlingResult =
   | { type: "MODAL"; message: string }
   | { type: "ERROR"; message: string }
   | { type: "WARNING"; message: string }
-  | { type: "DIALOG"; message: string }
+  | { type: "DIALOG"; message: string; to?: string }
   | { type: "FIELD_ERROR"; field: string; message: string }
   | { type: "IGNORE" }
   | { type: "AUTH"; message: string };

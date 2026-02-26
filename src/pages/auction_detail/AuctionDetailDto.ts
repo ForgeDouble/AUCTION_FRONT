@@ -18,7 +18,7 @@ export interface ProductDto {
   productContent: string;
   price: number;
   status: string;
-  images: imageDto;
+  images: imageDto[];
   auctionEndTime: string;
 }
 

@@ -1,4 +1,5 @@
 // api/authApi.ts
+import { ApiError, UnauthorizedError } from "@/errors/Errors";
 import type { ApiResponse, UserTokenDto } from "../type/CommonType";
 
 export const fetchLoginEmail = async (
@@ -14,7 +15,18 @@ export const fetchLoginEmail = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch bids: ${response.status}`);
+    const body = await response.json();
+
+    if (response.status === 401) {
+      throw new UnauthorizedError();
+    }
+
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
   }
 
   return response.json();

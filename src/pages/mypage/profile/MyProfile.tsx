@@ -15,6 +15,7 @@ import {
   Heart,
   Gavel,
   Trash2,
+  AlertCircle,
 } from "lucide-react";
 
 import { useAuth } from "../../../hooks/useAuth";
@@ -22,35 +23,64 @@ import { useModal } from "@/contexts/ModalContext";
 import {
   deleteMyProfileImage,
   fetchLoginUser,
-  updateMyNickname,
   updateMyProfileBasic,
   uploadMyProfileImage,
 } from "./MyProfileApi";
-import type { UserDto } from "./MyProfileDto";
+import type { Errors, FormState, UserDto } from "./MyProfileDto";
 import ProfileField from "./components/ProFileField";
 import MenuItem from "./components/MenuItem";
 import { handleApiError } from "@/errors/HandleApiError";
 import type { ErrorState } from "@/errors/ErrorDto";
 import ErrorPage from "@/errors/ErrorPage";
+import { isValidPhone } from "@/lib/validators";
 
 const MyProfile = () => {
+  const initial: FormState = {
+    nickname: "",
+    phone: "",
+    address: "",
+  };
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { showLogin, showError, showWarning } = useModal();
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [user, setUser] = useState<UserDto | null>(null);
-  const [tempUser, setTempUser] = useState<UserDto | null>(null);
+
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [photoMenuOpen, setPhotoMenuOpen] = useState<boolean>(false);
+  const [f, setF] = useState<FormState>(initial);
+  const [err, setErr] = useState<Errors>({});
 
   const nicknameWarnedRef = useRef(false);
 
-  useEffect(() => {
-    if (!isEditing) setPhotoMenuOpen(false);
-  }, [isEditing]);
+  function set<K extends keyof FormState>(k: K, v: FormState[K]) {
+    setF((p) => ({ ...p, [k]: v }));
+    if (err[k]) setErr((p) => ({ ...p, [k]: "" }));
+  }
+
+  function validateField<K extends keyof FormState>(k: K, v: FormState[K]) {
+    let msg = "";
+    switch (k) {
+      case "nickname":
+        if (String(v).trim().length > 0 && !/^[\w가-힣]{2,8}$/.test(String(v)))
+          msg = "닉네임은 2~8자 (한글/영문/숫자)만 가능합니다.";
+        break;
+      case "phone":
+        if (!v) msg = "전화번호를 입력하세요.";
+        else if (!isValidPhone(String(v)))
+          msg = "올바른 전화번호 형식이 아닙니다.";
+        break;
+      case "address":
+        if (String(v).trim().length > 0 && String(v).length < 2)
+          msg = "주소가 너무 짧습니다.";
+        break;
+    }
+    setErr((p) => ({ ...p, [k]: msg }));
+    return !msg;
+  }
 
   const loadLoginUser = useCallback(async () => {
     try {
@@ -69,8 +99,15 @@ const MyProfile = () => {
         createdAt: raw.createdAt?.split("T")[0].replace(/-/g, ".") ?? "",
       };
 
+      const tempProfile: FormState = {
+        nickname: raw.nickname,
+        phone: raw.phone,
+        address: raw.address,
+      };
+
       setUser(userProfile);
-      setTempUser((prev) => (isEditing ? prev : userProfile));
+
+      setF((prev) => (isEditing ? prev : tempProfile));
     } catch (error: unknown) {
       const result = handleApiError(error);
       console.error(result);
@@ -97,7 +134,12 @@ const MyProfile = () => {
 
   const startEdit = useCallback(() => {
     if (!user) return;
-    setTempUser({ ...user });
+
+    setF({
+      nickname: user.nickname,
+      phone: user.phone,
+      address: user.address,
+    });
     setIsEditing(true);
     setErrorMessage("");
 
@@ -108,7 +150,24 @@ const MyProfile = () => {
   }, [user, showWarning]);
 
   const handleCancel = useCallback(() => {
-    setTempUser(user ? { ...user } : null);
+    setF(
+      user
+        ? {
+            nickname: user.nickname,
+            phone: user.phone,
+            address: user.address,
+          }
+        : {
+            nickname: "",
+            phone: "",
+            address: "",
+          },
+    );
+    setErr({
+      nickname: "",
+      phone: "",
+      address: "",
+    });
     setIsEditing(false);
     setErrorMessage("");
     nicknameWarnedRef.current = false;
@@ -127,86 +186,53 @@ const MyProfile = () => {
       logout();
       return;
     }
-    if (!user || !tempUser) return;
+    if (!user || !f) return;
 
-    const nameChanged = (tempUser.name ?? "") !== (user.name ?? "");
-    const addressChanged = (tempUser.address ?? "") !== (user.address ?? "");
-    const phoneChanged = (tempUser.phone ?? "") !== (user.phone ?? "");
-
-    const nicknameChanged =
-      (tempUser.nickname ?? "").trim() !== (user.nickname ?? "").trim() &&
-      (tempUser.nickname ?? "").trim().length > 0;
+    let ok = true;
+    (Object.keys(f) as (keyof FormState)[]).forEach((k) => {
+      ok = validateField(k, f[k]) && ok;
+    });
+    if (!ok) return;
 
     try {
-      if (nameChanged || addressChanged || phoneChanged) {
-        await updateMyProfileBasic(token, {
-          name: nameChanged ? tempUser.name : undefined,
-          address: addressChanged ? tempUser.address : undefined,
-          phone: phoneChanged ? tempUser.phone : undefined,
-        });
-      }
+      await updateMyProfileBasic(token, {
+        nickname: f.nickname,
+        address: f.address,
+        phone: f.phone,
+      });
     } catch (error: unknown) {
       const result = handleApiError(error);
       console.error(result);
 
       switch (result.type) {
-        case "AUTH":
-          showLogin("confirm");
-          logout();
+        case "DIALOG":
+          switch (result.to) {
+            case "nickname":
+              setErr((p) => ({ ...p, nickname: result.message }));
+              break;
+
+            case "phone":
+              setErr((p) => ({ ...p, phone: result.message }));
+              break;
+            case "address":
+              setErr((p) => ({ ...p, address: result.message }));
+              break;
+
+            default:
+              showError(result.message ?? "입력값을 확인해주세요.");
+          }
           break;
-        default:
-          showError(
-            "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
-          );
-      }
-      return;
-    }
-
-    if (nicknameChanged) {
-      try {
-        await updateMyNickname(token, (tempUser.nickname ?? "").trim());
-      } catch (error: unknown) {
-        const result = handleApiError(error);
-        console.error(result);
-
-        switch (result.type) {
-          case "AUTH":
-            showLogin("confirm");
-            logout();
-            break;
-          case "WARNING":
-            showWarning(result.message);
-            break;
-          case "DIALOG":
-            setErrorMessage(result.message);
-            break;
-          default:
-            showError(
-              "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
-            );
-        }
-        return;
       }
     }
-
     await loadLoginUser();
     setIsEditing(false);
     setErrorMessage("");
-  }, [
-    loadLoginUser,
-    showLogin,
-    logout,
-    showError,
-    showWarning,
-    tempUser,
-    user,
-  ]);
+  }, [loadLoginUser, showLogin, logout, showError, user, f]);
 
   const openSelector = useCallback(() => {
-    if (!isEditing) return;
     setPhotoMenuOpen(false);
     fileInputRef.current?.click();
-  }, [isEditing]);
+  }, []);
 
   const onPickImage = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,19 +280,37 @@ const MyProfile = () => {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        showLogin();
+        showLogin("confirm");
+        logout();
         return;
       }
       setPhotoMenuOpen(false);
       await deleteMyProfileImage(token);
       await loadLoginUser();
-    } catch (e: any) {
-      console.error(e);
-      showError(e?.message ?? "프로필 이미지 삭제 실패");
-    }
-  }, [loadLoginUser, showLogin, showError]);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
 
-  const viewUser = isEditing ? tempUser : user;
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+        case "WARNING":
+          showWarning(result.message);
+          break;
+        case "DIALOG":
+          setErrorMessage(result.message);
+          break;
+        default:
+          showError(
+            "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+          );
+      }
+    }
+  }, [loadLoginUser, showLogin, showError, logout, showWarning]);
+
+  const viewUser = isEditing ? f : user;
 
   if (errorState?.show) {
     return (
@@ -277,6 +321,7 @@ const MyProfile = () => {
       />
     );
   }
+  const errText = "mt-2 text-[12px] text-red-500 flex items-center gap-1";
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] pt-20 pb-28 font-sans">
@@ -324,50 +369,48 @@ const MyProfile = () => {
                     )}
                   </div>
 
-                  {isEditing && (
-                    <div className="absolute -bottom-1 right-1">
-                      <button
-                        type="button"
-                        onClick={() => setPhotoMenuOpen((v) => !v)}
-                        className="bg-[#765AFF] text-white p-2.5 rounded-full shadow-lg hover:bg-[#6348e6] transition-transform hover:scale-105 active:scale-95"
-                        title="프로필 사진"
-                      >
-                        <Camera className="w-4 h-4" />
-                      </button>
+                  <div className="absolute -bottom-1 right-1">
+                    <button
+                      type="button"
+                      onClick={() => setPhotoMenuOpen((v) => !v)}
+                      className="bg-[#765AFF] text-white p-2.5 rounded-full shadow-lg hover:bg-[#6348e6] transition-transform hover:scale-105 active:scale-95"
+                      title="프로필 사진"
+                    >
+                      <Camera className="w-4 h-4" />
+                    </button>
 
-                      {photoMenuOpen && (
-                        <div className="absolute bottom-12 right-0 w-36 bg-white border border-gray-100 rounded-2xl shadow-xl p-1">
+                    {photoMenuOpen && (
+                      <div className="absolute bottom-12 right-0 w-36 bg-white border border-gray-100 rounded-2xl shadow-xl p-1">
+                        <button
+                          type="button"
+                          onClick={openSelector}
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 text-sm text-gray-700"
+                        >
+                          <Camera className="w-4 h-4 text-[#765AFF]" />
+                          <span className="font-medium">사진 변경</span>
+                        </button>
+
+                        {user?.profileImageUrl && (
                           <button
                             type="button"
-                            onClick={openSelector}
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 text-sm text-gray-700"
+                            onClick={onDeleteImage}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-600"
                           >
-                            <Camera className="w-4 h-4 text-[#765AFF]" />
-                            <span className="font-medium">사진 변경</span>
+                            <Trash2 className="w-4 h-4" />
+                            <span className="font-medium">사진 삭제</span>
                           </button>
+                        )}
+                      </div>
+                    )}
 
-                          {user?.profileImageUrl && (
-                            <button
-                              type="button"
-                              onClick={onDeleteImage}
-                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-50 text-sm text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              <span className="font-medium">사진 삭제</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={onPickImage}
-                      />
-                    </div>
-                  )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={onPickImage}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -467,31 +510,29 @@ const MyProfile = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
                 <ProfileField
                   label="이름"
-                  value={viewUser?.name}
+                  value={user?.name}
                   icon={User2}
-                  isEditable={true}
+                  isEditable={false}
                   isEditing={isEditing}
-                  onChange={(e) =>
-                    setTempUser((prev) => ({
-                      ...(prev ?? (user as UserDto)),
-                      name: e.target.value,
-                    }))
-                  }
                 />
-
-                <ProfileField
-                  label="닉네임"
-                  value={viewUser?.nickname}
-                  icon={User}
-                  isEditable={true}
-                  isEditing={isEditing}
-                  onChange={(e) =>
-                    setTempUser((prev) => ({
-                      ...(prev ?? (user as UserDto)),
-                      nickname: e.target.value,
-                    }))
-                  }
-                />
+                <div>
+                  <ProfileField
+                    label="닉네임"
+                    value={viewUser?.nickname}
+                    icon={User}
+                    isEditable={true}
+                    isEditing={isEditing}
+                    onBlur={(e) => validateField("nickname", e.target.value)}
+                    onChange={(e) => {
+                      set("nickname", e.target.value);
+                    }}
+                  />
+                  {err.nickname && (
+                    <div className={errText}>
+                      <AlertCircle className="w-3.5 h-3.5" /> {err.nickname}
+                    </div>
+                  )}
+                </div>
 
                 {errorMessage && (
                   <div className="md:col-span-2">
@@ -512,24 +553,28 @@ const MyProfile = () => {
                     isEditing={isEditing}
                   />
                 </div>
-
-                <ProfileField
-                  label="전화번호"
-                  value={viewUser?.phone}
-                  icon={Smartphone}
-                  isEditable={true}
-                  isEditing={isEditing}
-                  onChange={(e) => {
-                    const onlyDigits = String(e.target.value ?? "").replace(
-                      /[^0-9]/g,
-                      "",
-                    );
-                    setTempUser((prev) => ({
-                      ...(prev ?? (user as UserDto)),
-                      phone: onlyDigits,
-                    }));
-                  }}
-                />
+                <div>
+                  <ProfileField
+                    label="전화번호"
+                    value={viewUser?.phone}
+                    icon={Smartphone}
+                    isEditable={true}
+                    isEditing={isEditing}
+                    onBlur={(e) => validateField("phone", e.target.value)}
+                    onChange={(e) => {
+                      const onlyDigits = String(e.target.value ?? "").replace(
+                        /[^0-9]/g,
+                        "",
+                      );
+                      set("phone", onlyDigits);
+                    }}
+                  />
+                  {err.phone && (
+                    <div className={errText}>
+                      <AlertCircle className="w-3.5 h-3.5" /> {err.phone}
+                    </div>
+                  )}
+                </div>
 
                 <ProfileField
                   label="생년월일"
@@ -546,13 +591,16 @@ const MyProfile = () => {
                     icon={MapPin}
                     isEditable={true}
                     isEditing={isEditing}
-                    onChange={(e) =>
-                      setTempUser((prev) => ({
-                        ...(prev ?? (user as UserDto)),
-                        address: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => {
+                      set("address", e.target.value);
+                    }}
+                    onBlur={(e) => validateField("address", e.target.value)}
                   />
+                  {err.address && (
+                    <div className={errText}>
+                      <AlertCircle className="w-3.5 h-3.5" /> {err.address}
+                    </div>
+                  )}
                 </div>
 
                 <div className="md:col-span-2">
