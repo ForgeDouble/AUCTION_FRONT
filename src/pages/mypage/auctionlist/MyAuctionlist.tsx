@@ -5,6 +5,7 @@ import {
   Search,
   RefreshCw,
   LayoutGrid,
+  Grid3X3,
   List as ListIcon,
   ChevronRight,
   XCircle,
@@ -229,12 +230,12 @@ function ViewToggle({
         className={cn(
           "inline-flex items-center gap-2 px-3 h-9 rounded-xl text-sm font-extrabold transition",
           mode === "grid"
-            ? "bg-zinc-900 text-white"
+            ? "bg-[rgb(118,90,255)] text-white"
             : "text-zinc-700 hover:bg-white",
         )}
         title="그리드"
       >
-        <LayoutGrid className="w-4 h-4" />
+        <Grid3X3 className="w-4 h-4" />
       </button>
       <button
         type="button"
@@ -242,7 +243,7 @@ function ViewToggle({
         className={cn(
           "inline-flex items-center gap-2 px-3 h-9 rounded-xl text-sm font-extrabold transition",
           mode === "list"
-            ? "bg-zinc-900 text-white"
+            ? "bg-[rgb(118,90,255)] text-white"
             : "text-zinc-700 hover:bg-white",
         )}
         title="리스트"
