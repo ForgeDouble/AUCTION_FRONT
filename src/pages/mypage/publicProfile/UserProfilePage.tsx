@@ -31,6 +31,8 @@ import type { SeasonUserAwardsDto } from "@/components/season/seasonTypes";
 import SeasonAwardChips from "@/components/season/SeasonAwardChips";
 import { handleApiError } from "@/errors/HandleApiError";
 import { useModal } from "@/contexts/ModalContext";
+import { fetchSellerReviewSummary } from "@/pages/mypage/reviews/reviewApi";
+import type { ReviewSellerSummaryDto } from "@/pages/mypage/reviews/reviewTypes";
 
 type ProductRow = {
   productId: number;
@@ -120,6 +122,8 @@ export default function UserProfilePage() {
   const [statuses, setStatuses] = useState<Array<ProductRow["status"]>>([
     "READY",
     "PROCESSING",
+    "SELLED",
+    "NOTSELLED"
   ]);
   const [searchKey, setSearchKey] = useState(0);
 
@@ -130,8 +134,10 @@ export default function UserProfilePage() {
   const [section, setSection] = useState<SectionKey>("PRODUCTS");
 
   const [reportOpen, setReportOpen] = useState(false);
-  const reportMode = "USER"; // Fixed to USER for this page
+  const reportMode = "USER";
   const reportable = Boolean(profile?.reportable);
+
+  const [reviewCount, setReviewCount] = useState<number | undefined>(undefined);
 
   const openDays = useMemo(() => {
     if (!profile?.createdAt) return null;
@@ -254,6 +260,30 @@ export default function UserProfilePage() {
         applyUiError(e);
       } finally {
         if (mounted) setSeasonLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [token, targetUserId]);
+
+  useEffect(() => {
+    if (!token || !targetUserId) {
+      setReviewCount(undefined);
+      return;
+    }
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const res = await fetchSellerReviewSummary(token, targetUserId);
+        const dto = unwrap<ReviewSellerSummaryDto>(res);
+        const cnt = Number(dto?.reviewCount ?? 0);
+        if (mounted) setReviewCount(Number.isFinite(cnt) ? cnt : 0);
+      } catch {
+        if (mounted) setReviewCount(undefined);
       }
     })();
 
@@ -482,6 +512,7 @@ export default function UserProfilePage() {
             active={section === "REVIEWS"}
             onClick={() => setSection("REVIEWS")}
             label="받은 리뷰"
+            count={reviewCount}
           />
         </div>
 
