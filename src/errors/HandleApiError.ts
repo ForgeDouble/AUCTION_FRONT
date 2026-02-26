@@ -283,6 +283,49 @@ export function handleApiError(error: unknown): ErrorHandlingResult {
           message: "거래 금액 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
         };  
 
+      case "USER_ID_REQUIRED":
+        return { 
+          type: "DIALOG",
+          message: error.message || "탈퇴 정보가 올바르지 않습니다." 
+        };
+
+      case "USER_NOT_FOUND":
+        return { 
+          type: "DIALOG", 
+          message: error.message || "이미 탈퇴했거나 존재하지 않는 계정입니다." 
+        };
+
+      case "USER_DELETE_FORBIDDEN":
+      case "ADMIN_DELETE_FORBIDDEN":
+        return { 
+          type: "DIALOG", 
+          message: error.message || "탈퇴 권한이 없습니다." 
+        };
+
+      case "USER_DELETE_FAILED":
+        return { 
+          type: "ERROR", 
+          message: error.message || "탈퇴 처리 중 오류가 발생했습니다." 
+        };  
+
+      case "DUPLICATE_REPORT":
+        return { 
+          type: "WARNING",
+          message: "이미 해당 대상에 대해 신고하셨습니다. (대상당 1회)" 
+        };
+
+      case "SELF_REPORT_FORBIDDEN":
+        return { 
+          type: "WARNING", 
+          message: "자기 자신을 신고할 수 없습니다." 
+        };
+
+      case "TARGET_USER_NOT_FOUND":
+        return { 
+          type: "WARNING", 
+          message: "대상 유저가 존재하지 않거나 비활성화 상태입니다."
+        };  
+        
       /** 기본 */
       default:
         return {

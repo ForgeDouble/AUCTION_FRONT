@@ -91,19 +91,26 @@ export function useNotifications(): UseNotificationsResult {
           data: data || undefined,
         };
       });
-
-      const countJsonRaw = await fetchUnreadCount();
-      const unread = unwrapResult<number>(countJsonRaw) ?? 0;
-
       setNotifications(mapped);
-      setUnreadCount(typeof unread === "number" ? unread : 0);
     } catch (e: any) {
       console.error(e);
-      setError(e?.message || "알림 조회 중 오류가 발생했습니다.");
+      setNotifications([]);
+      setError("알림을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const countJsonRaw = await fetchUnreadCount();
+      const unread = unwrapResult<number>(countJsonRaw) ?? 0;
+      setUnreadCount(typeof unread === "number" ? unread : 0);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
+
   const reload = () => {
     loadInitial();
   };

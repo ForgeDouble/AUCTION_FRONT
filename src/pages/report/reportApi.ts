@@ -1,4 +1,6 @@
 // src/api/reportApi.ts
+import { apiFetch } from "@/api/ApiClient";
+
 export type ReportCategory = "SPAM" | "AD" | "ABUSE" | "HATE" | "SCAM" | "OTHER";
 export type ReportTargetType = "USER" | "PRODUCT";
 
@@ -6,6 +8,7 @@ type CommonResDto<T> = {
   status_code?: number;
   status_message?: string;
   result?: T;
+
   statusCode?: number;
   statusMessage?: string;
 };
@@ -16,31 +19,18 @@ function getToken(): string | null {
   return localStorage.getItem("accessToken");
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getToken();
-
-  const res = await fetch(BASE + path, {
-    ...init,
-    headers: {
-      ...(init?.headers || {}),
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text?.trim() ? text : `HTTP ${res.status}`);
-  }
-  if (res.status === 204) return undefined as unknown as T;
-  return (await res.json()) as T;
+function unwrap<T>(raw: any): T {
+  if (raw && typeof raw === "object" && "result" in raw) return raw.result as T;
+  return raw as T;
 }
 
-function unwrap<T>(raw: CommonResDto<T> | T): T {
-  if (raw && typeof raw === "object" && "result" in (raw as any)) {
-    return (raw as CommonResDto<T>).result as T;
-  }
-  return raw as T;
+function headersWithAuth() {
+  const token = getToken();
+  return {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 }
 
 export async function createUserReport(payload: {
@@ -49,8 +39,10 @@ export async function createUserReport(payload: {
   content?: string | null;
   targetType?: ReportTargetType;
 }): Promise<void> {
-  const raw = await request<CommonResDto<any>>("/report/create", {
+  const raw = await apiFetch<CommonResDto<any>>(BASE + "/report/create", {
     method: "POST",
+    headers: headersWithAuth(),
+    credentials: "include",
     body: JSON.stringify({
       ...payload,
       targetType: payload.targetType ?? "USER",
@@ -64,8 +56,10 @@ export async function createProductReport(payload: {
   productId: number;
   content?: string | null;
 }): Promise<void> {
-  const raw = await request<CommonResDto<any>>("/report/product/create", {
+  const raw = await apiFetch<CommonResDto<any>>(BASE + "/report/product/create", {
     method: "POST",
+    headers: headersWithAuth(),
+    credentials: "include",
     body: JSON.stringify({
       productId: payload.productId,
       content: payload.content ?? null,
