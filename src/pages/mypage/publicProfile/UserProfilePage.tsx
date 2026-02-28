@@ -16,11 +16,11 @@ import {
   ArrowUpDown,
   Home,
   User2,
+  User,
 } from "lucide-react";
 
 // import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import ReportModal from "@/components/report/ReportModal";
-import ProfileAvatar from "@/components/ProfileAvatar";
 import {
   fetchPublicProfile,
   fetchProductsByTargetUser,
@@ -468,8 +468,8 @@ export default function UserProfilePage() {
                   />
                 ) : (
                   <div className="w-full h-full grid place-items-center bg-gray-50">
-                    <div className="w-16 h-16 rounded-2xl bg-white ring-1 ring-black/5 grid place-items-center shadow-sm">
-                      <User2 className="w-9 h-9 text-gray-400" />
+                    <div className="w-21 h-21 rounded-2xl bg-white ring-1 ring-black/5 grid place-items-center shadow-sm">
+                      <User className="w-14 h-14 text-gray-400" />
                     </div>
                   </div>
                 )}
