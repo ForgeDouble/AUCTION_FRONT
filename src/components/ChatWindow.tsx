@@ -1,8 +1,8 @@
-// components/ChatWindow.tsx
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import type { ChatMessageDto } from "@/pages/chat/ChatTypes";
 import { useAuth } from "@/hooks/useAuth";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 type Props = { title?: string; messages: ChatMessageDto[] };
 
@@ -32,20 +32,63 @@ function isImageMessage(m: ChatMessageDto) {
   );
 }
 
+const NAV_CH = "auction:navigate";
+
+function tryNavigateMain(path: string) {
+  try {
+    let w: any = window;
+
+    while (w.opener && !w.opener.closed) {
+      w = w.opener;
+    }
+
+    if (w && w !== window) {
+      w.location.assign(path);
+      w.focus();
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+function requestMainNavigate(path: string) {
+  if (tryNavigateMain(path)) return true;
+  try {
+    const ch = new BroadcastChannel(NAV_CH);
+    ch.postMessage({ path });
+    ch.close();
+    return true;
+  } catch {}
+
+  try {
+    localStorage.setItem(NAV_CH, JSON.stringify({ path, ts: Date.now() }));
+    localStorage.removeItem(NAV_CH);
+    return true;
+  } catch {}
+
+  return false;
+}
+
 export default function ChatWindow({ title, messages }: Props) {
+  const nav = useNavigate();
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const { userEmail } = useAuth();
-  const myEmail = useMemo(() => String(userEmail ?? "").trim().toLowerCase(), [userEmail]);
+  const { userEmail, userId: meId } = useAuth() as {
+    userEmail?: string | null;
+    userId?: number | null;
+  };
+
+  const myEmail = useMemo(
+    () => String(userEmail ?? "").trim().toLowerCase(),
+    [userEmail],
+  );
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const imageUrls = useMemo(() => {
-    return messages
-      .filter(isImageMessage)
-      .map((m) => String(m.content));
+    return messages.filter(isImageMessage).map((m) => String(m.content));
   }, [messages]);
 
   const openLightboxByUrl = useCallback(
@@ -57,17 +100,15 @@ export default function ChatWindow({ title, messages }: Props) {
     [imageUrls],
   );
 
-  const closeLightbox = useCallback(() => {
-    setLightboxOpen(false);
-  }, []);
-
-  const goPrev = useCallback(() => {
-    setLightboxIndex((i) => (i <= 0 ? Math.max(0, imageUrls.length - 1) : i - 1));
-  }, [imageUrls.length]);
-
-  const goNext = useCallback(() => {
-    setLightboxIndex((i) => (imageUrls.length === 0 ? 0 : (i + 1) % imageUrls.length));
-  }, [imageUrls.length]);
+  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+  const goPrev = useCallback(
+    () => setLightboxIndex((i) => (i <= 0 ? Math.max(0, imageUrls.length - 1) : i - 1)),
+    [imageUrls.length],
+  );
+  const goNext = useCallback(
+    () => setLightboxIndex((i) => (imageUrls.length === 0 ? 0 : (i + 1) % imageUrls.length)),
+    [imageUrls.length],
+  );
 
   useEffect(() => {
     if (!lightboxOpen) return;
@@ -92,8 +133,21 @@ export default function ChatWindow({ title, messages }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  let lastDayKey = "";
+  const goPublicProfile = useCallback(
+    (userId: number) => {
+      if (!Number.isFinite(userId) || userId <= 0) return;
 
+      const path = `/user/profile/${userId}`;
+      const ok = requestMainNavigate(path);
+
+      if (!ok || !window.opener) {
+        nav(path);
+      }
+    },
+    [nav],
+  );
+
+  let lastDayKey = "";
   const currentImageUrl = imageUrls[lightboxIndex] || "";
 
   return (
@@ -117,8 +171,16 @@ export default function ChatWindow({ title, messages }: Props) {
           const showTime = formatTimeAmPm(d);
           const nickname = m.senderNickname || (mine ? "나" : "상대방");
           const initial = nickname.slice(0, 1);
-
           const isImage = isImageMessage(m);
+
+          const targetUid =
+            typeof m.senderUserId === "number" ? m.senderUserId : null;
+
+          const canOpenPeer =
+            !mine &&
+            typeof targetUid === "number" &&
+            targetUid > 0 &&
+            (!meId || Number(targetUid) !== Number(meId));
 
           return (
             <React.Fragment key={m.messageId}>
@@ -134,7 +196,6 @@ export default function ChatWindow({ title, messages }: Props) {
                 <div className="flex justify-end mb-2">
                   <div className="flex flex-col items-end max-w-[72%] min-w-0">
                     <div className="text-[11px] text-gray-500 mb-0.5">{nickname}</div>
-
 
                     <div className="rounded-xl px-2 py-2 text-[13px] leading-snug shadow-sm bg-[#e8d8ff] text-gray-900 max-w-full min-w-0">
                       {isImage ? (
@@ -155,15 +216,28 @@ export default function ChatWindow({ title, messages }: Props) {
                       )}
                     </div>
 
-                    <div className="text-gray-700/70 text-[10px] mt-0.5 pr-1 text-right">
-                      {showTime}
-                    </div>
+                    <div className="text-gray-700/70 text-[10px] mt-0.5 pr-1 text-right">{showTime}</div>
                   </div>
                 </div>
               ) : (
                 <div className="flex justify-start mb-2">
                   <div className="flex items-start gap-2 max-w-[80%] min-w-0">
-                    <div className="w-8 h-8 shrink-0 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 text-xs font-semibold overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!canOpenPeer) return;
+                        goPublicProfile(targetUid as number);
+                      }}
+                      disabled={!canOpenPeer}
+                      title={canOpenPeer ? "프로필 보기" : "프로필 정보를 불러올 수 없어요"}
+                      className={
+                        "w-8 h-8 shrink-0 rounded-full overflow-hidden flex items-center justify-center text-xs font-semibold " +
+                        (m.senderProfileImageUrl ? "bg-gray-100" : "bg-purple-100 text-purple-700") +
+                        (canOpenPeer
+                          ? " hover:ring-2 hover:ring-[rgba(118,90,255,0.35)] cursor-pointer"
+                          : " opacity-70 cursor-default")
+                      }
+                    >
                       {m.senderProfileImageUrl ? (
                         <img
                           src={m.senderProfileImageUrl}
@@ -173,7 +247,7 @@ export default function ChatWindow({ title, messages }: Props) {
                       ) : (
                         initial
                       )}
-                    </div>
+                    </button>
 
                     <div className="flex flex-col min-w-0">
                       <div className="text-[11px] text-gray-500 mb-0.5">{nickname}</div>
@@ -197,7 +271,6 @@ export default function ChatWindow({ title, messages }: Props) {
                         )}
                       </div>
 
-                      {/* 시간: 버블 아래 */}
                       <div className="text-gray-500 text-[10px] mt-0.5 pl-1">{showTime}</div>
                     </div>
                   </div>
@@ -216,11 +289,7 @@ export default function ChatWindow({ title, messages }: Props) {
           role="dialog"
           aria-modal="true"
         >
-          <div
-            className="relative max-w-[92vw] max-h-[92vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* 닫기 */}
+          <div className="relative max-w-[92vw] max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={closeLightbox}
@@ -231,7 +300,6 @@ export default function ChatWindow({ title, messages }: Props) {
               <X className="w-5 h-5 text-gray-800" />
             </button>
 
-            {/* 이전/다음 */}
             {imageUrls.length > 1 && (
               <>
                 <button
@@ -256,14 +324,12 @@ export default function ChatWindow({ title, messages }: Props) {
               </>
             )}
 
-            {/* 이미지 */}
             <img
               src={currentImageUrl}
               alt="확대 이미지"
               className="max-w-[92vw] max-h-[92vh] rounded-2xl object-contain shadow-2xl bg-black/20"
             />
 
-            {/* 카운트 */}
             {imageUrls.length > 1 && (
               <div className="absolute left-1/2 -translate-x-1/2 -bottom-3 px-3 py-1 rounded-full bg-white/90 text-xs text-gray-800 shadow">
                 {lightboxIndex + 1} / {imageUrls.length}
