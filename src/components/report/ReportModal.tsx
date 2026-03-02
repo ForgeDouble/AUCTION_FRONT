@@ -39,7 +39,7 @@ export type ReportModalProps = {
 };
 
 const overlayCls =
-  "fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4";
+  "fixed inset-0 z-[40] bg-black/60 flex items-center justify-center p-4";
 const panelCls =
   "w-full max-w-[520px] rounded-2xl bg-white shadow-xl border border-gray-100 overflow-hidden";
 
@@ -47,6 +47,11 @@ const btnBase =
   "h-10 px-4 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2";
 const inputBase =
   "w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-200";
+
+function isDuplicateReportMsg(msg?: string) {
+  const m = String(msg ?? "").trim();
+  return /중복|이미\s*신고|already/i.test(m);
+}
 
 export default function ReportModal(props: ReportModalProps) {
   const {
@@ -84,25 +89,9 @@ export default function ReportModal(props: ReportModalProps) {
   const navigate = useNavigate();
   const { showLogin, showWarning, showError } = useModal();
 
-  const applyReportUiError = (e: unknown) => {
-    const r = handleApiError(e);
-
-    if (r.type === "AUTH") {
-      showLogin("confirm");
-      return;
-    }
-
-    if (r.type === "WARNING" || r.type === "DIALOG" || r.type === "MODAL") {
-      showWarning(r.message);
-      return;
-    }
-
-    if (r.type === "REDIRECT") {
-      navigate(r.to);
-      return;
-    }
-
-    showError(r.message);
+  const closeThen = (fn: () => void) => {
+    onClose();
+    setTimeout(fn, 0);
   };
 
   const canSubmit =
@@ -110,7 +99,6 @@ export default function ReportModal(props: ReportModalProps) {
       ? typeof targetUserId === "number" && targetUserId > 0
       : typeof productId === "number" && productId > 0;
 
-  //  모달 열릴 때마다 입력 초기화
   useEffect(() => {
     if (!open) return;
     setContent("");
@@ -119,9 +107,40 @@ export default function ReportModal(props: ReportModalProps) {
 
   if (!open) return null;
 
+  const applyReportUiError = (e: unknown) => {
+    const r = handleApiError(e);
+
+    if (r.type === "AUTH") {
+      closeThen(() => showLogin("confirm"));
+      return;
+    }
+
+    if (r.type === "REDIRECT") {
+      onClose();
+      navigate(r.to);
+      return;
+    }
+
+    if (r.type === "WARNING" || r.type === "DIALOG" || r.type === "MODAL") {
+      if (isDuplicateReportMsg(r.message)) {
+        closeThen(() => showError(r.message));
+        return;
+      }
+      closeThen(() => showWarning(r.message));
+      return;
+    }
+
+    if (r.type === "IGNORE") {
+      onClose();
+      return;
+    }
+
+    closeThen(() => showError(r.message ?? "서버 오류가 발생했습니다."));
+  };
+
   const submit = async () => {
     if (!canSubmit) {
-      showWarning("신고 대상 정보가 없습니다.");
+      closeThen(() => showWarning("신고 대상 정보가 없습니다."));
       return;
     }
 
@@ -141,9 +160,8 @@ export default function ReportModal(props: ReportModalProps) {
         });
       }
 
-      showWarning("신고가 접수되었습니다.");
       onSubmitted?.();
-      onClose();
+      closeThen(() => showWarning("신고가 접수되었습니다."));
     } catch (e) {
       console.error(e);
       applyReportUiError(e);
@@ -179,7 +197,6 @@ export default function ReportModal(props: ReportModalProps) {
           </button>
         </div>
 
-        {/* body */}
         <div className="px-5 py-4 space-y-3">
           {showCategory ? (
             <div>
@@ -227,7 +244,7 @@ export default function ReportModal(props: ReportModalProps) {
           </div>
         </div>
 
-        {/* footer */}
+
         <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-end gap-2">
           <button
             className={
