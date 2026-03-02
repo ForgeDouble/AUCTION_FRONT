@@ -17,7 +17,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useModal } from "@/contexts/ModalContext";
 import { handleApiError } from "@/errors/HandleApiError";
-
+import PlaceHolder from "@/components/PlaceHolder";
 function isReviewTag(x: unknown): x is ReviewTag {
   return typeof x === "string" && x in REVIEW_TAG_LABEL;
 }
@@ -265,7 +265,13 @@ function ReviewCard({ r, onOpenDetail }: { r: ReviewListDto; onOpenDetail: () =>
     <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex gap-4">
         <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
-          <img src={thumb ?? placeholderImg} alt="review thumb" className="w-full h-full object-cover" />
+          <div className="w-24 h-24 rounded-2xl overflow-hidden bg-white ring-1 ring-black/5 flex-shrink-0">
+            {thumb ? (
+              <img src={thumb} alt="review thumb" className="w-full h-full object-cover" />
+            ) : (
+              <PlaceHolder className="rounded-2xl" label="No Image" />
+            )}
+          </div>
         </div>
 
         <div className="flex-1 min-w-0">
