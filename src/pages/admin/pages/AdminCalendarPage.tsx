@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, XCircle, Trash2, Save } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, X, Trash2, Save } from "lucide-react";
 import { useAdminStore } from "../AdminContext";
 import { SectionTitle } from "../components/AdminUi";
 import type { CalendarEventRow } from "../adminTypes";
@@ -507,7 +507,7 @@ const AdminCalendarPage: React.FC = () => {
                 className="px-2 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
                 title="닫기"
               >
-                <XCircle className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -593,7 +593,7 @@ const AdminCalendarPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="text-sm font-bold text-gray-900">일정 추가</div>
             <button onClick={() => setOpen(false)} className="px-2 py-2 rounded-xl border border-gray-200 hover:bg-gray-50">
-              <XCircle className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
@@ -680,7 +680,7 @@ const AdminCalendarPage: React.FC = () => {
             className="px-2 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
             title="닫기"
           >
-            <XCircle className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
