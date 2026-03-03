@@ -87,6 +87,7 @@ function isLeapYear(y: number) {
   return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
 }
 
+
 function computeNextBirthdayDate(
   now: Date,
   mm: string,
@@ -195,6 +196,16 @@ const AdminSettingsModal: React.FC<Props> = ({
   const showFail = (msg: string) => showError(msg);
   // 성공은 굳이 모달 아니어도 되면(토스트/경고용)
   const showOk = (msg: string) => showWarning(msg);
+
+  const closeThenOk = (msg: string) => {
+    onClose();
+    setTimeout(() => showWarning(msg), 0);
+  };
+
+  const closeThenFail = (msg: string) => {
+    onClose();
+    setTimeout(() => showError(msg), 0);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -355,7 +366,8 @@ const AdminSettingsModal: React.FC<Props> = ({
       const url = await adminApi.uploadAdminProfileImage(f);
       setProfileImageUrl(url);
 
-      showOk("프로필 이미지가 저장되었습니다.");
+      // showOk("프로필 이미지가 저장되었습니다.");
+      closeThenOk("프로필 이미지가 저장되었습니다.");
     } catch (e) {
       console.error(e);
       showFail("프로필 이미지 업로드에 실패했습니다.\n잠시 후 다시 시도해 주세요.");
@@ -373,7 +385,8 @@ const AdminSettingsModal: React.FC<Props> = ({
       await adminApi.deleteMyProfileImage();
       setProfileImageUrl(null);
 
-      showOk("프로필 이미지가 삭제되었습니다.");
+      // showOk("프로필 이미지가 삭제되었습니다.");
+      closeThenOk("프로필 이미지가 삭제되었습니다.");
     } catch (e) {
       console.error(e);
       showFail("프로필 이미지 삭제에 실패했습니다.\n잠시 후 다시 시도해 주세요.");
@@ -392,7 +405,8 @@ const AdminSettingsModal: React.FC<Props> = ({
       await adminApi.updateMyNickname(next);
       setAdminNick(next);
 
-      showOk("닉네임이 변경되었습니다.");
+      // showOk("닉네임이 변경되었습니다.");
+      closeThenOk("닉네임이 변경되었습니다.");
     } catch (e) {
       console.error(e);
       showFail("닉네임 변경에 실패했습니다.\n잠시 후 다시 시도해 주세요.");
@@ -413,8 +427,10 @@ const AdminSettingsModal: React.FC<Props> = ({
       }
       await ensureBirthdayCalendar();
 
-      showOk("환경설정이 저장되었습니다.");
-      onClose();
+      // showOk("환경설정이 저장되었습니다.");
+      // onClose();
+      // setTimeout(() => showWarning("환경설정이 저장되었습니다."), 0);
+      closeThenOk("환경설정이 저장되었습니다.");
     } catch (e) {
       console.error(e);
       showFail("환경설정 저장에 실패했습니다.\n잠시 후 다시 시도해 주세요.");
