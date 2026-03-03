@@ -67,7 +67,7 @@ const AdminCalendarPage: React.FC = () => {
 
     return {
       showLogin: (mode?: "navigation" | "confirm") => showLogin(mode ?? "confirm"),
-      showWarning: (message: string) => showError(message),
+      showWarning: (message: string) => showWarning(message),
       showError: (message?: string) => showError(message ?? defaultAdminError),
       logout: () => logout(),
       navigate: (to: string) => nav(to),
@@ -214,6 +214,7 @@ const AdminCalendarPage: React.FC = () => {
 
       setDraft({ date: draft.date, time: "10:00", title: "", tag: "기타", memo: "" });
       setOpen(false);
+      uiDeps.showWarning("일정이 추가되었습니다.");
     } catch (e) {
       applyUiError(e, uiDeps);
     }
@@ -257,6 +258,7 @@ const AdminCalendarPage: React.FC = () => {
         tag: edit.tag || "기타",
         memo: edit.memo?.trim() ? edit.memo.trim() : null,
       });
+      uiDeps.showWarning("저장되었습니다.");
     } catch (e) {
       applyUiError(e, uiDeps);
     }
@@ -270,6 +272,7 @@ const AdminCalendarPage: React.FC = () => {
     try {
       await deleteEvent(selected.id);
       setSelectedId(null);
+      uiDeps.showWarning("삭제되었습니다.");
     } catch (e) {
       applyUiError(e, uiDeps);
     }
