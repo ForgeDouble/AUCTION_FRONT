@@ -20,7 +20,12 @@ function authorityBadge(role: Authority) {
   };
   return map[role] ?? "bg-gray-50 text-gray-700 border-gray-200";
 }
-
+function normAuthority(a: any): Authority | "UNKNOWN" {
+  const s = String(a ?? "").trim().toUpperCase();
+  const t = s.startsWith("ROLE_") ? s.slice(5) : s;
+  if (t === "ADMIN" || t === "INQUIRY" || t === "USER") return t as Authority;
+  return "UNKNOWN";
+}
 function onlyDigits(v: string) {
   return v.replace(/\D/g, "");
 }
@@ -97,7 +102,9 @@ export default function AdminUsersPage() {
       if (opts?.clearError) setLoadErr(null);
 
       try {
-        await refreshUsersPage({ page: 0, size: usersPageSize, role: roleFilter, q });
+        // await refreshUsersPage({ page: 0, size: usersPageSize, role: roleFilter, q });
+        const roleParam = roleFilter === "ALL" ? undefined : roleFilter;
+        await refreshUsersPage({ page: 0, size: usersPageSize, role: roleParam, q });
 
         if (seq !== reqSeqRef.current) return;
         setLoadErr(null);
@@ -139,7 +146,9 @@ export default function AdminUsersPage() {
       try {
         await deleteUserAccount(targetUserId);
         showWarning("탈퇴 처리 완료");
-        await refreshUsersPage({ page: usersPageIndex, size: usersPageSize, role: roleFilter, q });
+        // await refreshUsersPage({ page: usersPageIndex, size: usersPageSize, role: roleFilter, q });
+        const roleParam = roleFilter === "ALL" ? undefined : roleFilter;
+        await refreshUsersPage({ page: usersPageIndex, size: usersPageSize, role: roleParam, q });
       } catch (e) {
         const r = handleApiError(e);
 
@@ -303,9 +312,20 @@ export default function AdminUsersPage() {
   const startNo = usersTotalElements === 0 ? 0 : usersPageIndex * usersPageSize + 1;
   const endNo = Math.min(usersTotalElements, usersPageIndex * usersPageSize + users.length);
 
-  const adminsCount = usersCounts.ADMIN;
-  const inquiriesCount = usersCounts.INQUIRY;
-  const normalsCount = usersCounts.USER;
+  const derivedCounts = useMemo(() => {
+    const c = { ADMIN: 0, INQUIRY: 0, USER: 0 };
+    for (const u of users) {
+      const a = normAuthority(u.authority);
+      if (a === "ADMIN") c.ADMIN += 1;
+      else if (a === "INQUIRY") c.INQUIRY += 1;
+      else if (a === "USER") c.USER += 1;
+    }
+    return c;
+  }, [users]);
+
+  const adminsCount = (usersCounts?.ADMIN ?? 0) || derivedCounts.ADMIN;
+  const inquiriesCount = (usersCounts?.INQUIRY ?? 0) || derivedCounts.INQUIRY;
+  const normalsCount = (usersCounts?.USER ?? 0) || derivedCounts.USER;
 
   return (
     <div className="space-y-4">
