@@ -23,6 +23,7 @@ import { useModal } from "@/contexts/ModalContext";
 import {
   deleteMyProfileImage,
   fetchLoginUser,
+  updateMyNickname,
   updateMyProfileBasic,
   uploadMyProfileImage,
 } from "./MyProfileApi";
@@ -44,6 +45,7 @@ const MyProfile = () => {
   const { logout } = useAuth();
   const { showLogin, showError, showWarning } = useModal();
 
+  const [isEditingNickname, setIsEditingNickname] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [user, setUser] = useState<UserDto | null>(null);
 
@@ -142,6 +144,13 @@ const MyProfile = () => {
     });
     setIsEditing(true);
     setErrorMessage("");
+  }, [user]);
+
+  const startEditNickname = useCallback(() => {
+    if (!user) return;
+    setF((prev) => ({ ...prev, nickname: user.nickname }));
+    setIsEditingNickname(true);
+    setErrorMessage("");
 
     if (!nicknameWarnedRef.current) {
       nicknameWarnedRef.current = true;
@@ -152,26 +161,22 @@ const MyProfile = () => {
   const handleCancel = useCallback(() => {
     setF(
       user
-        ? {
-            nickname: user.nickname,
-            phone: user.phone,
-            address: user.address,
-          }
-        : {
-            nickname: "",
-            phone: "",
-            address: "",
-          },
+        ? { nickname: user.nickname, phone: user.phone, address: user.address }
+        : { nickname: "", phone: "", address: "" },
     );
-    setErr({
-      nickname: "",
-      phone: "",
-      address: "",
-    });
+    setErr({ nickname: "", phone: "", address: "" });
     setIsEditing(false);
+    setIsEditingNickname(false); // ← 추가
     setErrorMessage("");
     nicknameWarnedRef.current = false;
     setPhotoMenuOpen(false);
+  }, [user]);
+
+  const handleCancelNickname = useCallback(() => {
+    setF((prev) => ({ ...prev, nickname: user?.nickname ?? "" }));
+    setErr((prev) => ({ ...prev, nickname: "" }));
+    setIsEditingNickname(false);
+    nicknameWarnedRef.current = false;
   }, [user]);
 
   const handleLogout = useCallback(() => {
@@ -196,7 +201,6 @@ const MyProfile = () => {
 
     try {
       await updateMyProfileBasic(token, {
-        nickname: f.nickname,
         address: f.address,
         phone: f.phone,
       });
@@ -207,10 +211,6 @@ const MyProfile = () => {
       switch (result.type) {
         case "DIALOG":
           switch (result.to) {
-            case "nickname":
-              setErr((p) => ({ ...p, nickname: result.message }));
-              break;
-
             case "phone":
               setErr((p) => ({ ...p, phone: result.message }));
               break;
@@ -228,6 +228,44 @@ const MyProfile = () => {
     setIsEditing(false);
     setErrorMessage("");
   }, [loadLoginUser, showLogin, logout, showError, user, f]);
+
+  const handleSaveNickname = useCallback(async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      showLogin("confirm");
+      logout();
+      return;
+    }
+    if (!user) return;
+
+    const ok = validateField("nickname", f.nickname);
+    if (!ok) return;
+
+    try {
+      await updateMyNickname(token, f.nickname);
+      await loadLoginUser();
+      setIsEditingNickname(false);
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      if (result.type === "DIALOG" && result.to === "nickname") {
+        setErr((p) => ({ ...p, nickname: result.message }));
+      } else if (result.type === "ERROR") {
+        showError(result.message);
+      } else if (result.type === "WARNING") {
+        showWarning(result.message);
+      } else {
+        showError("입력값을 확인해주세요.");
+      }
+    }
+  }, [
+    f.nickname,
+    user,
+    loadLoginUser,
+    showLogin,
+    logout,
+    showError,
+    showWarning,
+  ]);
 
   const openSelector = useCallback(() => {
     setPhotoMenuOpen(false);
@@ -516,17 +554,49 @@ const MyProfile = () => {
                   isEditing={isEditing}
                 />
                 <div>
-                  <ProfileField
-                    label="닉네임"
-                    value={viewUser?.nickname}
-                    icon={User}
-                    isEditable={true}
-                    isEditing={isEditing}
-                    onBlur={(e) => validateField("nickname", e.target.value)}
-                    onChange={(e) => {
-                      set("nickname", e.target.value);
-                    }}
-                  />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <ProfileField
+                        label="닉네임"
+                        value={isEditingNickname ? f.nickname : user?.nickname}
+                        icon={User}
+                        isEditable={isEditingNickname} // 전용 모드일 때만 편집 가능
+                        isEditing={isEditingNickname}
+                        onBlur={(e) =>
+                          validateField("nickname", e.target.value)
+                        }
+                        onChange={(e) => set("nickname", e.target.value)}
+                      />
+                    </div>
+
+                    {/* 닉네임 전용 버튼 */}
+                    {!isEditingNickname ? (
+                      <button
+                        onClick={startEditNickname}
+                        className="mt-5 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-[#765AFF] hover:bg-[#765AFF]/5 transition-all"
+                        title="닉네임 수정"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <div className="mt-5 flex items-center gap-1">
+                        <button
+                          onClick={handleCancelNickname}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+                          title="취소"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={handleSaveNickname}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#765AFF] text-white hover:bg-[#6348e6] shadow-md shadow-[#765AFF]/30"
+                          title="저장"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   {err.nickname && (
                     <div className={errText}>
                       <AlertCircle className="w-3.5 h-3.5" /> {err.nickname}

@@ -2,11 +2,15 @@ import type { BidLogDto, ProductDto, SellerDto } from "./AuctionDetailDto";
 import type { ApiResponse } from "../../type/CommonType";
 import { ApiError, DataReadError } from "@/errors/Errors";
 
+const BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
+  "http://localhost:8080";
+
 /** redis로부터 경매 내역 조회 (입찰이 진행 중인 경우) */
 export const fetchBidsFromRedis = async (
   productId: number | null,
 ): Promise<ApiResponse<BidLogDto[]>> => {
-  const response = await fetch(`http://localhost:8080/bid/redis/${productId}`, {
+  const response = await fetch(`${BASE}/bid/redis/${productId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -31,7 +35,7 @@ export const fetchBidsFromRedis = async (
 export const fetchBidsFromDB = async (
   productId: number | null,
 ): Promise<ApiResponse<BidLogDto[]>> => {
-  const response = await fetch(`http://localhost:8080/bid/all/${productId}`, {
+  const response = await fetch(`${BASE}/bid/all/${productId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -56,7 +60,7 @@ export const fetchBidsFromDB = async (
 export const fetchProductById = async (
   productId: number | null,
 ): Promise<ApiResponse<ProductDto>> => {
-  const response = await fetch(`http://localhost:8080/product/${productId}`, {
+  const response = await fetch(`${BASE}/product/${productId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -82,15 +86,12 @@ export const fetchProductById = async (
 export const fetchSellerByProductId = async (
   productId: number | null,
 ): Promise<ApiResponse<SellerDto>> => {
-  const response = await fetch(
-    `http://localhost:8080/user/seller/${productId}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+  const response = await fetch(`${BASE}/user/seller/${productId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+  });
 
   if (!response.ok) {
     const body = await response.json();
@@ -112,16 +113,39 @@ export const fetchIsWishlisted = async (
   token: string | null,
   productId: null | number,
 ): Promise<ApiResponse<number | null>> => {
-  const response = await fetch(
-    `http://localhost:8080/wishlist/isWishlisted/${productId}`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
+  const response = await fetch(`${BASE}/wishlist/isWishlisted/${productId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
-  );
+  });
+
+  if (!response.ok) {
+    const body = await response.json();
+
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
+  }
+
+  return response.json();
+};
+
+export const fetchDeleteProduct = async (
+  token: string | null,
+  productId: null | number,
+): Promise<ApiResponse<null>> => {
+  const response = await fetch(`${BASE}/product/delete/${productId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
 
   if (!response.ok) {
     const body = await response.json();

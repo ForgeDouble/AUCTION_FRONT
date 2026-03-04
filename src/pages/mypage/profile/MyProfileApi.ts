@@ -35,7 +35,6 @@ export const updateMyProfileBasic = async (
   payload: { nickname?: string; address?: string; phone?: string },
 ): Promise<ApiResponse<null>> => {
   const fd = new FormData();
-  if (payload.nickname !== undefined) fd.append("nickname", payload.nickname);
   if (payload.address !== undefined) fd.append("address", payload.address);
   if (payload.phone !== undefined) fd.append("phone", payload.phone);
 
@@ -43,6 +42,34 @@ export const updateMyProfileBasic = async (
     method: "PUT",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: fd,
+  });
+
+  if (!response.ok) {
+    const body = await response.json();
+    if (response.status === 401) throw new UnauthorizedError();
+    throw new ApiError(
+      response.status,
+      body.statusCode,
+      body.errorMessage,
+      body.additionalInfo,
+    );
+  }
+
+  return response.json();
+};
+
+/** 내 정보 수정(닉네임) */
+export const updateMyNickname = async (
+  token: string | null,
+  nickname?: string,
+): Promise<ApiResponse<null>> => {
+  const response = await fetch(`${BASE}/user/nickname`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ nickname }),
   });
 
   if (!response.ok) {

@@ -9,6 +9,8 @@ import { fetchBidsByUser } from "./MyBidListApi";
 import { handleApiError } from "@/errors/HandleApiError";
 import { useAuth } from "@/hooks/useAuth";
 
+type FilterType = "ALL" | "PROCESSING" | "SUCCESS" | "FAILED";
+
 const MyBidlist = () => {
   const { showLogin } = useModal();
   const { logout } = useAuth();
@@ -25,7 +27,9 @@ const MyBidlist = () => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>(
+    (searchParams.get("filter") as FilterType) || "ALL",
+  );
   const navigate = useNavigate();
 
   const getStatusInfo = (status: string, isWinned: IsWinned) => {
@@ -130,7 +134,7 @@ const MyBidlist = () => {
   const loadBidsByUser = async (
     page: number = 0,
     size: number = 10,
-    status: Status | null = null,
+    filter: FilterType = "ALL",
   ) => {
     try {
       setLoading(true);
@@ -140,7 +144,20 @@ const MyBidlist = () => {
         logout();
         return;
       }
-      const data = await fetchBidsByUser(token, page, size, status);
+
+      const statusMap = {
+        ALL: { statuses: null, isWinned: null },
+        PROCESSING: { statuses: ["PROCESSING", "READY"], isWinned: null },
+        SUCCESS: { statuses: ["SELLED"], isWinned: "Y" },
+        FAILED: { statuses: ["SELLED", "NOTSELLED"], isWinned: "N" },
+      } as Record<
+        FilterType,
+        { statuses: Status[] | null; isWinned: "Y" | "N" | null }
+      >;
+      const { statuses, isWinned } = statusMap[filter];
+
+      const data = await fetchBidsByUser(token, page, size, statuses, isWinned);
+
       setBids(data.result.content);
       setPageInfo({
         totalElements: data.result.totalElements,
@@ -166,11 +183,11 @@ const MyBidlist = () => {
     }
   };
 
-  const handleStatusFilter = (status: Status | null) => {
-    setSelectedStatus(status);
+  const handleStatusFilter = (filter: FilterType) => {
+    setSelectedFilter(filter);
     setCurrentPage(0);
-    updateURLParams({ page: 0, status: status || "" });
-    loadBidsByUser(0, 10, status);
+    updateURLParams({ page: 0, filter });
+    loadBidsByUser(0, 10, filter);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -178,30 +195,19 @@ const MyBidlist = () => {
       return;
     }
     setCurrentPage(newPage);
-    updateURLParams({ page: newPage, status: selectedStatus || "" });
-    loadBidsByUser(newPage, pageInfo.size || 10, selectedStatus);
+    updateURLParams({ page: newPage, filter: selectedFilter });
+    loadBidsByUser(newPage, pageInfo.size || 10, selectedFilter);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   useEffect(() => {
-    const pageParam = searchParams.get("page");
-    const raw = searchParams.get("status");
-    const statusParam: Status | null =
-      raw === "READY" ||
-      raw === "PROCESSING" ||
-      raw === "SELLED" ||
-      raw == "NOTSELLED"
-        ? raw
-        : null;
+    const pageParam = parseInt(searchParams.get("page") || "0");
+    const filterParam = (searchParams.get("filter") as FilterType) || "ALL";
 
-    const initialPage = pageParam ? parseInt(pageParam) : 0;
-    const initialStatus = statusParam || null;
-
-    setCurrentPage(initialPage);
-    setSelectedStatus(initialStatus);
-    loadBidsByUser(initialPage, 10, initialStatus);
+    setCurrentPage(pageParam);
+    setSelectedFilter(filterParam);
+    loadBidsByUser(pageParam, 10, filterParam);
   }, []);
-
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -219,46 +225,24 @@ const MyBidlist = () => {
 
               {/* 필터 탭 (선택사항) */}
               <div className="flex gap-2 mb-6 flex-wrap">
-                <button
-                  onClick={() => handleStatusFilter(null)}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
-                    selectedStatus === null
-                      ? "bg-[rgb(118,90,255)] text-white"
-                      : "bg-white/5 border border-gray-400 text-gray-900 hover:bg-white/10"
-                  } transition-colors`}
-                >
-                  전체
-                </button>
-                <button
-                  onClick={() => handleStatusFilter("PROCESSING")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
-                    selectedStatus === "PROCESSING"
-                      ? "bg-[rgb(118,90,255)] text-white"
-                      : "bg-white/5 border border-gray-400 text-gray-900 hover:bg-white/10"
-                  } transition-colors`}
-                >
-                  진행중
-                </button>
-                <button
-                  onClick={() => handleStatusFilter("SELLED")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
-                    selectedStatus === "SELLED"
-                      ? "bg-[rgb(118,90,255)] text-white"
-                      : "bg-white/5 border border-gray-400 text-gray-900 hover:bg-white/10"
-                  } transition-colors`}
-                >
-                  낙찰
-                </button>
-                <button
-                  onClick={() => handleStatusFilter("NOTSELLED")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
-                    selectedStatus === "NOTSELLED"
-                      ? "bg-[rgb(118,90,255)] text-white"
-                      : "bg-white/5 border border-gray-400 text-gray-900 hover:bg-white/10"
-                  } transition-colors`}
-                >
-                  유찰
-                </button>
+                {[
+                  { label: "전체", value: "ALL" },
+                  { label: "진행 중", value: "PROCESSING" },
+                  { label: "성공한 경매", value: "SUCCESS" },
+                  { label: "실패한 경매", value: "FAILED" },
+                ].map(({ label, value }) => (
+                  <button
+                    key={value}
+                    onClick={() => handleStatusFilter(value as FilterType)}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
+                      selectedFilter === value
+                        ? "bg-[rgb(118,90,255)] text-white"
+                        : "bg-white/5 border border-gray-400 text-gray-900 hover:bg-white/10"
+                    } transition-colors`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
 
               {loading ? (

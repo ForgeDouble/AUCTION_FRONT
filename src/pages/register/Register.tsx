@@ -49,11 +49,18 @@ export default function RegisterPage() {
         else if (!reEmail.test(String(v)))
           msg = "유효한 이메일 주소가 아닙니다.";
         break;
-      case "name":
-        if (!v) msg = "이름을 입력하세요.";
-        else if (String(v).trim().length < 2)
+      case "name": {
+        const name = String(v).trim();
+
+        if (!name) {
+          msg = "이름을 입력하세요.";
+        } else if (name.length < 2) {
           msg = "이름은 2자 이상이어야 합니다.";
+        } else if (!/^[가-힣a-zA-Z]+$/.test(name)) {
+          msg = "이름에는 한글 또는 영문만 입력할 수 있습니다.";
+        }
         break;
+      }
       case "password":
         if (!v) msg = "비밀번호를 입력하세요.";
         else if (!rePassword.test(String(v)))
@@ -71,7 +78,7 @@ export default function RegisterPage() {
         const dot = toBirthdayDotFromInputDate(String(v));
         if (!v) msg = "생년월일을 선택하세요.";
         else if (!isValidBirthdayDot(dot))
-          msg = "유효하지 않은 생년월일입니다.";
+          msg = "만 14세 이상부터 가입할 수 있습니다.";
         break;
       }
       case "nickname":

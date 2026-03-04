@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import PlaceHolder from "@/components/PlaceHolder";
 import dayjs from "dayjs";
 import { handleApiError } from "@/errors/HandleApiError";
+import { useAuth } from "@/hooks/useAuth";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -40,6 +41,8 @@ const Home = () => {
   const [timers, setTimers] = useState<
     Record<number, { hours: number; minutes: number; seconds: number }>
   >({});
+
+  const { isAuthenticated } = useAuth();
 
   /** 카테고리 아이콘 */
   const categoryIcons: Record<string, LucideIcon> = {
@@ -423,7 +426,35 @@ const Home = () => {
               시작해보세요.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
+              {isAuthenticated ? (
+                <button
+                  onClick={() => {
+                    navigate(`auction_list`);
+                  }}
+                  className="px-8 py-3 rounded-xl bg-gray-600 border text-sm font-semibold text-gray-100 hover:bg-gray-800 cursor-pointer transition-colors"
+                >
+                  경매 둘러보기
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => navigate(`/register`)}
+                    className="px-8 py-3 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-semibold hover:bg-[rgb(90,58,252)] cursor-pointer transition-colors"
+                  >
+                    회원가입
+                    <ArrowRight className="inline-block ml-2 h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigate(`auction_list`);
+                    }}
+                    className="px-8 py-3 rounded-xl bg-gray-600 border text-sm font-semibold text-gray-100 hover:bg-gray-800 cursor-pointer transition-colors"
+                  >
+                    경매 둘러보기
+                  </button>
+                </>
+              )}
+              {/* <button
                 onClick={() => navigate(`/register`)}
                 className="px-8 py-3 rounded-xl bg-[rgb(118,90,255)] text-white text-sm font-semibold hover:bg-[rgb(90,58,252)] cursor-pointer transition-colors"
               >
@@ -437,7 +468,7 @@ const Home = () => {
                 className="px-8 py-3 rounded-xl bg-gray-600 border text-sm font-semibold text-gray-100 hover:bg-gray-800 cursor-pointer transition-colors"
               >
                 경매 둘러보기
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
