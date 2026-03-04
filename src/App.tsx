@@ -31,7 +31,7 @@ import UserProfilePage from "@/pages/mypage/publicProfile/UserProfilePage";
 import MyShopReviewsPage from "@/pages/mypage/reviews/MyShopReviewsPage";
 import ErrorPage from "./errors/ErrorPage";
 import EditProductPage from "./pages/sell_edit_product/EditProductPage";
-
+import NavigationBridge from "@/components/NavigationBridge";
 
 function App() {
   const location = useLocation();
@@ -51,6 +51,7 @@ function App() {
     <ModalProvider>
       <AuthProvider>
         <ChatProvider>
+          <NavigationBridge />
           <FcmNotificationCenter />
 
           {/* 1) 기본 화면: backgroundLocation이 있으면 "뒤에 깔릴 화면"을 그걸로 렌더 */}

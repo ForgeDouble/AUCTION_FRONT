@@ -1,7 +1,7 @@
 // pages/mypage/publicProfile/PublicProfileReview.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, Tag, X, Store, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, Tag, X, Store, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import { fetchSellerReviews, fetchSellerReviewSummary, fetchReviewDetail } from "@/pages/mypage/reviews/reviewApi";
 import {
@@ -14,10 +14,10 @@ import {
   type SpringPage,
   type ReviewTag,
 } from "@/pages/mypage/reviews/reviewTypes";
-
+import { useAuth } from "@/hooks/useAuth";
 import { useModal } from "@/contexts/ModalContext";
 import { handleApiError } from "@/errors/HandleApiError";
-
+import PlaceHolder from "@/components/PlaceHolder";
 function isReviewTag(x: unknown): x is ReviewTag {
   return typeof x === "string" && x in REVIEW_TAG_LABEL;
 }
@@ -70,7 +70,20 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
   const showServerErrorModal = () => {
     modal.showError("서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.");
   };
+  const handleListLoadError = (e: any) => {
+    const r = handleApiError(e);
 
+    if (r.type === "REDIRECT") {
+      nav(r.to);
+      return;
+    }
+
+    if (r.type === "AUTH") {
+      modal.showLogin("navigation");
+    return;
+    }
+
+  };
   const handleUiError = (e: any) => {
     const r = handleApiError(e);
 
@@ -91,7 +104,6 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
     showServerErrorModal();
     return true;
   };
-
   const load = async () => {
     if (!token) return;
 
@@ -106,7 +118,8 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
       setData(p);
       setSummary(s);
     } catch (e: any) {
-      handleUiError(e);
+      handleListLoadError(e);
+
       setLoadFailed(true);
       setData(null);
       setSummary(null);
@@ -184,8 +197,9 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
           <div className="mt-1 text-xs text-gray-500">잠시 후 다시 시도해주세요.</div>
           <button
             onClick={() => void load()}
-            className="mt-4 px-5 py-2 rounded-xl bg-[rgb(118,90,255)] hover:brightness-95 text-white text-sm font-semibold"
+            className="mt-6 inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[rgb(118,90,255)] hover:brightness-95 text-white text-sm font-semibold"
           >
+            <RefreshCw className="w-4 h-4" />
             다시 시도
           </button>
         </div>
@@ -251,7 +265,13 @@ function ReviewCard({ r, onOpenDetail }: { r: ReviewListDto; onOpenDetail: () =>
     <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex gap-4">
         <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
-          <img src={thumb ?? placeholderImg} alt="review thumb" className="w-full h-full object-cover" />
+          <div className="w-24 h-24 rounded-2xl overflow-hidden bg-white ring-1 ring-black/5 flex-shrink-0">
+            {thumb ? (
+              <img src={thumb} alt="review thumb" className="w-full h-full object-cover" />
+            ) : (
+              <PlaceHolder className="rounded-2xl" label="No Image" />
+            )}
+          </div>
         </div>
 
         <div className="flex-1 min-w-0">
@@ -323,7 +343,9 @@ function ReviewDetailModal(props: {
   onOpenLightbox: (index: number) => void;
 }) {
   const { open, loading, err, data, onClose, onGoProduct, onGoSeller, onOpenLightbox } = props;
+  const { userId: meId } = useAuth();
 
+  const isMyProfile = Boolean(meId && data?.sellerId && Number(data.sellerId) === Number(meId));
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -406,10 +428,20 @@ function ReviewDetailModal(props: {
 
                   <button
                     type="button"
-                    onClick={() => onGoSeller(data.sellerId)}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-[rgba(118,90,255,0.35)] text-[rgb(118,90,255)] text-sm font-extrabold hover:bg-[rgba(118,90,255,0.08)] active:scale-[0.98] transition-all"
+                    onClick={() => {
+                      if (isMyProfile) return;
+                      onGoSeller(data.sellerId);
+                    }}
+                    disabled={isMyProfile}
+                    className={
+                      "w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-extrabold transition-all " +
+                      (isMyProfile
+                        ? "bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-white border border-[rgba(118,90,255,0.35)] text-[rgb(118,90,255)] hover:bg-[rgba(118,90,255,0.08)] active:scale-[0.98]")
+                    }
+                    title={isMyProfile ? "내 프로필은 여기서 열 수 없어요" : "판매자 프로필 보기"}
                   >
-                    <Store className="w-4 h-4 text-[rgb(118,90,255)]" />
+                    <Store className={"w-4 h-4 " + (isMyProfile ? "text-gray-300" : "text-[rgb(118,90,255)]")} />
                     <span className="min-w-0 truncate">{data.sellerNick}님 상점</span>
                   </button>
                 </div>

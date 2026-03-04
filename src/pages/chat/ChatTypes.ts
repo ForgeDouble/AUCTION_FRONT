@@ -1,5 +1,4 @@
-// ChatTypes.ts
-export type ChatMessageType = "TALK" | "IMAGE" | "FILE";
+export type ChatMessageType = "TALK" | "IMAGE" | "FILE" | "SYSTEM";
 
 export type ChatAvatarItem = {
   nickname?: string;
@@ -12,34 +11,38 @@ export interface ChatRoomDto {
   lastMessage?: string;
   lastAt?: string;
   unread?: number;
-  // peerUserId?: number;
+
   adminChat?: boolean;
-  peerNickname?: string;
   productId?: number;
+
+  peerNickname?: string;
+  peerEmail?: string;
+  peerProfileImageUrl?: string | null;
 
   inquiry?: boolean;
   userKeywords?: string;
 
-  peerEmail?: string;
   avatarStack?: ChatAvatarItem[];
-  peerProfileImageUrl?: string | null;
+  avatarMoreCount?: number;
 }
 
 export interface ChatMessageDto {
   messageId: string;
   roomId: string;
   senderId: string;
+  senderUserId?: number | null;
+
   senderNickname: string;
   senderProfileImageUrl?: string;
+
   content: string;
   createdAt: string;
   type: ChatMessageType;
+
   mine?: boolean;
 }
 
-
-
 export interface ChatSendDto {
-    roomId: string;
-    content: string;
+  roomId: string;
+  content: string;
 }

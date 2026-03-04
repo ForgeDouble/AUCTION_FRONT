@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, Bell, ChevronDown } from "lucide-react";
+import { MessageCircle, Bell, ChevronDown, User2 } from "lucide-react";
 import {
   useNotifications,
   type NotificationItem,
@@ -288,8 +288,8 @@ function UserMenu(props: {
 
   useClickOutside(ref, () => setOpen(false));
 
-  const firstLetter =
-    !profileUrl && nickname ? nickname.charAt(0).toUpperCase() : "?";
+  // const firstLetter =
+  //   !profileUrl && nickname ? nickname.charAt(0).toUpperCase() : "?";
 
   return (
     <div className="relative" ref={ref}>
@@ -299,7 +299,8 @@ function UserMenu(props: {
         className="flex items-center gap-2 pl-1 pr-2 h-9 rounded-full hover:bg-black/5 active:scale-[0.99] transition"
         aria-label="유저 메뉴"
       >
-        <div className="w-7 h-7 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center">
+        <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center
+                        bg-[rgba(118,90,255,0.10)] ring-1 ring-[rgba(118,90,255,0.18)]">
           {profileUrl ? (
             <img
               src={profileUrl}
@@ -307,9 +308,7 @@ function UserMenu(props: {
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-xs font-bold text-slate-700">
-              {firstLetter}
-            </span>
+            <User2 className="w-4 h-4 text-[rgb(118,90,255)]" aria-hidden="true" />
           )}
         </div>
 

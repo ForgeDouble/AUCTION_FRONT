@@ -48,6 +48,13 @@ function unwrapResult<T>(json: any): T {
   return json as T;
 }
 
+function pickNotificationId(x: any): string {
+  const v = x?.id ?? x?.notificationId ?? x?._id ?? x?.notifId;
+  const s = String(v ?? "").trim();
+  if (!s || s === "undefined" || s === "null") return "";
+  return s;
+}
+
 export function useNotifications(): UseNotificationsResult {
   const { isAuthenticated, userEmail } = useAuth() as {
     isAuthenticated: boolean;
@@ -79,9 +86,10 @@ export function useNotifications(): UseNotificationsResult {
           (n.category as NotificationCategory) ||
           categoryFromType(type) ||
           "ALL";
-
+        const nid = pickNotificationId(n);
+        if (!nid) return null;
         return {
-          id: String(n.id),
+          id: nid,
           title: n.title || "",
           body: n.body || "",
           category,
@@ -90,7 +98,7 @@ export function useNotifications(): UseNotificationsResult {
           type: type ? String(type) : undefined,
           data: data || undefined,
         };
-      });
+      }).filter(Boolean) as NotificationItem[];
       setNotifications(mapped);
     } catch (e: any) {
       console.error(e);
@@ -116,15 +124,24 @@ export function useNotifications(): UseNotificationsResult {
   };
 
   const markAsRead = async (id: string) => {
+    if (!id || id === "undefined" || id === "null") return;
+
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+
     try {
-    await markNotificationRead(id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      await markNotificationRead(id);
     } catch (e) {
       console.error(e);
+
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: false } : n))
+      );
+      setUnreadCount((prev) => prev + 1);
     }
+
   };
 
   const markAllRead = async () => {
@@ -178,9 +195,10 @@ export function useNotifications(): UseNotificationsResult {
             (body.category as NotificationCategory) ||
             categoryFromType(type) ||
             "ALL";
-
+          const nid = pickNotificationId(body);
+          if (!nid) return;
           const item: NotificationItem = {
-            id: String(body.id),
+            id: nid,
             title: body.title || "",
             body: body.body || "",
             category,

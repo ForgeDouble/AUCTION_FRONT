@@ -15,11 +15,12 @@ import {
   Filter,
   ArrowUpDown,
   Home,
+  User2,
+  User,
 } from "lucide-react";
 
-import placeholderImg from "@/assets/images/PlaceHolder.jpg";
+// import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import ReportModal from "@/components/report/ReportModal";
-
 import {
   fetchPublicProfile,
   fetchProductsByTargetUser,
@@ -31,7 +32,9 @@ import type { SeasonUserAwardsDto } from "@/components/season/seasonTypes";
 import SeasonAwardChips from "@/components/season/SeasonAwardChips";
 import { handleApiError } from "@/errors/HandleApiError";
 import { useModal } from "@/contexts/ModalContext";
-
+import { fetchSellerReviewSummary } from "@/pages/mypage/reviews/reviewApi";
+import type { ReviewSellerSummaryDto } from "@/pages/mypage/reviews/reviewTypes";
+import { useAuth } from "@/hooks/useAuth";
 type ProductRow = {
   productId: number;
   productName: string;
@@ -120,6 +123,8 @@ export default function UserProfilePage() {
   const [statuses, setStatuses] = useState<Array<ProductRow["status"]>>([
     "READY",
     "PROCESSING",
+    "SELLED",
+    "NOTSELLED"
   ]);
   const [searchKey, setSearchKey] = useState(0);
 
@@ -130,8 +135,10 @@ export default function UserProfilePage() {
   const [section, setSection] = useState<SectionKey>("PRODUCTS");
 
   const [reportOpen, setReportOpen] = useState(false);
-  const reportMode = "USER"; // Fixed to USER for this page
+  const reportMode = "USER";
   const reportable = Boolean(profile?.reportable);
+
+  const [reviewCount, setReviewCount] = useState<number | undefined>(undefined);
 
   const openDays = useMemo(() => {
     if (!profile?.createdAt) return null;
@@ -146,6 +153,7 @@ export default function UserProfilePage() {
 
   const shownModalErrRef = useRef<string | null>(null);
 
+  const [imgBroken, setImgBroken] = useState(false);
   function showErrorModalOnce(msg: string) {
     const m = String(msg ?? "").trim();
     if (!m) return;
@@ -154,6 +162,22 @@ export default function UserProfilePage() {
     modal.showError(m);
   }
   const modal = useModal();
+
+  const { logout } = useAuth();
+  const loginPromptedRef = useRef(false);
+
+  const forceReauth = () => {
+    logout();
+    setToken("");
+
+    if (!loginPromptedRef.current) {
+      loginPromptedRef.current = true;
+      modal.showLogin("navigation");
+    }
+  };
+  useEffect(() => {
+    if (token) loginPromptedRef.current = false;
+  }, [token]);
 
   function calcChipMax() {
     const w = window.innerWidth;
@@ -181,7 +205,7 @@ export default function UserProfilePage() {
     }
 
     if (r.type === "AUTH") {
-      modal.showLogin("navigation");
+      forceReauth();
       return;
     }
 
@@ -203,7 +227,7 @@ export default function UserProfilePage() {
     if (t !== token) setToken(t);
 
     if (!t) {
-      modal.showLogin("navigation");
+      forceReauth();
       return;
     }
 
@@ -221,7 +245,7 @@ export default function UserProfilePage() {
         return;
       }
       if (r.type === "AUTH") {
-        modal.showLogin("navigation");
+        forceReauth();
         return;
       }
       if (r.type === "WARNING") {
@@ -262,6 +286,30 @@ export default function UserProfilePage() {
     };
   }, [token, targetUserId]);
 
+  useEffect(() => {
+    if (!token || !targetUserId) {
+      setReviewCount(undefined);
+      return;
+    }
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const res = await fetchSellerReviewSummary(token, targetUserId);
+        const dto = unwrap<ReviewSellerSummaryDto>(res);
+        const cnt = Number(dto?.reviewCount ?? 0);
+        if (mounted) setReviewCount(Number.isFinite(cnt) ? cnt : 0);
+      } catch {
+        if (mounted) setReviewCount(undefined);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [token, targetUserId]);
+
   const loadList = async () => {
     if (!targetUserId) return;
 
@@ -269,7 +317,7 @@ export default function UserProfilePage() {
     if (t !== token) setToken(t);
 
     if (!t) {
-      modal.showLogin("navigation");
+      forceReauth();
       return;
     }
 
@@ -299,7 +347,7 @@ export default function UserProfilePage() {
           return;
         }
         if (r.type === "AUTH") {
-          modal.showLogin("navigation");
+          forceReauth();
           return;
         }
 
@@ -409,8 +457,22 @@ export default function UserProfilePage() {
           <div className="relative z-0 flex flex-col md:flex-row md:items-start gap-8">
             {/* 프로필 임지ㅣ */}
             <div className="flex-shrink-0 pt-1">
-              <div className="w-32 h-42 md:w-50 md:h-50 rounded-[2rem] overflow-hidden border-4 border-white shadow-lg ring-1 ring-gray-100">
-                <img src={profile?.profileImageUrl || placeholderImg} alt="Profile" className="w-full h-full object-cover" />
+              <div className="w-32 h-42 md:w-50 md:h-50 rounded-[2rem] overflow-hidden border-4 border-white shadow-lg ring-1 ring-gray-100 bg-white">
+                {profile?.profileImageUrl && !imgBroken ? (
+                  <img
+                    src={profile.profileImageUrl}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={() => setImgBroken(true)}
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full grid place-items-center bg-gray-50">
+                    <div className="w-21 h-21 rounded-2xl bg-white ring-1 ring-black/5 grid place-items-center shadow-sm">
+                      <User className="w-14 h-14 text-gray-400" />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -482,6 +544,7 @@ export default function UserProfilePage() {
             active={section === "REVIEWS"}
             onClick={() => setSection("REVIEWS")}
             label="받은 리뷰"
+            count={reviewCount}
           />
         </div>
 
