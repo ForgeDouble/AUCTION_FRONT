@@ -13,6 +13,8 @@ import {
   ChevronRight,
   Store,
   X,
+  XCircle,
+  RefreshCw
 } from "lucide-react";
 import { fetchMyPendingReviews, fetchMyReviews, fetchReviewDetail } from "./reviewApi";
 import {
@@ -129,12 +131,10 @@ export default function MyShopReviewsPage() {
 
       showWarning: (_msg: string) => {
         setMessage?.(LIST_INTERNAL_MSG);
-        showError(LIST_INTERNAL_MSG);
       },
 
       showError: (_msg?: string) => {
         setMessage?.(LIST_INTERNAL_MSG);
-        showError(LIST_INTERNAL_MSG);
       },
 
       navigate: (to: string) => nav(to),
@@ -297,11 +297,11 @@ export default function MyShopReviewsPage() {
         </div>
 
         <div className="animate-fade-in-up">
-          {err && (
+          {/* {err && (
             <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 text-sm font-bold whitespace-pre-line text-center">
               {err}
             </div>
-          )}
+          )} */}
 
           {loading && (
             <div className="py-20 text-center">
@@ -315,10 +315,20 @@ export default function MyShopReviewsPage() {
               {tab === "PENDING" && (
                 <div className="space-y-4">
                   {pendingRows.length === 0 ? (
-                    <EmptyBox
-                      title="작성할 리뷰가 없습니다"
-                      desc="낙찰받은 상품의 거래가 완료되면 리뷰를 작성할 수 있습니다."
-                    />
+                    err ? (
+                      <EmptyBox
+                        title={LIST_INTERNAL_MSG}
+                        desc={"잠시 후 다시 시도해주세요."}
+                        variant="error"
+                        actionLabel="다시 시도"
+                        onAction={() => loadPending()}
+                      />
+                    ) : (
+                      <EmptyBox
+                        title="작성할 리뷰가 없습니다"
+                        desc="낙찰받은 상품의 거래가 완료되면 리뷰를 작성할 수 있습니다."
+                      />
+                    )
                   ) : (
                     pendingRows.map((r) => (
                       <PendingReviewCard
@@ -352,7 +362,20 @@ export default function MyShopReviewsPage() {
               {tab === "MINE" && (
                 <div className="space-y-4">
                   {myRows.length === 0 ? (
-                    <EmptyBox title="작성한 리뷰가 없습니다" desc="소중한 거래 후기를 남겨보세요." />
+                    err ? (
+                      <EmptyBox
+                        title={LIST_INTERNAL_MSG}
+                        desc={"잠시 후 다시 시도해주세요."}
+                        variant="error"
+                        actionLabel="다시 시도"
+                        onAction={() => loadMine()}
+                      />
+                    ) : (
+                      <EmptyBox
+                        title="작성한 리뷰가 없습니다"
+                        desc="소중한 거래 후기를 남겨보세요."
+                      />
+                    )
                   ) : (
                     myRows.map((r) => (
                       <WrittenReviewCard
@@ -474,7 +497,7 @@ function PendingReviewCard({ data, onReview, onViewProduct, onViewSeller,}: { da
         <button
           type="button"
           onClick={onViewProduct}
-          className="text-left font-bold text-gray-900 text-lg truncate hover:underline underline-offset-4 decoration-gray-300 hover:decoration-gray-900 transition-colors hover:text-[rgb(118,90,255)]"
+          className="text-left font-bold text-gray-900 text-lg truncate hover:decoration-gray-900 transition-colors hover:text-[rgb(118,90,255)]"
           title="상품 상세로 이동"
         >
           {data.productName}
@@ -567,14 +590,52 @@ function WrittenReviewCard({ data, onViewProduct, onOpenDetail, }: { data: Revie
   );
 }
 
-function EmptyBox({ title, desc }: { title: string; desc: string }) {
+function EmptyBox(props: {
+  title: string;
+  desc: string;
+  variant?: "normal" | "error";
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  const { title, desc, variant = "normal", actionLabel, onAction } = props;
+
+  const isError = variant === "error";
+
   return (
-    <div className="py-20 text-center bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center justify-center">
-      <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
-        <MessageSquare className="w-8 h-8 text-gray-300" />
+    <div
+      className={
+        "py-20 text-center bg-white rounded-3xl border shadow-sm flex flex-col items-center justify-center " +
+        (isError ? "border-rose-100" : "border-gray-100")
+      }
+    >
+      <div
+        className={
+          "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 " +
+          (isError ? "bg-rose-50" : "bg-gray-50")
+        }
+      >
+        {isError ? (
+          <XCircle className="w-8 h-8 text-rose-400" />
+        ) : (
+          <MessageSquare className="w-8 h-8 text-gray-300" />
+        )}
       </div>
-      <div className="text-gray-900 font-bold text-lg mb-1">{title}</div>
-      <div className="text-gray-500 text-sm">{desc}</div>
+
+      <div className={"font-bold text-lg mb-1 " + (isError ? "text-rose-700" : "text-gray-900")}>
+        {title}
+      </div>
+      <div className="text-gray-500 text-sm whitespace-pre-line">{desc}</div>
+
+      {onAction && (
+        <button
+          type="button"
+          onClick={onAction}
+          className="mt-6 inline-flex items-center gap-2 px-5 h-11 rounded-2xl bg-zinc-900 text-white text-sm font-extrabold hover:bg-zinc-800 transition"
+        >
+          <RefreshCw className="w-4 h-4" />
+          {actionLabel ?? "다시 시도"}
+        </button>
+      )}
     </div>
   );
 }
