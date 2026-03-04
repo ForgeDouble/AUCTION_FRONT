@@ -24,6 +24,7 @@ import {
 import {
   fetchBidsFromDB,
   fetchBidsFromRedis,
+  fetchDeleteProduct,
   fetchIsWishlisted,
   fetchProductById,
   fetchSellerByProductId,
@@ -450,6 +451,71 @@ const AuctionDetail = () => {
           );
       }
     }
+  };
+
+  /** 상품 삭제 */
+  const handleDeleteProduct = async () => {
+    if (
+      product?.auctionEndTime &&
+      dayjs().isAfter(dayjs(product.auctionEndTime))
+    ) {
+      showError("경매시간이 종료된 상품입니다.");
+      return;
+    }
+
+    if (!product?.productId) {
+      showError("서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.");
+      return;
+    }
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      showLogin("confirm");
+      return;
+    }
+    try {
+      await fetchDeleteProduct(token, product?.productId);
+      showWarning("해당 상품이 삭제되었습니다.");
+      nav("/auction_list");
+    } catch (error: unknown) {
+      const result = handleApiError(error);
+      console.error(result);
+
+      switch (result.type) {
+        case "AUTH":
+          showLogin("confirm");
+          logout();
+          break;
+        default:
+          showError(
+            "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+          );
+      }
+    }
+  };
+
+  /** 상품 수정 */
+  const handleUpdateProduct = async () => {
+    if (
+      product?.auctionEndTime &&
+      dayjs().isAfter(dayjs(product.auctionEndTime))
+    ) {
+      showError("경매시간이 종료된 상품입니다.");
+      return;
+    }
+
+    if (!product?.productId) {
+      showError("서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.");
+      return;
+    }
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      showLogin("confirm");
+      return;
+    }
+
+    nav(`/edit_product/${product.productId}`);
   };
 
   /** 위시리스트 핸들 */
@@ -973,6 +1039,20 @@ const AuctionDetail = () => {
                       {product?.productName || "상품명을 불러오는 중..."}
                     </h1>
 
+                    {!isSelfSeller && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReportMode("PRODUCT");
+                          setReportOpen(true);
+                        }}
+                        className="mt-2 text-xs font-extrabold flex items-center gap-1 text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                      >
+                        <Siren className="w-3.5 h-3.5" />
+                        상품 신고
+                      </button>
+                    )}
+
                     <div className="mt-4">
                       {" "}
                       <SeasonAwardChips
@@ -996,9 +1076,9 @@ const AuctionDetail = () => {
 
                     {/* 준비중 + 본인 상품일 때 수정/삭제 버튼 */}
                     {product?.status === "READY" && isSelfSeller && (
-                      <div className="mt-3 flex gap-2 justify-end">
+                      <div className="mt-3 flex gap-2 justify-end relative z-30">
                         <button
-                          // onClick={handleEditProduct}
+                          onClick={() => handleUpdateProduct()}
                           className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
                         >
                           <svg
@@ -1017,7 +1097,7 @@ const AuctionDetail = () => {
                           수정
                         </button>
                         <button
-                          // onClick={handleDeleteProduct}
+                          onClick={() => handleDeleteProduct()}
                           className="px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
                         >
                           <svg
