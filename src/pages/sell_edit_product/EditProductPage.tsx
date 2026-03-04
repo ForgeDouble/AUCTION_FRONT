@@ -421,7 +421,7 @@ const EditProductPage = () => {
               {images.length < 10 && (
                 <label
                   className={`aspect-square border-2 border-dashed border-gray-300 rounded-xl hover:border-[rgb(118,90,255)] hover:bg-blue-50 transition-all cursor-pointer flex flex-col items-center justify-center
-                  ${imageError ? "border-2 border-dashed border-yellow-500 rounded-xl" : "border-2 border-dashed border-gray-300 rounded-xl"}
+                  ${imageError ? "border-2 border-dashed border-red-500 rounded-xl" : "border-2 border-dashed border-gray-300 rounded-xl"}
                   `}
                 >
                   <input
@@ -463,7 +463,7 @@ const EditProductPage = () => {
               ))}
             </div>
             {imageError && (
-              <p className="mt-2 text-sm text-yellow-500">{imageError}</p>
+              <p className="mt-2 text-sm text-red-500">{imageError}</p>
             )}
             <p className="text-sm text-gray-500 mt-2">
               첫 번째 이미지가 대표 이미지로 설정됩니다
@@ -489,13 +489,13 @@ const EditProductPage = () => {
                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 placeholder:text-gray-400
                     ${
                       nameError
-                        ? "border-yellow-500 focus:ring-yellow-400"
+                        ? "border-red-500 focus:ring-red-400"
                         : "border-gray-300 focus:ring-[rgb(118,90,255)]"
                     }
                   `}
               />
               {nameError && (
-                <p className="mt-1 text-sm text-yellow-500">{nameError}</p>
+                <p className="mt-1 text-sm text-red-500">{nameError}</p>
               )}
             </div>
 
@@ -521,7 +521,7 @@ const EditProductPage = () => {
               />
 
               {categoryError && (
-                <p className="mt-1 text-sm text-yellow-500">{categoryError}</p>
+                <p className="mt-1 text-sm text-red-500">{categoryError}</p>
               )}
             </div>
 
@@ -544,14 +544,14 @@ const EditProductPage = () => {
                   className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 placeholder:text-gray-400
                     ${
                       priceError
-                        ? "border-yellow-500 focus:ring-yellow-400"
+                        ? "border-red-500 focus:ring-red-400"
                         : "border-gray-300 focus:ring-[rgb(118,90,255)]"
                     }
                   `}
                 />
 
                 {priceError && (
-                  <p className="mt-1 text-sm text-yellow-500">{priceError}</p>
+                  <p className="mt-1 text-sm text-red-500">{priceError}</p>
                 )}
               </div>
             </div>
@@ -573,7 +573,7 @@ const EditProductPage = () => {
                 className={`w-full h-40 px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 placeholder:text-gray-400
                     ${
                       contentError
-                        ? "border-yellow-500 focus:ring-yellow-400"
+                        ? "border-red-500 focus:ring-red-400"
                         : "border-gray-300 focus:ring-[rgb(118,90,255)]"
                     }
                   `}
@@ -581,7 +581,7 @@ const EditProductPage = () => {
 
               {/* 글자 수 표시 */}
               <div className="flex justify-between text-sm">
-                <span className="text-yellow-500">{contentError}</span>
+                <span className="text-red-500">{contentError}</span>
                 <span className="text-gray-400">
                   {formData.productContent.length} / 2500
                 </span>

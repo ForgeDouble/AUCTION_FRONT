@@ -23,7 +23,7 @@ const CategorySelector = forwardRef<HTMLDivElement, Props>(
           onClick={() => setIsOpen((prev) => !prev)}
           className={`w-full px-4 py-3 border rounded-xl bg-white text-left flex items-center justify-between
             focus:outline-none focus:ring-2 focus:ring-[rgb(118,90,255)] focus:border-transparent
-            ${hasError ? "border-yellow-500 focus:ring-yellow-400" : "border-gray-300"}
+            ${hasError ? "border-red-500 focus:ring-red-400" : "border-gray-300"}
           `}
         >
           <span
