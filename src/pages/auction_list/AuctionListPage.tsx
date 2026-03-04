@@ -1,6 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import placeholderImg from "@/assets/images/PlaceHolder.jpg";
-import { Filter, Clock, Heart, ChevronDown, Grid3X3, List } from "lucide-react";
+import {
+  Filter,
+  Clock,
+  Heart,
+  ChevronDown,
+  Grid3X3,
+  List,
+  RotateCcw,
+} from "lucide-react";
 import dayjs from "dayjs";
 import {
   fetchParentCategories,
@@ -52,21 +60,25 @@ const AuctionListPage = () => {
   const [pageSize /*, setPageSize*/] = useState(9);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
+  const isInitialized = useRef(false);
 
   /* URL 쿼리 파라미터 업데이트 */
-  const updateURLParams = (params: Record<string, string | number>) => {
+  const updateURLParams = (
+    params: Record<string, string | number | string[]>,
+  ) => {
     const newSearchParams = new URLSearchParams(searchParams);
 
     Object.entries(params).forEach(([key, value]) => {
-      if (
+      newSearchParams.delete(key); // 기존 값 먼저 제거
+      if (Array.isArray(value)) {
+        value.forEach((v) => newSearchParams.append(key, v));
+      } else if (
         value !== null &&
         value !== undefined &&
         value !== "" &&
         value !== 0
       ) {
         newSearchParams.set(key, value.toString());
-      } else {
-        newSearchParams.delete(key);
       }
     });
 
@@ -202,7 +214,7 @@ const AuctionListPage = () => {
   };
 
   /* 모든 상품 조회 */
-  const loadProductList = async (page = 0, size = 9) => {
+  const loadProductList = async (page = 0, size = 9, statuses?: string[]) => {
     try {
       showLoading();
       const sortParam = getSortParam(sortBy);
@@ -218,8 +230,9 @@ const AuctionListPage = () => {
         params.append("categoryId", selectedCategory.toString());
       }
 
-      if (selectedStatuses.length > 0) {
-        selectedStatuses.forEach((status) => {
+      const statusesToUse = statuses ?? selectedStatuses;
+      if (statusesToUse.length > 0) {
+        statusesToUse.forEach((status) => {
           params.append("statuses", status);
         });
       }
@@ -373,19 +386,28 @@ const AuctionListPage = () => {
     }
   };
 
+  const handleResetFilters = () => {
+    setSelectedStatuses([]);
+    setSelectedCategory(0);
+    setSortBy("newest");
+    setCurrentPage(0);
+    setSearchParams(new URLSearchParams());
+  };
   useEffect(() => {
     const pageFromURL = parseInt(searchParams.get("page") || "0");
     const categoryFromURL = parseInt(searchParams.get("categoryId") || "0");
     const sortFromURL = searchParams.get("sortBy") || "newest";
+    const statusesFromURL = searchParams.getAll("statuses"); // ← 추가
 
     setCurrentPage(pageFromURL);
     setSelectedCategory(categoryFromURL);
     setSortBy(sortFromURL);
+    setSelectedStatuses(statusesFromURL); // ← 추가
 
-    loadProductList(pageFromURL, pageSize);
     loadParentCategories();
     loadWishlistByUser();
-  }, []); // 빈 배열 유지
+    loadProductList(pageFromURL, pageSize, statusesFromURL);
+  }, []);
 
   // 모든 경매의 타이머 업데이트
   useEffect(() => {
@@ -424,21 +446,18 @@ const AuctionListPage = () => {
     return () => clearInterval(timer);
   }, [auctions]);
 
-  // sortBy 변경 시 첫 페이지로 이동하며 재조회
   useEffect(() => {
-    // URL에서 온 초기 로드가 아닐 때만 실행
-    if (
-      currentPage !== parseInt(searchParams.get("page") || "0") ||
-      selectedCategory !== parseInt(searchParams.get("categoryId") || "0") ||
-      sortBy !== searchParams.get("sortBy")
-    ) {
-      updateURLParams({
-        page: 0,
-        sortBy,
-        categoryId: selectedCategory,
-      });
-      loadProductList(0, pageSize);
+    if (!isInitialized.current) {
+      isInitialized.current = true;
+      return;
     }
+    updateURLParams({
+      page: 0,
+      sortBy,
+      categoryId: selectedCategory,
+      statuses: selectedStatuses,
+    });
+    loadProductList(0, pageSize);
   }, [sortBy, selectedCategory, selectedStatuses]);
 
   return (
@@ -458,9 +477,18 @@ const AuctionListPage = () => {
           {/* 사이드바 필터 */}
           <div className="lg:w-64 flex-shrink-0 relative z-50">
             <div className="bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6 sticky top-24">
-              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <Filter className="h-5 w-5 mr-2" />
-                필터
+              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center justify-between">
+                <span className="flex items-center">
+                  <Filter className="h-5 w-5 mr-2" />
+                  필터
+                </span>
+                <button
+                  onClick={handleResetFilters}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-[rgb(118,90,255)] hover:bg-purple-50 transition-all"
+                  title="필터 초기화"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
               </h3>
 
               {/* 카테고리 */}
@@ -696,12 +724,12 @@ const AuctionListPage = () => {
                     className={
                       viewMode === "grid"
                         ? `bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl overflow-hidden transition-all duration-300 group ${
-                            auction.status === "READY"
+                            auction.status === "READY" && !isSelf
                               ? "opacity-50 cursor-not-allowed"
                               : "hover:transform hover:scale-105"
                           }`
                         : `bg-white/10 backdrop-blur-lg border border-black/20 rounded-2xl p-6 transition-all duration-300 ${
-                            auction.status === "READY"
+                            auction.status === "READY" && !isSelf
                               ? "opacity-50 cursor-not-allowed"
                               : "hover:bg-white/15"
                           }`
@@ -834,21 +862,23 @@ const AuctionListPage = () => {
 
                           <button
                             className={`px-6 py-2 rounded-xl transition-all duration-300 font-bold ${
-                              auction.status === "READY"
-                                ? "w-full bg-[rgb(118,90,255)] text-white py-3 rounded-xl transition-all duration-300 font-bold cursor-not-allowed"
+                              auction.status === "READY" && !isSelf
+                                ? "w-full bg-[rgb(118,90,255)] text-white py-3 rounded-xl font-bold cursor-not-allowed opacity-50"
                                 : "w-full bg-[rgb(118,90,255)] text-white py-3 rounded-xl hover:bg-[rgb(90,58,252)] transition-all duration-300 font-bold cursor-pointer"
                             }`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (auction.status !== "READY") {
+                              if (auction.status !== "READY" || isSelf) {
                                 navigate(
                                   `/auction_detail/${auction.productId}`,
                                 );
                               }
                             }}
-                            disabled={auction.status === "READY"}
+                            disabled={auction.status === "READY" && !isSelf}
                           >
-                            {auction.status === "READY" ? "준비중" : "참여하기"}
+                            {auction.status === "READY" && !isSelf
+                              ? "준비중"
+                              : "참여하기"}
                           </button>
                         </div>
                       </>
@@ -976,21 +1006,23 @@ const AuctionListPage = () => {
                                 {/* 참여하기 버튼 */}
                                 <button
                                   className={`px-6 py-2.5 rounded-xl transition-all duration-300 font-bold shadow-md min-w-[100px] ${
-                                    auction.status === "READY"
+                                    auction.status === "READY" && !isSelf
                                       ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
                                       : "bg-[rgb(118,90,255)] text-white hover:bg-[rgb(90,58,252)] hover:scale-105 active:scale-95 cursor-pointer"
                                   }`}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (auction.status !== "READY") {
+                                    if (auction.status !== "READY" || isSelf) {
                                       navigate(
                                         `/auction_detail/${auction.productId}`,
                                       );
                                     }
                                   }}
-                                  disabled={auction.status === "READY"}
+                                  disabled={
+                                    auction.status === "READY" && !isSelf
+                                  }
                                 >
-                                  {auction.status === "READY"
+                                  {auction.status === "READY" && !isSelf
                                     ? "준비중"
                                     : "참여하기"}
                                 </button>
