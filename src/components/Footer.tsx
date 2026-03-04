@@ -1,6 +1,35 @@
 import { Gavel } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Footer = () => {
+  const navigate = useNavigate();
+
+  const openChatListPopup = () => {
+    const w = 420;
+    const h = 720;
+    const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2);
+    const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2);
+
+    const win = window.open(
+      "/chat-list",
+      "chat_list_popup",
+      "popup=yes,width=" +
+        w +
+        ",height=" +
+        h +
+        ",left=" +
+        left +
+        ",top=" +
+        top +
+        ",resizable=yes,scrollbars=yes",
+    );
+
+    if (!win) {
+      navigate("/chat-list");
+      return;
+    }
+    win.focus();
+  };
   return (
     <>
       {/* 푸터 */}
@@ -25,9 +54,18 @@ const Footer = () => {
                 서비스
               </h3>
               <ul className="space-y-2 text-gray-600 text-sm">
-                <li>경매 참여</li>
-                <li>판매하기</li>
-                <li>감정 서비스</li>
+                <li
+                  onClick={() => navigate(`/auction_list`)}
+                  className="cursor-pointer hover:text-gray-400"
+                >
+                  경매 참여
+                </li>
+                <li
+                  onClick={() => navigate(`/sell_product`)}
+                  className="cursor-pointer hover:text-gray-400"
+                >
+                  판매하기
+                </li>
               </ul>
             </div>
 
@@ -37,8 +75,12 @@ const Footer = () => {
               </h3>
               <ul className="space-y-2 text-gray-600 text-sm">
                 <li>FAQ</li>
-                <li>1:1 문의</li>
-                <li>이용약관</li>
+                <li
+                  onClick={() => openChatListPopup()}
+                  className="cursor-pointer hover:text-gray-400"
+                >
+                  1:1 문의
+                </li>
               </ul>
             </div>
 
