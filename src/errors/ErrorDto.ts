@@ -1,5 +1,6 @@
 export type ErrorCode =
   /** 공용 */
+  | "NOT_ALLOWED"
   | "INTERNAL_SERVER_ERROR"
   | "INTERNAL_ERROR"
   | "INVALID_TOKEN"
