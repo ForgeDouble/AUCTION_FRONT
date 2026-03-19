@@ -65,8 +65,8 @@ export default function ReportModal(props: ReportModalProps) {
     onSubmitted,
   } = props;
 
-  const showCategory = mode === "USER";
-
+  // const showCategory = mode === "USER";
+  const showCategory = true;
   const title = useMemo(() => {
     return mode === "USER" ? "유저 신고하기" : "상품 신고하기";
   }, [mode]);
@@ -156,6 +156,7 @@ export default function ReportModal(props: ReportModalProps) {
       } else {
         await createProductReport({
           productId: productId as number,
+          category,
           content: content.trim() ? content.trim() : null,
         });
       }
