@@ -1,6 +1,10 @@
 import { ApiError, UnauthorizedError } from "@/errors/Errors";
 import type { ApiResponse } from "@/type/CommonType";
 
+const BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
+  "http://localhost:8080";
+
 export const fetchCreateWishlist = async (
   token: string | null,
   prodcutId: number,
@@ -8,7 +12,7 @@ export const fetchCreateWishlist = async (
   const formData = new FormData();
   formData.append("productId", prodcutId.toString());
 
-  const response = await fetch(`http://localhost:8080/wishlist/create`, {
+  const response = await fetch(`${BASE}/wishlist/create`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -35,15 +39,12 @@ export const fetchDeleteWishlist = async (
   token: string | null,
   wishlistId: number,
 ): Promise<ApiResponse<null>> => {
-  const response = await fetch(
-    `http://localhost:8080/wishlist/delete/${wishlistId}`,
-    {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+  const response = await fetch(`${BASE}/wishlist/delete/${wishlistId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
     },
-  );
+  });
 
   if (!response.ok) {
     const body = await response.json();

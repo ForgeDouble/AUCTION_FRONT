@@ -1,5 +1,4 @@
-// src/components/MessageInput.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Images, Send, X } from "lucide-react";
 
 type Props = {
@@ -18,7 +17,10 @@ const MAX_FILE_MB = 10;
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
 function makeId() {
-  return ((crypto?.randomUUID?.() ?? "img-" + Date.now() + "-" + Math.random().toString(16).slice(2)));
+  return (
+    crypto?.randomUUID?.() ??
+    "img-" + Date.now() + "-" + Math.random().toString(16).slice(2)
+  );
 }
 
 export default function MessageInput({ onSend, onSendImage }: Props) {
@@ -118,7 +120,9 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
 
           const ok = await Promise.resolve(onSendImage(item.file));
           if (!ok) {
-            setSubmitErr("메시지 전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+            setSubmitErr(
+              "메시지 전송에 실패했습니다. 잠시 후 다시 시도해주세요.",
+            );
             setPicked(remain);
             return;
           }
@@ -138,7 +142,9 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
       if (t) {
         const ok = await Promise.resolve(onSend(t));
         if (!ok) {
-          setSubmitErr("메시지 전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+          setSubmitErr(
+            "메시지 전송에 실패했습니다. 잠시 후 다시 시도해주세요.",
+          );
           return;
         }
         setText("");
@@ -155,7 +161,9 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
       {picked.length > 0 && (
         <div className="px-1">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-600">선택된 이미지 {picked.length}장</div>
+            <div className="text-xs text-gray-600">
+              선택된 이미지 {picked.length}장
+            </div>
             <button
               type="button"
               onClick={clearAll}
@@ -171,7 +179,11 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
             {picked.map((p) => (
               <div key={p.id} className="relative">
                 <div className="aspect-square rounded-xl overflow-hidden border border-black/10 bg-gray-50">
-                  <img src={p.url} alt={p.file.name} className="w-full h-full object-cover" />
+                  <img
+                    src={p.url}
+                    alt={p.file.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
 
                 <button
@@ -195,7 +207,8 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
           </div>
 
           <div className="mt-2 text-[11px] text-gray-400">
-            Enter: 전송 · Shift+Enter: 줄바꿈 · 이미지: 최대 {MAX_IMAGES}장 / {MAX_FILE_MB}MB
+            Enter: 전송 · Shift+Enter: 줄바꿈 · 이미지: 최대 {MAX_IMAGES}장 /{" "}
+            {MAX_FILE_MB}MB
           </div>
         </div>
       )}
@@ -266,9 +279,7 @@ export default function MessageInput({ onSend, onSendImage }: Props) {
         </button>
       </div>
       {submitErr && (
-        <div className="px-1 text-[11px] text-rose-600">
-          {submitErr}
-        </div>
+        <div className="px-1 text-[11px] text-rose-600">{submitErr}</div>
       )}
     </div>
   );

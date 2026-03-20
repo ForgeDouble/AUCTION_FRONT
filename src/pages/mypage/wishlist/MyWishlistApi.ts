@@ -38,15 +38,12 @@ export async function deleteWishlist(
   token: string,
   wishlistId: number,
 ): Promise<ApiResponse<null>> {
-  const response = await fetch(
-    `${import.meta.env.VITE_API_BASE}/wishlist/delete/${wishlistId}`,
-    {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+  const response = await fetch(`${BASE}/wishlist/delete/${wishlistId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
     },
-  );
+  });
 
   if (!response.ok) {
     const body = await response.json();

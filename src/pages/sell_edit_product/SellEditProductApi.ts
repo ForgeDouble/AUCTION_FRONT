@@ -7,6 +7,10 @@ import type {
 } from "./SellEditProductDto";
 import { ApiError, UnauthorizedError } from "@/errors/Errors";
 
+const BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
+  "http://localhost:8080";
+
 /** 물건 판매 등록 */
 export const fetchCreateProduct = async (
   productData: ProductCreateDto,
@@ -27,7 +31,7 @@ export const fetchCreateProduct = async (
     formData.append("files", file);
   });
 
-  const response = await fetch(`http://localhost:8080/product/create`, {
+  const response = await fetch(`${BASE}/product/create`, {
     method: "POST",
     headers: {
       // Content-Type을 설정하지 않음 (브라우저가 자동으로 multipart/form-data 설정)
@@ -54,7 +58,7 @@ export const fetchCreateProduct = async (
 export const fetchParentCategories = async (): Promise<
   ApiResponse<ParentCategoriesDto[]>
 > => {
-  const response = await fetch(`http://localhost:8080/category/with_children`, {
+  const response = await fetch(`${BASE}/category/with_children`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -78,16 +82,13 @@ export const fetchProductByProductId = async (
   productId: number | null,
   token: string | null,
 ): Promise<ApiResponse<ProductReadUpdateDto>> => {
-  const response = await fetch(
-    `http://localhost:8080/product/update/${productId}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+  const response = await fetch(`${BASE}/product/update/${productId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
     },
-  );
+  });
 
   if (!response.ok) {
     const body = await response.json();
@@ -141,7 +142,7 @@ export const fetchUpdateProduct = async (
     });
   }
 
-  const response = await fetch(`http://localhost:8080/product/update`, {
+  const response = await fetch(`${BASE}/product/update`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,

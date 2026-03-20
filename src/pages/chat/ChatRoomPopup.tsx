@@ -1,5 +1,5 @@
 // src/pages/chat/ChatRoomPopup.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useChat } from "@/hooks/useChat";
 import ChatWindow from "@/components/ChatWindow";
@@ -34,7 +34,15 @@ function openChatListPopup() {
 }
 
 export default function ChatRoomPopup() {
-  const { currentRoom, rooms, messages, selectRoom, send, sendImage, leaveRoom } = useChat();
+  const {
+    currentRoom,
+    rooms,
+    messages,
+    selectRoom,
+    send,
+    sendImage,
+    leaveRoom,
+  } = useChat();
   const [sp] = useSearchParams();
   const roomId = sp.get("roomId") || "";
 
@@ -48,7 +56,10 @@ export default function ChatRoomPopup() {
     if (roomId) selectRoom(roomId);
   }, [roomId]);
 
-  const msgList = useMemo(() => (roomId ? messages[roomId] || [] : []), [messages, roomId]);
+  const msgList = useMemo(
+    () => (roomId ? messages[roomId] || [] : []),
+    [messages, roomId],
+  );
 
   const title =
     currentRoom?.title ||
@@ -59,7 +70,9 @@ export default function ChatRoomPopup() {
     const listWin = openChatListPopup();
 
     if (!listWin) {
-      alert("팝업이 차단되어 채팅 목록을 열 수 없습니다.\n브라우저 팝업 허용 후 다시 시도해주세요.");
+      alert(
+        "팝업이 차단되어 채팅 목록을 열 수 없습니다.\n브라우저 팝업 허용 후 다시 시도해주세요.",
+      );
       return;
     }
 
@@ -97,7 +110,9 @@ export default function ChatRoomPopup() {
           ←
         </button>
 
-        <div className="font-semibold truncate max-w-[70%] text-center">{title}</div>
+        <div className="font-semibold truncate max-w-[70%] text-center">
+          {title}
+        </div>
 
         <button
           type="button"
@@ -126,7 +141,9 @@ export default function ChatRoomPopup() {
                 disabled={leaving}
                 className={
                   "flex-1 h-9 rounded-xl border text-sm font-semibold " +
-                  (leaving ? "opacity-50 cursor-not-allowed" : "hover:bg-black/5")
+                  (leaving
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-black/5")
                 }
               >
                 취소

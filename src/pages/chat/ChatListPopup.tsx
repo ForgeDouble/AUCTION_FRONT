@@ -3,8 +3,6 @@ import React, { useMemo, useState } from "react";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/hooks/useAuth";
 import { Plus, X } from "lucide-react";
-import { useModal } from "@/contexts/ModalContext";
-import { handleApiError } from "@/errors/HandleApiError";
 
 function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -71,7 +69,8 @@ function AvatarCircle(props: { item: any; className: string }) {
 }
 
 export default function ChatListPopup() {
-  const { rooms, openAdminAndSelect, roomsLoading, roomsError, refreshRooms } = useChat();
+  const { rooms, openAdminAndSelect, roomsLoading, roomsError, refreshRooms } =
+    useChat();
   // const { showLogin, showError, showWarning } = useModal();
   const { isAuthenticated, authority } = useAuth();
 
@@ -217,12 +216,14 @@ export default function ChatListPopup() {
                 const query = q.trim();
                 const lastMsg = String(r.lastMessage ?? "");
                 const msgMatched =
-                  !!query && lastMsg.toLowerCase().includes(query.toLowerCase());
+                  !!query &&
+                  lastMsg.toLowerCase().includes(query.toLowerCase());
 
                 const displayName =
                   (r.peerNickname && String(r.peerNickname).trim()) ||
                   (r.peerEmail && String(r.peerEmail).trim()) ||
-                  (r.title || "대화");
+                  r.title ||
+                  "대화";
 
                 const initial = displayName.slice(0, 1);
 

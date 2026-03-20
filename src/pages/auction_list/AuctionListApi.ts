@@ -6,19 +6,20 @@ import type {
   wishlistDto,
 } from "./AuctionListDto";
 
+const BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
+  "http://localhost:8080";
+
 /** 상품목록 조회 */
 export const fetchProducts = async (
   params: URLSearchParams,
 ): Promise<ApiResponse<PageResponse<ProductListDto>>> => {
-  const response = await fetch(
-    `http://localhost:8080/product/all?${params.toString()}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+  const response = await fetch(`${BASE}/product/all?${params.toString()}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+  });
 
   if (!response.ok) {
     const body = await response.json();
@@ -38,15 +39,12 @@ export const fetchProducts = async (
 export const fetchParentCategories = async (): Promise<
   ApiResponse<ParentCategoriesDto[]>
 > => {
-  const response = await fetch(
-    `http://localhost:8080/category/with_children_and_count`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+  const response = await fetch(`${BASE}/category/with_children_and_count`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+  });
 
   if (!response.ok) {
     const body = await response.json();
@@ -66,7 +64,7 @@ export const fetchParentCategories = async (): Promise<
 export const fetchWishlistByUser = async (
   token: string | null,
 ): Promise<ApiResponse<wishlistDto[]>> => {
-  const response = await fetch(`http://localhost:8080/wishlist/allByUser`, {
+  const response = await fetch(`${BASE}/wishlist/allByUser`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,

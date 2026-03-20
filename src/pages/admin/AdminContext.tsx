@@ -1,5 +1,12 @@
-// src/pages/admin/AdminContext.tsx
-import React, { createContext, useContext, useEffect, useMemo, useRef, useCallback, useState, } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  useState,
+} from "react";
 import type {
   AdminOverviewResponse,
   AuctionRow,
@@ -20,7 +27,7 @@ import type {
   Authority,
   AdminUserPageRes,
   AdminUserCounts,
-  AdminChatRoomRow
+  AdminChatRoomRow,
 } from "./adminTypes";
 import { adminApi } from "./adminApi";
 import { Client } from "@stomp/stompjs";
@@ -39,7 +46,9 @@ function nowIso(): string {
 // }
 
 // 권한 확인
-function parseAuthorityFromTokenPayload(payload: Record<string, unknown>): "ADMIN" | "INQUIRY" | "USER" {
+function parseAuthorityFromTokenPayload(
+  payload: Record<string, unknown>,
+): "ADMIN" | "INQUIRY" | "USER" {
   const pick =
     (payload as any)?.authority ??
     (payload as any)?.role ??
@@ -67,7 +76,11 @@ function safeParse<T>(s: string | null): T | null {
 
 function safeGetAdminProfile(): { email: string; nick: string; role: string } {
   const token = localStorage.getItem("accessToken");
-  const fallback = { email: "admin@example.com", nick: "관리자", role: "ADMIN" };
+  const fallback = {
+    email: "admin@example.com",
+    nick: "관리자",
+    role: "ADMIN",
+  };
   if (!token) return fallback;
 
   const parts = token.split(".");
@@ -75,20 +88,27 @@ function safeGetAdminProfile(): { email: string; nick: string; role: string } {
 
   try {
     const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, "=");
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      "=",
+    );
     const json = decodeURIComponent(
       Array.from(atob(padded))
         .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
-        .join("")
+        .join(""),
     );
     const payload = JSON.parse(json) as Record<string, unknown>;
 
-    const email = typeof payload.email === "string" ? payload.email : fallback.email;
+    const email =
+      typeof payload.email === "string" ? payload.email : fallback.email;
     const nick =
-      typeof (payload as any).nick === "string" ? (payload as any).nick :
-      typeof (payload as any).nickname === "string" ? (payload as any).nickname :
-      typeof (payload as any).name === "string" ? (payload as any).name :
-      fallback.nick;
+      typeof (payload as any).nick === "string"
+        ? (payload as any).nick
+        : typeof (payload as any).nickname === "string"
+          ? (payload as any).nickname
+          : typeof (payload as any).name === "string"
+            ? (payload as any).name
+            : fallback.nick;
     const role = parseAuthorityFromTokenPayload(payload);
 
     return { email, nick, role };
@@ -100,24 +120,24 @@ function safeGetAdminProfile(): { email: string; nick: string; role: string } {
 // 초기값 셋팅
 function emptyAdminStats(): AdminOverviewResponse {
   return {
-  todayNewUsers: 0,
-  todayCreatedAuctions: 0,
-  todayEndedAuctions: 0,
-  todaySoldAuctions: 0,
-  totalBids: 0,
-  ongoingAuctions: 0,
-  reportsOpen: 0,
-  realtimeUsers: 0,
-  todayActiveUsers: 0,
+    todayNewUsers: 0,
+    todayCreatedAuctions: 0,
+    todayEndedAuctions: 0,
+    todaySoldAuctions: 0,
+    totalBids: 0,
+    ongoingAuctions: 0,
+    reportsOpen: 0,
+    realtimeUsers: 0,
+    todayActiveUsers: 0,
 
-  todayTradeAmount: 0,
-  monthlyAvgTradeAmount: 0,
+    todayTradeAmount: 0,
+    monthlyAvgTradeAmount: 0,
 
-  todayActivityHourly: [],
-  statusReady: 0,
-  statusProcessing: 0,
-  statusSelled: 0,
-  statusNotselled: 0,
+    todayActivityHourly: [],
+    statusReady: 0,
+    statusProcessing: 0,
+    statusSelled: 0,
+    statusNotselled: 0,
   };
 }
 export interface AdminStore {
@@ -129,7 +149,10 @@ export interface AdminStore {
   setQuery: (v: string) => void;
 
   lastUpdatedAt: string;
-  refreshAll: (opts?: { auctionsPageUi?: number; auctionsSize?: number }) => Promise<void>;
+  refreshAll: (opts?: {
+    auctionsPageUi?: number;
+    auctionsSize?: number;
+  }) => Promise<void>;
 
   stats: AdminOverviewResponse;
   setStats: React.Dispatch<React.SetStateAction<AdminOverviewResponse>>;
@@ -149,22 +172,39 @@ export interface AdminStore {
   refreshAuctionsPage: () => Promise<void>;
 
   overviewTopAuctions: AuctionRow[];
-  refreshOverviewTopAuctions: () => Promise<void>; 
+  refreshOverviewTopAuctions: () => Promise<void>;
 
   // 신고(유저)
   reportGroups: AdminReportGroupRow[];
   setReportGroups: React.Dispatch<React.SetStateAction<AdminReportGroupRow[]>>;
 
-  fetchGroupReports: (targetUserId: number, category: ReportCategory, page: number, size: number) => Promise<SpringPage<AdminReportItemRow>>;
-  resolveReportGroup: (targetUserId: number, category: ReportCategory, payload: { accept: boolean; adminContent?: string; suspendDays?: number }) => Promise<void>;
-  adminSuspendUser: (targetUserId: number, days: number, reason?: string) => Promise<void>;
+  fetchGroupReports: (
+    targetUserId: number,
+    category: ReportCategory,
+    page: number,
+    size: number,
+  ) => Promise<SpringPage<AdminReportItemRow>>;
+  resolveReportGroup: (
+    targetUserId: number,
+    category: ReportCategory,
+    payload: { accept: boolean; adminContent?: string; suspendDays?: number },
+  ) => Promise<void>;
+  adminSuspendUser: (
+    targetUserId: number,
+    days: number,
+    reason?: string,
+  ) => Promise<void>;
   adminLiftAll: (targetUserId: number, reason?: string) => Promise<void>;
 
   // 신고(상품)
   blockedProducts: BlockedProductRow[];
   setBlockedProducts: React.Dispatch<React.SetStateAction<BlockedProductRow[]>>;
   refreshBlockedProducts: () => Promise<void>;
-  liftBlockedProduct: (payload: { productId: number; reason?: string; resetCounter?: boolean }) => Promise<void>;
+  liftBlockedProduct: (payload: {
+    productId: number;
+    reason?: string;
+    resetCounter?: boolean;
+  }) => Promise<void>;
 
   // 공지(인수인계)
   notices: NoticeRow[];
@@ -191,7 +231,7 @@ export interface AdminStore {
       content?: string;
       pinned?: boolean;
       importance?: number;
-    }
+    },
   ) => Promise<void>;
   deleteNotice: (id: number) => Promise<void>;
 
@@ -203,7 +243,10 @@ export interface AdminStore {
   setEvents: React.Dispatch<React.SetStateAction<CalendarEventRow[]>>;
   refreshEvents: () => Promise<void>;
   addEvent: (e: Omit<CalendarEventRow, "id">) => Promise<void>;
-  updateEvent: (id: string, payload: Partial<Omit<CalendarEventRow, "id">>) => Promise<void>;
+  updateEvent: (
+    id: string,
+    payload: Partial<Omit<CalendarEventRow, "id">>,
+  ) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   moveEventDate: (id: string, newDate: string) => Promise<void>;
 
@@ -218,14 +261,18 @@ export interface AdminStore {
 
   // 카테고리 확인용(overview)
   categoryDistribution: CategoryDistributionRow[];
-  setCategoryDistribution: React.Dispatch<React.SetStateAction<CategoryDistributionRow[]>>;
+  setCategoryDistribution: React.Dispatch<
+    React.SetStateAction<CategoryDistributionRow[]>
+  >;
   refreshCategoryDistribution: () => Promise<void>;
 
   todayActiveHours: ActiveHourBucketRow[];
-  setTodayActiveHours: React.Dispatch<React.SetStateAction<ActiveHourBucketRow[]>>;
+  setTodayActiveHours: React.Dispatch<
+    React.SetStateAction<ActiveHourBucketRow[]>
+  >;
   refreshTodayActiveHours: () => Promise<void>;
 
-  // 최근 7일 내 경매 생성/종료 
+  // 최근 7일 내 경매 생성/종료
   auctionTrendRows: AuctionTrendRow[];
   refreshAuctionTrend: () => Promise<void>;
 
@@ -253,7 +300,12 @@ export interface AdminStore {
 
   usersCounts: AdminUserCounts;
 
-  refreshUsersPage: (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => Promise<void>;
+  refreshUsersPage: (params?: {
+    page?: number;
+    size?: number;
+    role?: "ALL" | Authority;
+    q?: string;
+  }) => Promise<void>;
   goUsersPage: (pageIndex: number) => void;
   changeUsersPageSize: (size: number) => void;
 
@@ -283,7 +335,9 @@ export function useAdminStore(): AdminStore {
   return v;
 }
 
-export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   // const profile = useMemo(() => safeGetAdminProfile(), []);
   const [profile, setProfile] = useState(() => safeGetAdminProfile());
   const setAdminNick = useCallback((nick: string) => {
@@ -292,10 +346,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [query, setQuery] = useState<string>("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>(nowIso());
 
-  const [stats, setStats] = useState<AdminOverviewResponse>(() => emptyAdminStats());
+  const [stats, setStats] = useState<AdminOverviewResponse>(() =>
+    emptyAdminStats(),
+  );
 
   const [auctions, setAuctions] = useState<AuctionRow[]>([]);
-  const [auctionsPage, setAuctionsPage] = useState<SpringPage<AuctionRow> | null>(null);
+  const [auctionsPage, setAuctionsPage] =
+    useState<SpringPage<AuctionRow> | null>(null);
 
   const [auctionsPageIndex, setAuctionsPageIndex] = useState<number>(0);
   const [auctionsPageSize, setAuctionsPageSize] = useState<number>(10);
@@ -303,25 +360,37 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [auctionsTotalPages, setAuctionsTotalPages] = useState<number>(1);
   const [auctionsTotalElements, setAuctionsTotalElements] = useState<number>(0);
 
-  const [overviewTopAuctions, setOverviewTopAuctions] = useState<AuctionRow[]>([]);
+  const [overviewTopAuctions, setOverviewTopAuctions] = useState<AuctionRow[]>(
+    [],
+  );
   // const auctionsPagingRef = useRef<{ index: number; size: number }>({ index: -1, size: -1 });
 
   const [reportGroups, setReportGroups] = useState<AdminReportGroupRow[]>([]);
 
   const [events, setEvents] = useState<CalendarEventRow[]>([]);
-  
+
   const [notices, setNotices] = useState<NoticeRow[]>([]);
   const [noticePage, setNoticePage] = useState(0);
   const [noticeSize, setNoticeSize] = useState(10);
   const [noticeTotalPages, setNoticeTotalPages] = useState(1);
   const [noticeTotalElements, setNoticeTotalElements] = useState(0);
 
-  const [blockedProducts, setBlockedProducts] = useState<BlockedProductRow[]>([]);
-  const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistributionRow[]>([]);
-  const [todayActiveHours, setTodayActiveHours] = useState<ActiveHourBucketRow[]>([]);
+  const [blockedProducts, setBlockedProducts] = useState<BlockedProductRow[]>(
+    [],
+  );
+  const [categoryDistribution, setCategoryDistribution] = useState<
+    CategoryDistributionRow[]
+  >([]);
+  const [todayActiveHours, setTodayActiveHours] = useState<
+    ActiveHourBucketRow[]
+  >([]);
 
-  const [auctionTrendRows, setAuctionTrendRows] = useState<AuctionTrendRow[]>([]);
-  const [monthlyTradeRows, setMonthlyTradeRows] = useState<MonthlyTradeRow[]>([]);
+  const [auctionTrendRows, setAuctionTrendRows] = useState<AuctionTrendRow[]>(
+    [],
+  );
+  const [monthlyTradeRows, setMonthlyTradeRows] = useState<MonthlyTradeRow[]>(
+    [],
+  );
 
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [usersPage, setUsersPage] = useState<AdminUserPageRes | null>(null);
@@ -331,7 +400,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [usersTotalPages, setUsersTotalPages] = useState(1);
   const [usersTotalElements, setUsersTotalElements] = useState(0);
 
-  const [usersCounts, setUsersCounts] = useState<AdminUserCounts>({ ADMIN: 0, INQUIRY: 0, USER: 0 });
+  const [usersCounts, setUsersCounts] = useState<AdminUserCounts>({
+    ADMIN: 0,
+    INQUIRY: 0,
+    USER: 0,
+  });
 
   const [chatRooms, setChatRooms] = useState<AdminChatRoomRow[]>([]);
 
@@ -355,9 +428,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     birthdayOpen?: boolean;
   };
 
-  const prefsKey = useMemo(() => `admin_prefs_${profile.email}`, [profile.email]);
+  const prefsKey = useMemo(
+    () => `admin_prefs_${profile.email}`,
+    [profile.email],
+  );
 
-  const [profileImageUrl, setProfileImageUrlState] = useState<string | null>(null);
+  const [profileImageUrl, setProfileImageUrlState] = useState<string | null>(
+    null,
+  );
   const [notifEnabled, setNotifEnabledState] = useState<boolean>(true);
   const [birthdayOpen, setBirthdayOpenState] = useState<boolean>(false);
 
@@ -366,8 +444,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!prefs) return;
 
     setProfileImageUrlState(prefs.profileImageUrl ?? null);
-    setNotifEnabledState(typeof prefs.notifEnabled === "boolean" ? prefs.notifEnabled : true);
-    setBirthdayOpenState(typeof prefs.birthdayOpen === "boolean" ? prefs.birthdayOpen : false);
+    setNotifEnabledState(
+      typeof prefs.notifEnabled === "boolean" ? prefs.notifEnabled : true,
+    );
+    setBirthdayOpenState(
+      typeof prefs.birthdayOpen === "boolean" ? prefs.birthdayOpen : false,
+    );
   }, [prefsKey]);
 
   useEffect(() => {
@@ -383,10 +465,19 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setProfileImageUrlState(url ? String(url) : null);
   }, []);
 
-  const setNotifEnabled = useCallback((v: boolean) => setNotifEnabledState(Boolean(v)), []);
-  const setBirthdayOpen = useCallback((v: boolean) => setBirthdayOpenState(Boolean(v)), []);
+  const setNotifEnabled = useCallback(
+    (v: boolean) => setNotifEnabledState(Boolean(v)),
+    [],
+  );
+  const setBirthdayOpen = useCallback(
+    (v: boolean) => setBirthdayOpenState(Boolean(v)),
+    [],
+  );
 
-  const fcmTokenKey = useMemo(() => `admin_fcm_token_${profile.email}`, [profile.email]);
+  const fcmTokenKey = useMemo(
+    () => `admin_fcm_token_${profile.email}`,
+    [profile.email],
+  );
   const lastRegisteredFcmRef = useRef<string | null>(null);
 
   // 닉네임 / 프로필 관련
@@ -405,7 +496,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (alive && typeof nick === "string" && nick.trim()) {
           setAdminNick(nick.trim());
         }
-        if (alive && me && typeof me === "object" && "profileImageUrl" in (me as any)) {
+        if (
+          alive &&
+          me &&
+          typeof me === "object" &&
+          "profileImageUrl" in (me as any)
+        ) {
           const url = (me as any).profileImageUrl;
           setProfileImageUrlState(url ? String(url) : null);
         }
@@ -429,7 +525,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     if (rtClientRef.current) {
-      try { rtClientRef.current.deactivate(); } catch {}
+      try {
+        rtClientRef.current.deactivate();
+      } catch {}
       rtClientRef.current = null;
     }
 
@@ -450,7 +548,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             };
             setStats((prev) => ({
               ...prev,
-              realtimeUsers: Number(data.realtimeUsers ?? prev.realtimeUsers ?? 0),
+              realtimeUsers: Number(
+                data.realtimeUsers ?? prev.realtimeUsers ?? 0,
+              ),
             }));
 
             setLastUpdatedAt(nowIso());
@@ -467,24 +567,28 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     client.activate();
 
     return () => {
-      try { client.deactivate(); } catch {}
+      try {
+        client.deactivate();
+      } catch {}
       rtClientRef.current = null;
       setRtConnected(false);
     };
   }, [rtTokenVersion]);
 
-  
-  const computeCountsFromItems = useCallback((items: AdminUserRow[]): AdminUserCounts => {
-    return items.reduce(
-      (acc, u) => {
-        if (u.authority === "ADMIN") acc.ADMIN += 1;
-        else if (u.authority === "INQUIRY") acc.INQUIRY += 1;
-        else acc.USER += 1;
-        return acc;
-      },
-      { ADMIN: 0, INQUIRY: 0, USER: 0 } as AdminUserCounts
-    );
-  }, []);
+  const computeCountsFromItems = useCallback(
+    (items: AdminUserRow[]): AdminUserCounts => {
+      return items.reduce(
+        (acc, u) => {
+          if (u.authority === "ADMIN") acc.ADMIN += 1;
+          else if (u.authority === "INQUIRY") acc.INQUIRY += 1;
+          else acc.USER += 1;
+          return acc;
+        },
+        { ADMIN: 0, INQUIRY: 0, USER: 0 } as AdminUserCounts,
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -493,36 +597,54 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => window.clearTimeout(t);
   }, [query, noticeSize]);
 
-  const usersPagingRef = useRef<{ page: number; size: number; role: "ALL" | Authority; q: string }>({
+  const usersPagingRef = useRef<{
+    page: number;
+    size: number;
+    role: "ALL" | Authority;
+    q: string;
+  }>({
     page: 0,
     size: 10,
     role: "ALL",
     q: "",
   });
 
-  const fetchUsersPage = useCallback(async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
-    const next = {
-      page: Math.max(0, params?.page ?? usersPagingRef.current.page ?? 0),
-      size: Math.max(1, Math.min(params?.size ?? usersPagingRef.current.size ?? 10, 100)),
-      role: (params?.role ?? usersPagingRef.current.role ?? "ALL") as "ALL" | Authority,
-      q: (params?.q ?? usersPagingRef.current.q ?? "").trim(),
-    };
+  const fetchUsersPage = useCallback(
+    async (params?: {
+      page?: number;
+      size?: number;
+      role?: "ALL" | Authority;
+      q?: string;
+    }) => {
+      const next = {
+        page: Math.max(0, params?.page ?? usersPagingRef.current.page ?? 0),
+        size: Math.max(
+          1,
+          Math.min(params?.size ?? usersPagingRef.current.size ?? 10, 100),
+        ),
+        role: (params?.role ?? usersPagingRef.current.role ?? "ALL") as
+          | "ALL"
+          | Authority,
+        q: (params?.q ?? usersPagingRef.current.q ?? "").trim(),
+      };
 
-    usersPagingRef.current = next;
+      usersPagingRef.current = next;
 
-    const res = await adminApi.getUsersPage(next);
+      const res = await adminApi.getUsersPage(next);
 
-    setUsersPage(res);
+      setUsersPage(res);
 
-    setUsers(res.items);
+      setUsers(res.items);
 
-    setUsersPageIndex(res.page);
-    setUsersPageSize(res.size);
-    setUsersTotalPages(Math.max(1, res.totalPages));
-    setUsersTotalElements(res.totalElements);
+      setUsersPageIndex(res.page);
+      setUsersPageSize(res.size);
+      setUsersTotalPages(Math.max(1, res.totalPages));
+      setUsersTotalElements(res.totalElements);
 
-    if (res.counts) setUsersCounts(res.counts);
-  }, [setUsers]);
+      if (res.counts) setUsersCounts(res.counts);
+    },
+    [setUsers],
+  );
 
   const fetchNoticesPage = async (pg: number, sz: number): Promise<void> => {
     const qv = query.trim();
@@ -541,32 +663,36 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setNoticeTotalPages(Math.max(1, res.totalPages));
       setNoticeTotalElements(res.totalElements);
     } catch (e) {
-      setNoticesLoadErr("공지 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.");
-      // throw e; 
+      setNoticesLoadErr(
+        "공지 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.",
+      );
+      // throw e;
     }
   };
 
-  const fetchAuctionsPage = useCallback(async (pageIndex: number, size: number): Promise<void> => {
-    const p = Math.max(0, pageIndex);
-    const s = Math.max(1, Math.min(size, 100));
+  const fetchAuctionsPage = useCallback(
+    async (pageIndex: number, size: number): Promise<void> => {
+      const p = Math.max(0, pageIndex);
+      const s = Math.max(1, Math.min(size, 100));
 
       try {
-      setAuctionsLoadErr(null);
+        setAuctionsLoadErr(null);
 
-      const pg = await adminApi.getAuctionsPage({ page: p, size: s });
-      setAuctionsPage(pg);
+        const pg = await adminApi.getAuctionsPage({ page: p, size: s });
+        setAuctionsPage(pg);
 
-      const content = Array.isArray(pg?.content) ? pg.content : [];
-      setAuctions(content);
+        const content = Array.isArray(pg?.content) ? pg.content : [];
+        setAuctions(content);
 
-      const tp = (pg as any)?.totalPages ?? 1;
-      const te = (pg as any)?.totalElements ?? content.length;
+        const tp = (pg as any)?.totalPages ?? 1;
+        const te = (pg as any)?.totalElements ?? content.length;
 
-      setAuctionsTotalPages(Math.max(1, Number(tp) || 1));
-      setAuctionsTotalElements(Number(te) || 0);
-
+        setAuctionsTotalPages(Math.max(1, Number(tp) || 1));
+        setAuctionsTotalElements(Number(te) || 0);
       } catch (e) {
-        setAuctionsLoadErr("경매 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        setAuctionsLoadErr(
+          "경매 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        );
 
         setAuctionsPage(null);
         setAuctions([]);
@@ -574,7 +700,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setAuctionsTotalElements(0);
         // throw e;
       }
-    }, []);
+    },
+    [],
+  );
 
   const refreshAuctionsPage = useCallback(async (): Promise<void> => {
     await fetchAuctionsPage(auctionsPageIndex, auctionsPageSize);
@@ -591,20 +719,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const setAuctionsPagingFromUrl = useCallback(async (pageUi: number, size: number): Promise<void> =>
-  {
-    const uiPage = Number.isFinite(pageUi) ? pageUi : 1;
-    const uiSize = Number.isFinite(size) ? size : 10;
+  const setAuctionsPagingFromUrl = useCallback(
+    async (pageUi: number, size: number): Promise<void> => {
+      const uiPage = Number.isFinite(pageUi) ? pageUi : 1;
+      const uiSize = Number.isFinite(size) ? size : 10;
 
-    const nextSize = Math.max(1, Math.min(uiSize, 100));
-    const nextIndex = Math.max(0, Math.max(1, uiPage) - 1);
+      const nextSize = Math.max(1, Math.min(uiSize, 100));
+      const nextIndex = Math.max(0, Math.max(1, uiPage) - 1);
 
-    setAuctionsPageIndex(nextIndex);
-    setAuctionsPageSize(nextSize);
+      setAuctionsPageIndex(nextIndex);
+      setAuctionsPageSize(nextSize);
 
-    // void fetchAuctionsPage(nextIndex, nextSize);
-    await fetchAuctionsPage(nextIndex, nextSize);
-  }, [fetchAuctionsPage]);
+      // void fetchAuctionsPage(nextIndex, nextSize);
+      await fetchAuctionsPage(nextIndex, nextSize);
+    },
+    [fetchAuctionsPage],
+  );
 
   const refreshBlockedProducts = async (): Promise<void> => {
     try {
@@ -621,7 +751,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCalendarLoadErr(null);
     } catch (e) {
       console.error(e);
-      setCalendarLoadErr("운영 캘린더 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.");
+      setCalendarLoadErr(
+        "운영 캘린더 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.",
+      );
       throw e;
     }
   };
@@ -675,7 +807,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const chatUnreadTotal = useMemo(() => {
-    return (chatRooms ?? []).reduce((acc, r) => acc + (Number((r as any).unread ?? 0) || 0), 0);
+    return (chatRooms ?? []).reduce(
+      (acc, r) => acc + (Number((r as any).unread ?? 0) || 0),
+      0,
+    );
   }, [chatRooms]);
   // const refreshUsers = useCallback(async () => {
   //   try {
@@ -696,28 +831,42 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchUsersPage]);
 
   const refreshUsersPage = useCallback(
-    async (params?: { page?: number; size?: number; role?: "ALL" | Authority; q?: string }) => {
+    async (params?: {
+      page?: number;
+      size?: number;
+      role?: "ALL" | Authority;
+      q?: string;
+    }) => {
       await fetchUsersPage(params);
     },
-    [fetchUsersPage]
+    [fetchUsersPage],
   );
-  
+
   const createAdminUser = useCallback(
     async (payload: AdminUserCreateReq) => {
       await adminApi.createAdminUser(payload);
-      await refreshUsersPage({ page: 0, size: usersPageSize, role: "ALL", q: "" });
+      await refreshUsersPage({
+        page: 0,
+        size: usersPageSize,
+        role: "ALL",
+        q: "",
+      });
     },
-    [refreshUsersPage, usersPageSize]
+    [refreshUsersPage, usersPageSize],
   );
 
   const createInquiryUser = useCallback(
     async (payload: AdminUserCreateReq) => {
       await adminApi.createInquiryUser(payload);
-      await refreshUsersPage({ page: 0, size: usersPageSize, role: "ALL", q: "" });
+      await refreshUsersPage({
+        page: 0,
+        size: usersPageSize,
+        role: "ALL",
+        q: "",
+      });
     },
-    [refreshUsersPage, usersPageSize]
+    [refreshUsersPage, usersPageSize],
   );
-
 
   const goUsersPage: AdminStore["goUsersPage"] = (pageIndex) => {
     const pg = Math.max(0, Math.min(pageIndex, usersTotalPages - 1));
@@ -743,13 +892,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     ]);
 
     // const [ovR, auctR, groupR, blockedR, evR, catR, hourR] = results;
-    const [ovR, groupR, blockedR, evR, catR, hourR, trendR, tradeR, chatR] = results;
+    const [ovR, groupR, blockedR, evR, catR, hourR, trendR, tradeR, chatR] =
+      results;
     if (ovR.status === "fulfilled") setStats(ovR.value);
     // if (auctR.status === "fulfilled") setAuctions(auctR.value);
     if (groupR.status === "fulfilled") setReportGroups(groupR.value);
     if (blockedR.status === "fulfilled") setBlockedProducts(blockedR.value);
     if (evR.status === "fulfilled") setEvents(evR.value);
-    if (evR.status === "rejected") setCalendarLoadErr("캘린더 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.");
+    if (evR.status === "rejected")
+      setCalendarLoadErr(
+        "캘린더 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.",
+      );
     if (catR.status === "fulfilled") setCategoryDistribution(catR.value);
     if (hourR.status === "fulfilled") setTodayActiveHours(hourR.value);
     if (trendR.status === "fulfilled") setAuctionTrendRows(trendR.value);
@@ -761,7 +914,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (typeof uiPage === "number" || typeof uiSize === "number") {
       const nextSize = Math.max(1, Math.min(uiSize ?? auctionsPageSize, 100));
-      const nextIndex = Math.max(0, (Math.max(1, uiPage ?? (auctionsPageIndex + 1)) - 1));
+      const nextIndex = Math.max(
+        0,
+        Math.max(1, uiPage ?? auctionsPageIndex + 1) - 1,
+      );
 
       setAuctionsPageIndex(nextIndex);
       setAuctionsPageSize(nextSize);
@@ -855,14 +1011,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   //     }
   //   })();
   // };
-  const suspendAuction = useCallback(async (auctionId: string): Promise<void> => {
-    const reason = window.prompt("임시차단 사유를 입력하세요") || "";
-    if (!reason.trim()) return;
+  const suspendAuction = useCallback(
+    async (auctionId: string): Promise<void> => {
+      const reason = window.prompt("임시차단 사유를 입력하세요") || "";
+      if (!reason.trim()) return;
 
-    await adminApi.suspendAuction(auctionId, reason.trim());
-    await refreshAuctionsPage();
-    await refreshOverviewTopAuctions();
-  }, [refreshAuctionsPage, refreshOverviewTopAuctions]);
+      await adminApi.suspendAuction(auctionId, reason.trim());
+      await refreshAuctionsPage();
+      await refreshOverviewTopAuctions();
+    },
+    [refreshAuctionsPage, refreshOverviewTopAuctions],
+  );
   // const forceEndAuction = (auctionId: string): void => {
   //   (async () => {
   //     const reason = window.prompt("강제종료 사유를 입력하세요") || "";
@@ -884,44 +1043,65 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   //     }
   //   })();
   // };
-  const forceEndAuction = useCallback(async (auctionId: string): Promise<void> => {
-    const reason = window.prompt("강제종료 사유를 입력하세요") || "";
-    if (!reason.trim()) return;
+  const forceEndAuction = useCallback(
+    async (auctionId: string): Promise<void> => {
+      const reason = window.prompt("강제종료 사유를 입력하세요") || "";
+      if (!reason.trim()) return;
 
-    await adminApi.forceEndAuction(auctionId, reason.trim());
-    await refreshAuctionsPage();
-    await refreshOverviewTopAuctions();
+      await adminApi.forceEndAuction(auctionId, reason.trim());
+      await refreshAuctionsPage();
+      await refreshOverviewTopAuctions();
 
-    setStats((s) => ({
-      ...s,
-      todayEndedAuctions: s.todayEndedAuctions + 1,
-      ongoingAuctions: Math.max(0, s.ongoingAuctions - 1),
-    }));
-  }, [refreshAuctionsPage, refreshOverviewTopAuctions, setStats]);
+      setStats((s) => ({
+        ...s,
+        todayEndedAuctions: s.todayEndedAuctions + 1,
+        ongoingAuctions: Math.max(0, s.ongoingAuctions - 1),
+      }));
+    },
+    [refreshAuctionsPage, refreshOverviewTopAuctions, setStats],
+  );
 
- const fetchGroupReports: AdminStore["fetchGroupReports"] = async (targetUserId, category, page, size) => {
+  const fetchGroupReports: AdminStore["fetchGroupReports"] = async (
+    targetUserId,
+    category,
+    page,
+    size,
+  ) => {
     return await adminApi.getGroupReports(targetUserId, category, page, size);
   };
 
-  const resolveReportGroup: AdminStore["resolveReportGroup"] = async (targetUserId, category, payload) => {
+  const resolveReportGroup: AdminStore["resolveReportGroup"] = async (
+    targetUserId,
+    category,
+    payload,
+  ) => {
     await adminApi.resolveReportGroup(targetUserId, category, payload);
     const refreshed = await adminApi.getReportGroups();
     setReportGroups(refreshed);
   };
 
-  const adminSuspendUser: AdminStore["adminSuspendUser"] = async (targetUserId, days, reason) => {
+  const adminSuspendUser: AdminStore["adminSuspendUser"] = async (
+    targetUserId,
+    days,
+    reason,
+  ) => {
     await adminApi.adminSuspendUser(targetUserId, days, reason);
     const refreshed = await adminApi.getReportGroups();
     setReportGroups(refreshed);
   };
 
-  const adminLiftAll: AdminStore["adminLiftAll"] = async (targetUserId, reason) => {
+  const adminLiftAll: AdminStore["adminLiftAll"] = async (
+    targetUserId,
+    reason,
+  ) => {
     await adminApi.adminLiftAll(targetUserId, reason);
     const refreshed = await adminApi.getReportGroups();
     setReportGroups(refreshed);
   };
 
-  const liftBlockedProduct: AdminStore["liftBlockedProduct"] = async (payload) => {
+  const liftBlockedProduct: AdminStore["liftBlockedProduct"] = async (
+    payload,
+  ) => {
     await adminApi.liftBlockedProduct(payload);
     await refreshBlockedProducts();
   };
@@ -939,7 +1119,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deleteNotice: AdminStore["deleteNotice"] = async (id) => {
     await adminApi.deleteNotice(id);
 
-    const nextPage = noticePage > 0 && notices.length === 1 ? noticePage - 1 : noticePage;
+    const nextPage =
+      noticePage > 0 && notices.length === 1 ? noticePage - 1 : noticePage;
     await fetchNoticesPage(nextPage, noticeSize);
   };
 
@@ -976,9 +1157,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const moveEventDate: AdminStore["moveEventDate"] = async (id, newDate) => {
     await adminApi.moveEventDate(id, newDate);
-    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, date: newDate } : e)));
+    setEvents((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, date: newDate } : e)),
+    );
   };
-
 
   const extendAdminSession = useCallback(async (): Promise<void> => {
     const res = await adminApi.extendAdminSession();
@@ -990,15 +1172,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem("accessToken", token);
     setRtTokenVersion((v) => v + 1);
   }, []);
-  
+
   // 뱃지 관련 카운팅 함수
-  const pinnedNoticesCount = useMemo(() => notices.filter((n) => n.pinned).length, [notices]);
-  const noticesCount = useMemo(() => noticeTotalElements, [noticeTotalElements]);
+  const pinnedNoticesCount = useMemo(
+    () => notices.filter((n) => n.pinned).length,
+    [notices],
+  );
+  const noticesCount = useMemo(
+    () => noticeTotalElements,
+    [noticeTotalElements],
+  );
 
   const reportsOpenCount = useMemo(() => {
     return reportGroups.reduce((acc, g) => acc + (g.pendingCount || 0), 0);
   }, [reportGroups]);
-  
+
   const value: AdminStore = {
     adminEmail: profile.email,
     adminNick: profile.nick,

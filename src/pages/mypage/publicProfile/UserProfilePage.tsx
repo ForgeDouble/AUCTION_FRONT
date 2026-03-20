@@ -7,7 +7,6 @@ import {
   Siren,
   Search,
   RefreshCw,
-  Star,
   ShoppingBag,
   Clock,
   Gavel,
@@ -15,7 +14,6 @@ import {
   Filter,
   ArrowUpDown,
   Home,
-  User2,
   User,
 } from "lucide-react";
 
@@ -64,21 +62,32 @@ function formatMoney(v: number) {
 function statusBadge(s: ProductRow["status"]) {
   switch (s) {
     case "READY":
-      return { label: "대기", cls: "bg-gray-100 text-gray-600 ring-1 ring-gray-200" };
+      return {
+        label: "대기",
+        cls: "bg-gray-100 text-gray-600 ring-1 ring-gray-200",
+      };
     case "PROCESSING":
-      return { label: "진행중", cls: "bg-[rgba(118,90,255,0.08)] text-[rgb(118,90,255)] ring-1 ring-[rgba(118,90,255,0.25)]" };
+      return {
+        label: "진행중",
+        cls: "bg-[rgba(118,90,255,0.08)] text-[rgb(118,90,255)] ring-1 ring-[rgba(118,90,255,0.25)]",
+      };
     case "SELLED":
-      return { label: "낙찰", cls: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200" };
+      return {
+        label: "낙찰",
+        cls: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
+      };
     case "NOTSELLED":
-      return { label: "유찰", cls: "bg-rose-50 text-rose-700 ring-1 ring-rose-200" };
+      return {
+        label: "유찰",
+        cls: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
+      };
     default:
       return { label: s, cls: "bg-gray-50 text-gray-500" };
   }
 }
 
-
-const BRAND_COLOR = "rgb(118,90,255)"
-const BRAND_BG_SOFT = "rgba(118,90,255,0.08)"
+const BRAND_COLOR = "rgb(118,90,255)";
+const BRAND_BG_SOFT = "rgba(118,90,255,0.08)";
 
 type SectionKey = "PRODUCTS" | "REVIEWS";
 
@@ -93,7 +102,9 @@ export default function UserProfilePage() {
   }, [params.userId]);
 
   // const token = useMemo(() => localStorage.getItem("accessToken") ?? "", []);
-  const [token, setToken] = useState(() => localStorage.getItem("accessToken") ?? "");
+  const [token, setToken] = useState(
+    () => localStorage.getItem("accessToken") ?? "",
+  );
 
   useEffect(() => {
     const sync = () => setToken(localStorage.getItem("accessToken") ?? "");
@@ -124,7 +135,7 @@ export default function UserProfilePage() {
     "READY",
     "PROCESSING",
     "SELLED",
-    "NOTSELLED"
+    "NOTSELLED",
   ]);
   const [searchKey, setSearchKey] = useState(0);
 
@@ -146,7 +157,9 @@ export default function UserProfilePage() {
     return Math.max(0, days);
   }, [profile?.createdAt]);
 
-  const [seasonAwards, setSeasonAwards] = useState<SeasonUserAwardsDto | null>(null);
+  const [seasonAwards, setSeasonAwards] = useState<SeasonUserAwardsDto | null>(
+    null,
+  );
   const [seasonLoading, setSeasonLoading] = useState(false);
 
   const [listLoadErr, setListLoadErr] = useState<string | null>(null);
@@ -254,7 +267,9 @@ export default function UserProfilePage() {
       }
       if (r.type === "IGNORE") return;
 
-      modal.showError("서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.");
+      modal.showError(
+        "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+      );
     } finally {
       setLoadingProfile(false);
     }
@@ -334,30 +349,32 @@ export default function UserProfilePage() {
       });
 
       const payload = unwrap<any>(res);
-      const pageObj = payload?.content ? payload : payload?.result ?? payload?.data ?? payload;
+      const pageObj = payload?.content
+        ? payload
+        : (payload?.result ?? payload?.data ?? payload);
 
       setRows((pageObj?.content ?? []) as ProductRow[]);
       setTotalPages(Number(pageObj?.totalPages ?? 0));
       setTotalElements(Number(pageObj?.totalElements ?? 0));
-      } catch (e: any) {
-        const r = handleApiError(e);
+    } catch (e: any) {
+      const r = handleApiError(e);
 
-        if (r.type === "REDIRECT" && r.to === "/404") {
-          nav("/404");
-          return;
-        }
-        if (r.type === "AUTH") {
-          forceReauth();
-          return;
-        }
-
-        const msg = (r as any).message ?? "상품 목록을 불러올 수 없습니다.";
-        setListLoadErr(msg);
-
-        showErrorModalOnce(msg);
-      } finally {
-        setLoadingList(false);
+      if (r.type === "REDIRECT" && r.to === "/404") {
+        nav("/404");
+        return;
       }
+      if (r.type === "AUTH") {
+        forceReauth();
+        return;
+      }
+
+      const msg = (r as any).message ?? "상품 목록을 불러올 수 없습니다.";
+      setListLoadErr(msg);
+
+      showErrorModalOnce(msg);
+    } finally {
+      setLoadingList(false);
+    }
   };
 
   // 프로필 로드
@@ -380,7 +397,6 @@ export default function UserProfilePage() {
     setSearchKey((k) => k + 1);
   };
 
-
   const toggleStatus = (s: ProductRow["status"]) => {
     setPage(0);
     setStatuses((prev) => {
@@ -398,7 +414,9 @@ export default function UserProfilePage() {
         <div className="bg-white p-8 rounded-3xl shadow-lg text-center max-w-md border border-gray-100">
           <Siren className="w-12 h-12 text-rose-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-900">잘못된 접근</h2>
-          <p className="text-gray-500 mt-2 text-sm">유저 정보가 올바르지 않습니다.</p>
+          <p className="text-gray-500 mt-2 text-sm">
+            유저 정보가 올바르지 않습니다.
+          </p>
           <button
             onClick={() => nav(-1)}
             className="mt-6 w-full py-3 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 transition"
@@ -433,7 +451,9 @@ export default function UserProfilePage() {
               }}
               className="p-2 text-gray-400 hover:text-[rgb(118,90,255)] transition rounded-full hover:bg-[rgba(118,90,255,0.08)]"
             >
-              <RefreshCw className={`w-5 h-5 ${loadingProfile ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-5 h-5 ${loadingProfile ? "animate-spin" : ""}`}
+              />
             </button>
           </div>
         </div>
@@ -442,7 +462,7 @@ export default function UserProfilePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="relative bg-white rounded-[2rem] p-10 md:min-h-[360px] shadow-sm border border-gray-100 overflow-hidden mb-8 group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-[rgba(118,90,255,0.14)] rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-[rgba(118,90,255,0.20)] transition-colors duration-700" />
-   
+
           {reportable && (
             <button
               onClick={() => setReportOpen(true)}
@@ -488,24 +508,59 @@ export default function UserProfilePage() {
                       </span>
                     )}
                   </h1>
-                  
+
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[rgba(118,90,255,0.08)] text-[rgb(118,90,255)] text-xs font-bold">
-                      <Home className="w-4 h-4" /> 오픈 {openDays}일차 </span>
-                      {/* <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold border border-gray-100"> ID #{targetUserId} </span> */}
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold border border-gray-100"> 최근 활동 
+                      <Home className="w-4 h-4" /> 오픈 {openDays}일차{" "}
+                    </span>
+                    {/* <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold border border-gray-100"> ID #{targetUserId} </span> */}
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold border border-gray-100">
+                      {" "}
+                      최근 활동
                       <span className="text-gray-900 font-bold">집계 예정</span>
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 p-6 rounded-2xl bg-white border border-gray-100"> 
-                <div className="flex items-center justify-between"> 
-                  <div className="text-sm font-bold text-gray-900">최근 활동</div> 
-                  <div className="text-xs text-gray-400 font-semibold"> {seasonAwards?.ym ? `${seasonAwards.ym} 시즌` : "집계 예정"} </div> 
-                </div> 
-                <div className="mt-4"> {seasonLoading ? ( <div className="flex items-center gap-2 text-xs text-gray-400"> <div className="animate-spin w-4 h-4 border-2 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full" /> 시즌 정보를 불러오는 중... </div> ) : (seasonAwards && ((seasonAwards.titles?.length ?? 0) + (seasonAwards.badges?.length ?? 0) > 0)) ? ( <SeasonAwardChips data={seasonAwards} accent={BRAND_COLOR} accentSoft={BRAND_BG_SOFT} max={chipMax} /> ) : ( <div className="text-xs text-gray-500"> 아직 집계된 시즌 결과가 없습니다. </div> )} </div> </div>
+              <div className="mt-6 p-6 rounded-2xl bg-white border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold text-gray-900">
+                    최근 활동
+                  </div>
+                  <div className="text-xs text-gray-400 font-semibold">
+                    {" "}
+                    {seasonAwards?.ym
+                      ? `${seasonAwards.ym} 시즌`
+                      : "집계 예정"}{" "}
+                  </div>
+                </div>
+                <div className="mt-4">
+                  {" "}
+                  {seasonLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      {" "}
+                      <div className="animate-spin w-4 h-4 border-2 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full" />{" "}
+                      시즌 정보를 불러오는 중...{" "}
+                    </div>
+                  ) : seasonAwards &&
+                    (seasonAwards.titles?.length ?? 0) +
+                      (seasonAwards.badges?.length ?? 0) >
+                      0 ? (
+                    <SeasonAwardChips
+                      data={seasonAwards}
+                      accent={BRAND_COLOR}
+                      accentSoft={BRAND_BG_SOFT}
+                      max={chipMax}
+                    />
+                  ) : (
+                    <div className="text-xs text-gray-500">
+                      {" "}
+                      아직 집계된 시즌 결과가 없습니다.{" "}
+                    </div>
+                  )}{" "}
+                </div>{" "}
+              </div>
             </div>
           </div>
 
@@ -550,7 +605,6 @@ export default function UserProfilePage() {
 
         {section === "PRODUCTS" && (
           <div className="animate-fade-in-up">
-
             <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center mb-6">
               <div className="relative w-full md:w-80">
                 <input
@@ -566,21 +620,25 @@ export default function UserProfilePage() {
               <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                 <div className="flex items-center gap-2 mr-2">
                   <Filter className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs font-semibold text-gray-500">상태필터</span>
+                  <span className="text-xs font-semibold text-gray-500">
+                    상태필터
+                  </span>
                 </div>
-                {(["READY", "PROCESSING", "SELLED", "NOTSELLED"] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => toggleStatus(s)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
-                      statuses.includes(s)
-                        ? "bg-[rgb(118,90,255)] text-white border-[rgb(118,90,255)] shadow-sm"
-                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    {statusBadge(s).label}
-                  </button>
-                ))}
+                {(["READY", "PROCESSING", "SELLED", "NOTSELLED"] as const).map(
+                  (s) => (
+                    <button
+                      key={s}
+                      onClick={() => toggleStatus(s)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
+                        statuses.includes(s)
+                          ? "bg-[rgb(118,90,255)] text-white border-[rgb(118,90,255)] shadow-sm"
+                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {statusBadge(s).label}
+                    </button>
+                  ),
+                )}
 
                 <div className="w-px h-6 bg-gray-200 mx-1 hidden md:block" />
 
@@ -601,8 +659,12 @@ export default function UserProfilePage() {
             </div>
             {listLoadErr ? (
               <div className="py-20 text-center bg-white rounded-3xl border border-red-200 shadow-sm">
-                <div className="text-red-700 font-bold mb-1">상품 목록을 불러올 수 없습니다</div>
-                <div className="text-sm text-red-600 whitespace-pre-line">{listLoadErr}</div>
+                <div className="text-red-700 font-bold mb-1">
+                  상품 목록을 불러올 수 없습니다
+                </div>
+                <div className="text-sm text-red-600 whitespace-pre-line">
+                  {listLoadErr}
+                </div>
                 <button
                   onClick={() => void loadList()}
                   className="mt-4 px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm"
@@ -613,20 +675,30 @@ export default function UserProfilePage() {
             ) : loadingList ? (
               <div className="py-20 text-center">
                 <div className="animate-spin w-8 h-8 border-4 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full mx-auto mb-4" />
-                <p className="text-gray-500 text-sm">상품 정보를 불러오고 있습니다...</p>
+                <p className="text-gray-500 text-sm">
+                  상품 정보를 불러오고 있습니다...
+                </p>
               </div>
             ) : rows.length === 0 ? (
               <div className="py-20 text-center bg-white rounded-3xl border border-gray-100 shadow-sm">
                 <div className="bg-gray-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Search className="w-8 h-8 text-gray-300" />
                 </div>
-                <h3 className="text-gray-900 font-bold mb-1">검색 결과가 없습니다</h3>
-                <p className="text-gray-500 text-sm">다른 검색어나 필터를 시도해보세요.</p>
+                <h3 className="text-gray-900 font-bold mb-1">
+                  검색 결과가 없습니다
+                </h3>
+                <p className="text-gray-500 text-sm">
+                  다른 검색어나 필터를 시도해보세요.
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {rows.map((p) => (
-                  <ProductCard key={p.productId} product={p} onClick={() => nav(`/auction_detail/${p.productId}`)} />
+                  <ProductCard
+                    key={p.productId}
+                    product={p}
+                    onClick={() => nav(`/auction_detail/${p.productId}`)}
+                  />
                 ))}
               </div>
             )}
@@ -635,7 +707,7 @@ export default function UserProfilePage() {
               <div className="mt-12 flex justify-center items-center gap-2">
                 <button
                   disabled={page === 0}
-                  onClick={() => setPage(p => p - 1)}
+                  onClick={() => setPage((p) => p - 1)}
                   className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   이전
@@ -645,7 +717,7 @@ export default function UserProfilePage() {
                 </span>
                 <button
                   disabled={page >= totalPages - 1}
-                  onClick={() => setPage(p => p + 1)}
+                  onClick={() => setPage((p) => p + 1)}
                   className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   다음
@@ -668,8 +740,11 @@ export default function UserProfilePage() {
           </div>
         )} */}
         {section === "REVIEWS" && (
-
-<div className="animate-fade-in-up"> <PublicProfileReviews token={token} sellerId={targetUserId} /> </div> )}
+          <div className="animate-fade-in-up">
+            {" "}
+            <PublicProfileReviews token={token} sellerId={targetUserId} />{" "}
+          </div>
+        )}
       </div>
 
       <ReportModal
@@ -684,8 +759,15 @@ export default function UserProfilePage() {
   );
 }
 
-
-function StatCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+function StatCard({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+}) {
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow group">
       <div className="w-12 h-12 rounded-xl bg-gray-50 group-hover:bg-[rgba(118,90,255,0.08)] flex items-center justify-center transition-colors">
@@ -724,7 +806,9 @@ function TabButton({
         {count !== undefined && (
           <span
             className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-              active ? "bg-[rgba(118,90,255,0.14)] text-[rgb(118,90,255)]" : "bg-gray-100 text-gray-500"
+              active
+                ? "bg-[rgba(118,90,255,0.14)] text-[rgb(118,90,255)]"
+                : "bg-gray-100 text-gray-500"
             }`}
           >
             {count}
@@ -738,10 +822,18 @@ function TabButton({
   );
 }
 
-function ProductCard({ product, onClick }: { product: ProductRow; onClick: () => void }) {
+function ProductCard({
+  product,
+  onClick,
+}: {
+  product: ProductRow;
+  onClick: () => void;
+}) {
   const badge = statusBadge(product.status);
   const price = formatMoney(
-    product.maxBidAmount && product.maxBidAmount > 0 ? product.maxBidAmount : product.price
+    product.maxBidAmount && product.maxBidAmount > 0
+      ? product.maxBidAmount
+      : product.price,
   );
 
   return (
@@ -749,7 +841,6 @@ function ProductCard({ product, onClick }: { product: ProductRow; onClick: () =>
       onClick={onClick}
       className="group bg-white rounded-3xl border border-gray-100 overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full"
     >
-      
       <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
         <img
           src={product.previewImageUrl || placeholderImg}
@@ -757,11 +848,13 @@ function ProductCard({ product, onClick }: { product: ProductRow; onClick: () =>
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        
+
         <div className="absolute top-3 right-3">
-            <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold backdrop-blur-md shadow-sm ${badge.cls}`}>
-                {badge.label}
-            </span>
+          <span
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold backdrop-blur-md shadow-sm ${badge.cls}`}
+          >
+            {badge.label}
+          </span>
         </div>
       </div>
 
@@ -777,14 +870,21 @@ function ProductCard({ product, onClick }: { product: ProductRow; onClick: () =>
 
         <div className="pt-4 border-t border-dashed border-gray-100 flex items-end justify-between">
           <div>
-            <span className="text-[10px] font-medium text-gray-400 block mb-0.5">현재가</span>
+            <span className="text-[10px] font-medium text-gray-400 block mb-0.5">
+              현재가
+            </span>
             <span className="text-lg font-extrabold text-gray-900 tracking-tight">
-              {price}<span className="text-sm font-normal text-gray-500 ml-0.5">원</span>
+              {price}
+              <span className="text-sm font-normal text-gray-500 ml-0.5">
+                원
+              </span>
             </span>
           </div>
           <div className="text-right">
-            <span className="text-[10px] font-medium text-gray-400 block mb-0.5">입찰수</span>
-             <span className="text-sm font-bold text-[rgb(118,90,255)] bg-[rgba(118,90,255,0.08)] px-2 py-0.5 rounded-md">
+            <span className="text-[10px] font-medium text-gray-400 block mb-0.5">
+              입찰수
+            </span>
+            <span className="text-sm font-bold text-[rgb(118,90,255)] bg-[rgba(118,90,255,0.08)] px-2 py-0.5 rounded-md">
               {product.bidCount}건
             </span>
           </div>

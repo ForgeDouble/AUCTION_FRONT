@@ -1,9 +1,19 @@
-// pages/mypage/publicProfile/PublicProfileReview.tsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, Tag, X, Store, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
-import placeholderImg from "@/assets/images/PlaceHolder.jpg";
-import { fetchSellerReviews, fetchSellerReviewSummary, fetchReviewDetail } from "@/pages/mypage/reviews/reviewApi";
+import {
+  Star,
+  Tag,
+  X,
+  Store,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+} from "lucide-react";
+import {
+  fetchSellerReviews,
+  fetchSellerReviewSummary,
+  fetchReviewDetail,
+} from "@/pages/mypage/reviews/reviewApi";
 import {
   unwrap,
   REVIEW_TAG_LABEL,
@@ -22,7 +32,10 @@ function isReviewTag(x: unknown): x is ReviewTag {
   return typeof x === "string" && x in REVIEW_TAG_LABEL;
 }
 
-export default function PublicProfileReviews(props: { token: string; sellerId: number }) {
+export default function PublicProfileReviews(props: {
+  token: string;
+  sellerId: number;
+}) {
   const { token, sellerId } = props;
 
   const [page, setPage] = useState(0);
@@ -68,7 +81,9 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
     .map((x: any) => x.url);
 
   const showServerErrorModal = () => {
-    modal.showError("서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.");
+    modal.showError(
+      "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.",
+    );
   };
   const handleListLoadError = (e: any) => {
     const r = handleApiError(e);
@@ -80,9 +95,8 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
 
     if (r.type === "AUTH") {
       modal.showLogin("navigation");
-    return;
+      return;
     }
-
   };
   const handleUiError = (e: any) => {
     const r = handleApiError(e);
@@ -180,10 +194,15 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
       <div className="bg-white rounded-3xl border border-gray-100 p-6 flex items-center justify-between">
         <div>
           <div className="text-sm font-bold text-gray-900">받은 리뷰</div>
-          <div className="text-xs text-gray-500 mt-1">총 {summary?.reviewCount ?? 0}개</div>
+          <div className="text-xs text-gray-500 mt-1">
+            총 {summary?.reviewCount ?? 0}개
+          </div>
         </div>
         <div className="flex items-center gap-2 bg-[rgba(118,90,255,0.08)] px-3 py-2 rounded-2xl">
-          <Star className="w-4 h-4 text-[rgb(118,90,255)]" fill="currentColor" />
+          <Star
+            className="w-4 h-4 text-[rgb(118,90,255)]"
+            fill="currentColor"
+          />
           <span className="font-extrabold text-[rgb(118,90,255)] text-sm">
             {(summary?.avgRating ?? 0).toFixed(1)}
           </span>
@@ -193,8 +212,12 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
       {/* 실패 시: 빨간 박스 대신(모달은 이미 뜸) 재시도 카드만 */}
       {loadFailed ? (
         <div className="bg-white rounded-3xl border border-gray-100 p-10 text-center">
-          <div className="text-sm font-bold text-gray-900">리뷰를 불러오지 못했습니다</div>
-          <div className="mt-1 text-xs text-gray-500">잠시 후 다시 시도해주세요.</div>
+          <div className="text-sm font-bold text-gray-900">
+            리뷰를 불러오지 못했습니다
+          </div>
+          <div className="mt-1 text-xs text-gray-500">
+            잠시 후 다시 시도해주세요.
+          </div>
           <button
             onClick={() => void load()}
             className="mt-6 inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[rgb(118,90,255)] hover:brightness-95 text-white text-sm font-semibold"
@@ -209,7 +232,11 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
         </div>
       ) : (
         rows.map((r) => (
-          <ReviewCard key={r.reviewId} r={r} onOpenDetail={() => openDetail(r.reviewId)} />
+          <ReviewCard
+            key={r.reviewId}
+            r={r}
+            onOpenDetail={() => openDetail(r.reviewId)}
+          />
         ))
       )}
 
@@ -224,7 +251,8 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
             이전
           </button>
           <span className="text-sm font-bold text-gray-900 px-2">
-            {page + 1} <span className="text-gray-400 font-normal">/</span> {data.totalPages}
+            {page + 1} <span className="text-gray-400 font-normal">/</span>{" "}
+            {data.totalPages}
           </span>
           <button
             disabled={page >= data.totalPages - 1}
@@ -251,14 +279,22 @@ export default function PublicProfileReviews(props: { token: string; sellerId: n
         open={lbOpen}
         urls={detailImageUrls}
         index={lbIndex}
-        setIndex={(v: any) => setLbIndex(typeof v === "number" ? v : v(lbIndex))}
+        setIndex={(v: any) =>
+          setLbIndex(typeof v === "number" ? v : v(lbIndex))
+        }
         onClose={() => setLbOpen(false)}
       />
     </div>
   );
 }
 
-function ReviewCard({ r, onOpenDetail }: { r: ReviewListDto; onOpenDetail: () => void }) {
+function ReviewCard({
+  r,
+  onOpenDetail,
+}: {
+  r: ReviewListDto;
+  onOpenDetail: () => void;
+}) {
   const thumb = r.firstImageUrl || null;
 
   return (
@@ -267,7 +303,11 @@ function ReviewCard({ r, onOpenDetail }: { r: ReviewListDto; onOpenDetail: () =>
         <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
           <div className="w-24 h-24 rounded-2xl overflow-hidden bg-white ring-1 ring-black/5 flex-shrink-0">
             {thumb ? (
-              <img src={thumb} alt="review thumb" className="w-full h-full object-cover" />
+              <img
+                src={thumb}
+                alt="review thumb"
+                className="w-full h-full object-cover"
+              />
             ) : (
               <PlaceHolder className="rounded-2xl" label="No Image" />
             )}
@@ -279,19 +319,32 @@ function ReviewCard({ r, onOpenDetail }: { r: ReviewListDto; onOpenDetail: () =>
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
                 {r.reviewerProfileImageUrl ? (
-                  <img src={r.reviewerProfileImageUrl} alt="reviewer" className="w-full h-full object-cover" />
+                  <img
+                    src={r.reviewerProfileImageUrl}
+                    alt="reviewer"
+                    className="w-full h-full object-cover"
+                  />
                 ) : null}
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-extrabold text-gray-900 truncate">{r.reviewerNick}</div>
-                <div className="text-[11px] text-gray-400">{formatKST(r.createdAt)}</div>
+                <div className="text-sm font-extrabold text-gray-900 truncate">
+                  {r.reviewerNick}
+                </div>
+                <div className="text-[11px] text-gray-400">
+                  {formatKST(r.createdAt)}
+                </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 bg-[rgba(118,90,255,0.08)] px-2 py-1 rounded-xl">
-                <Star className="w-4 h-4 text-[rgb(118,90,255)]" fill="currentColor" />
-                <span className="font-extrabold text-[rgb(118,90,255)] text-sm">{Number(r.rating ?? 0).toFixed(1)}</span>
+                <Star
+                  className="w-4 h-4 text-[rgb(118,90,255)]"
+                  fill="currentColor"
+                />
+                <span className="font-extrabold text-[rgb(118,90,255)] text-sm">
+                  {Number(r.rating ?? 0).toFixed(1)}
+                </span>
               </div>
 
               <button
@@ -308,7 +361,9 @@ function ReviewCard({ r, onOpenDetail }: { r: ReviewListDto; onOpenDetail: () =>
           </div>
 
           {r.content ? (
-            <div className="mt-3 text-sm text-gray-700 bg-gray-50 rounded-2xl p-4 leading-relaxed">{r.content}</div>
+            <div className="mt-3 text-sm text-gray-700 bg-gray-50 rounded-2xl p-4 leading-relaxed">
+              {r.content}
+            </div>
           ) : (
             <div className="mt-3 text-sm text-gray-400">내용 없음</div>
           )}
@@ -342,10 +397,21 @@ function ReviewDetailModal(props: {
   onGoSeller: (sellerId: number) => void;
   onOpenLightbox: (index: number) => void;
 }) {
-  const { open, loading, err, data, onClose, onGoProduct, onGoSeller, onOpenLightbox } = props;
+  const {
+    open,
+    loading,
+    err,
+    data,
+    onClose,
+    onGoProduct,
+    onGoSeller,
+    onOpenLightbox,
+  } = props;
   const { userId: meId } = useAuth();
 
-  const isMyProfile = Boolean(meId && data?.sellerId && Number(data.sellerId) === Number(meId));
+  const isMyProfile = Boolean(
+    meId && data?.sellerId && Number(data.sellerId) === Number(meId),
+  );
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -366,7 +432,9 @@ function ReviewDetailModal(props: {
 
   if (!open) return null;
 
-  const images = (data?.images ?? []).slice().sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0));
+  const images = (data?.images ?? [])
+    .slice()
+    .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0));
   const MAX_SLOTS = 12;
   const thumbs = images.slice(0, MAX_SLOTS);
   const extra = Math.max(0, images.length - MAX_SLOTS);
@@ -375,7 +443,10 @@ function ReviewDetailModal(props: {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      <div className="absolute inset-0 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="absolute inset-0 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
         <div
           className="w-[min(92vw,720px)] max-h-[88vh] overflow-hidden bg-white rounded-3xl shadow-2xl border border-gray-100"
           onClick={(e) => e.stopPropagation()}
@@ -399,7 +470,11 @@ function ReviewDetailModal(props: {
           </div>
 
           <div className="p-5 overflow-y-auto max-h-[calc(88vh-72px)]">
-            {loading && <div className="py-12 text-center text-sm text-gray-500">불러오는 중...</div>}
+            {loading && (
+              <div className="py-12 text-center text-sm text-gray-500">
+                불러오는 중...
+              </div>
+            )}
 
             {!loading && err && (
               <div className="mb-4 p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 text-sm font-bold">
@@ -411,10 +486,17 @@ function ReviewDetailModal(props: {
               <>
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <div className="flex items-center gap-2 bg-[rgba(118,90,255,0.08)] px-3 py-2 rounded-2xl">
-                    <Star className="w-5 h-5 text-[rgb(118,90,255)]" fill="currentColor" />
-                    <span className="text-[rgb(118,90,255)] font-extrabold">{Number(data.rating ?? 0).toFixed(1)}</span>
+                    <Star
+                      className="w-5 h-5 text-[rgb(118,90,255)]"
+                      fill="currentColor"
+                    />
+                    <span className="text-[rgb(118,90,255)] font-extrabold">
+                      {Number(data.rating ?? 0).toFixed(1)}
+                    </span>
                   </div>
-                  <div className="text-xs text-gray-400 font-semibold">{formatKST(data.createdAt)}</div>
+                  <div className="text-xs text-gray-400 font-semibold">
+                    {formatKST(data.createdAt)}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5">
@@ -439,10 +521,23 @@ function ReviewDetailModal(props: {
                         ? "bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed"
                         : "bg-white border border-[rgba(118,90,255,0.35)] text-[rgb(118,90,255)] hover:bg-[rgba(118,90,255,0.08)] active:scale-[0.98]")
                     }
-                    title={isMyProfile ? "내 프로필은 여기서 열 수 없어요" : "판매자 프로필 보기"}
+                    title={
+                      isMyProfile
+                        ? "내 프로필은 여기서 열 수 없어요"
+                        : "판매자 프로필 보기"
+                    }
                   >
-                    <Store className={"w-4 h-4 " + (isMyProfile ? "text-gray-300" : "text-[rgb(118,90,255)]")} />
-                    <span className="min-w-0 truncate">{data.sellerNick}님 상점</span>
+                    <Store
+                      className={
+                        "w-4 h-4 " +
+                        (isMyProfile
+                          ? "text-gray-300"
+                          : "text-[rgb(118,90,255)]")
+                      }
+                    />
+                    <span className="min-w-0 truncate">
+                      {data.sellerNick}님 상점
+                    </span>
                   </button>
                 </div>
 
@@ -451,7 +546,9 @@ function ReviewDetailModal(props: {
                     {data.content}
                   </div>
                 ) : (
-                  <div className="bg-gray-50 p-4 rounded-2xl text-gray-400 text-sm mb-5">작성된 내용이 없습니다.</div>
+                  <div className="bg-gray-50 p-4 rounded-2xl text-gray-400 text-sm mb-5">
+                    작성된 내용이 없습니다.
+                  </div>
                 )}
 
                 {data.tags && data.tags.length > 0 && (
@@ -487,7 +584,10 @@ function ReviewDetailModal(props: {
                       className="relative rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 group"
                       aria-label="이미지 확대 보기"
                     >
-                      <img src={img.url} className="w-full h-full object-cover group-hover:scale-[1.02] transition" />
+                      <img
+                        src={img.url}
+                        className="w-full h-full object-cover group-hover:scale-[1.02] transition"
+                      />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
 
                       {extra > 0 && idx === MAX_SLOTS - 1 && (
@@ -501,7 +601,10 @@ function ReviewDetailModal(props: {
                   ))}
 
                   {Array.from({ length: placeholders }).map((_, i) => (
-                    <div key={`ph-${i}`} className="rounded-2xl border border-dashed border-gray-200 bg-gray-50" />
+                    <div
+                      key={`ph-${i}`}
+                      className="rounded-2xl border border-dashed border-gray-200 bg-gray-50"
+                    />
                   ))}
                 </div>
               </>
@@ -526,7 +629,8 @@ function Lightbox(props: {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft") setIndex((index - 1 + urls.length) % urls.length);
+      if (e.key === "ArrowLeft")
+        setIndex((index - 1 + urls.length) % urls.length);
       if (e.key === "ArrowRight") setIndex((index + 1) % urls.length);
     };
     window.addEventListener("keydown", onKey);
@@ -542,9 +646,18 @@ function Lightbox(props: {
     <div className="fixed inset-0 z-[60]">
       <div className="absolute inset-0 bg-black/80" onClick={onClose} />
 
-      <div className="absolute inset-0 flex items-center justify-center p-4" onClick={onClose}>
-        <div className="relative w-[min(96vw,980px)] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-          <img src={urls[index]} className="w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl" />
+      <div
+        className="absolute inset-0 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <div
+          className="relative w-[min(96vw,980px)] max-h-[90vh]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <img
+            src={urls[index]}
+            className="w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+          />
 
           <button
             type="button"

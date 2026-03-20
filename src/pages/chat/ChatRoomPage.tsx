@@ -1,4 +1,3 @@
-// pages/chat/chatRoomPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useChat } from "@/hooks/useChat";
@@ -38,7 +37,15 @@ function isChatRoomPopupWindow() {
 
 const ChatRoomPage: React.FC = () => {
   const nav = useNavigate();
-  const { currentRoom, rooms, messages, selectRoom, send, sendImage, leaveRoom } = useChat();
+  const {
+    currentRoom,
+    rooms,
+    messages,
+    selectRoom,
+    send,
+    sendImage,
+    leaveRoom,
+  } = useChat();
   const [sp] = useSearchParams();
   const roomId = sp.get("roomId") || "";
 
@@ -50,7 +57,7 @@ const ChatRoomPage: React.FC = () => {
   }, [roomId, selectRoom]);
 
   const msgList = useMemo(
-    () => (currentRoom ? (messages[currentRoom.roomId] || []) : []),
+    () => (currentRoom ? messages[currentRoom.roomId] || [] : []),
     [messages, currentRoom],
   );
 
@@ -153,7 +160,9 @@ const ChatRoomPage: React.FC = () => {
                 disabled={leaving}
                 className={
                   "flex-1 h-9 rounded-xl border text-sm font-semibold " +
-                  (leaving ? "opacity-50 cursor-not-allowed" : "hover:bg-black/5")
+                  (leaving
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-black/5")
                 }
               >
                 취소

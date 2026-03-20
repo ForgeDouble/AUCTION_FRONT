@@ -1,13 +1,17 @@
 import { ApiError } from "@/errors/Errors";
 import type { ApiResponse } from "@/type/CommonType";
 
+const BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
+  "http://localhost:8080";
+
 export const fetchForgotPassword = async (
   email: string,
 ): Promise<ApiResponse<null>> => {
   const formData = new FormData();
   formData.append("email", email);
 
-  const response = await fetch(`http://localhost:8080/auth/forgot_password`, {
+  const response = await fetch(`${BASE}/auth/forgot_password`, {
     method: "POST",
     body: formData,
   });
@@ -33,7 +37,7 @@ export const fetchResetPassword = async (
   formData.append("token", token);
   formData.append("newPassword", newPassword);
 
-  const response = await fetch(`http://localhost:8080/auth/reset_password`, {
+  const response = await fetch(`${BASE}/auth/reset_password`, {
     method: "POST",
     body: formData,
   });
@@ -54,15 +58,12 @@ export const fetchResetPassword = async (
 export const fetchValidateToken = async (
   token: string,
 ): Promise<ApiResponse<null>> => {
-  const response = await fetch(
-    `http://localhost:8080/auth/validate_token?token=${token}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+  const response = await fetch(`${BASE}/auth/validate_token?token=${token}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+  });
 
   if (!response.ok) {
     const body = await response.json();
