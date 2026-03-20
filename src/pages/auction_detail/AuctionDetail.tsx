@@ -975,6 +975,19 @@ const AuctionDetail = () => {
           </div>
 
           <div className="flex items-center gap-2">
+              {!isSelfSeller && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReportMode("PRODUCT");
+                    setReportOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-extrabold text-rose-600 hover:bg-rose-100 transition"
+                >
+                  <Siren className="w-3 h-3" />
+                  신고
+                </button>
+            )}
             <span
               className="px-3 py-1 rounded-full text-xs font-extrabold border"
               style={{
@@ -1811,6 +1824,8 @@ const AuctionDetail = () => {
                   mode={reportMode}
                   targetUserId={sellerInfo?.userId}
                   targetUserName={sellerInfo?.nickname}
+                  productId={product?.productId}
+                  productName={product?.productName}
                 />
               </div>
             </div>

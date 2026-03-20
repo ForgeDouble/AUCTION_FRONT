@@ -54,6 +54,7 @@ export async function createUserReport(payload: {
 
 export async function createProductReport(payload: {
   productId: number;
+  category: ReportCategory;
   content?: string | null;
 }): Promise<void> {
   const raw = await apiFetch<CommonResDto<any>>(BASE + "/report/product/create", {
@@ -62,6 +63,7 @@ export async function createProductReport(payload: {
     credentials: "include",
     body: JSON.stringify({
       productId: payload.productId,
+      category: payload.category,
       content: payload.content ?? null,
     }),
   });
