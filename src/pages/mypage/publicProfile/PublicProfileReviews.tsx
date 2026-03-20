@@ -86,18 +86,31 @@ export default function PublicProfileReviews(props: {
     );
   };
   const handleListLoadError = (e: any) => {
-    const r = handleApiError(e);
+  const r = handleApiError(e);
 
-    if (r.type === "REDIRECT") {
-      nav(r.to);
-      return;
-    }
+  if (r.type === "REDIRECT") {
+    nav(r.to);
+    return true;
+  }
 
-    if (r.type === "AUTH") {
-      modal.showLogin("navigation");
-      return;
-    }
+  if (r.type === "AUTH") {
+    modal.showLogin("navigation");
+    return true;
+  }
+
+  if (r.type === "WARNING") {
+    modal.showWarning(r.message);
+    return true;
+  }
+
+  if (r.type === "IGNORE") {
+    return true;
+  }
+
+  showServerErrorModal();
+    return false;
   };
+  
   const handleUiError = (e: any) => {
     const r = handleApiError(e);
 
@@ -125,10 +138,12 @@ export default function PublicProfileReviews(props: {
     setLoadFailed(false);
 
     try {
-      const [p, s] = await Promise.all([
+      const [pRes, sRes] = await Promise.all([
         fetchSellerReviews(token, sellerId, page, 10),
         fetchSellerReviewSummary(token, sellerId),
       ]);
+      const p = unwrap<SpringPage<ReviewListDto>>(pRes);
+      const s = unwrap<ReviewSellerSummaryDto>(sRes);
       setData(p);
       setSummary(s);
     } catch (e: any) {
@@ -151,7 +166,7 @@ export default function PublicProfileReviews(props: {
       setDetailLoading(true);
       try {
         const res = await fetchReviewDetail(token, detailId, ac.signal);
-        const dto = unwrap(res);
+        const dto = unwrap<ReviewDetailDto>(res);
         setDetail(dto);
       } catch (e: any) {
         if (ac.signal.aborted) return;

@@ -1,5 +1,4 @@
 // components/chatRoomList.tsx
-import React from "react";
 import type { ChatRoomDto } from "@/pages/chat/ChatTypes";
 
 type Props = { rooms: ChatRoomDto[]; onOpen: (roomId: string) => void };

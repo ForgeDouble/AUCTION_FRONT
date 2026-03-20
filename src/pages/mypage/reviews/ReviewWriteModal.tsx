@@ -1,5 +1,5 @@
 // pages/mypage/reviews/ReviewWriteModal.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X, Star, UploadCloud, Trash2, Tag, RotateCcw } from "lucide-react";
 import { createReview, fetchCanWriteReview } from "./reviewApi";
 import { REVIEW_TAG_LABEL, type PendingReviewRowDto, type ReviewTag } from "./reviewTypes";
@@ -14,11 +14,11 @@ const TAGS: ReviewTag[] = [
     "FAST_AFTER_WIN",
 ];
 
-function ratingOptions() {
-    const arr: number[] = [];
-    for (let i = 0; i <= 10; i++) arr.push(i / 2);
-    return arr;
-}
+// function ratingOptions() {
+//     const arr: number[] = [];
+//     for (let i = 0; i <= 10; i++) arr.push(i / 2);
+//     return arr;
+// }
 function StarRating(props: {
     value: number;
     onChange: (v: number) => void;

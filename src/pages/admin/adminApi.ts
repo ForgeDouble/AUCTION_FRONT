@@ -18,7 +18,6 @@ import type {
   AdminUserCreateReq,
   Authority,
   AdminUserPageRes,
-  AdminUserCounts,
   AdminChatRoomRow,
   AdminChatMessageRow,
   AdminChatCreateGroupReq,
@@ -159,7 +158,7 @@ function normalizeNotice(x: any) {
   // const category = (x.category ?? "ETC") as any;
   // const content = String(x.content ?? x.body ?? "");
   // const authorNickname = String(x.authorNickname ?? x.author ?? "");
-  const createdAt = String(x.createdAt ?? new Date().toISOString());
+  // const createdAt = String(x.createdAt ?? new Date().toISOString());
   // const updatedAt = String(x.updatedAt ?? x.createdAt ?? createdAt);
 
   return {
@@ -266,25 +265,25 @@ function normalizeActiveHourBucket(x: any): ActiveHourBucketRow {
 // }
 
 // 관리자 유저 생성 관련 
-function normalizeAdminUser(x: any): AdminUserRow {
-  return {
-    userId: Number(x.userId ?? x.id ?? 0),
-    email: String(x.email ?? ""),
-    name: String(x.name ?? ""),
+// function normalizeAdminUser(x: any): AdminUserRow {
+//   return {
+//     userId: Number(x.userId ?? x.id ?? 0),
+//     email: String(x.email ?? ""),
+//     name: String(x.name ?? ""),
 
-    nickname: x.nickname != null ? String(x.nickname) : null,
-    authority: String(x.authority ?? "USER").toUpperCase() as Authority,
+//     nickname: x.nickname != null ? String(x.nickname) : null,
+//     authority: String(x.authority ?? "USER").toUpperCase() as Authority,
 
-    phone: x.phone != null ? String(x.phone) : null,
-    profileImageUrl: x.profileImageUrl != null ? String(x.profileImageUrl) : null,
+//     phone: x.phone != null ? String(x.phone) : null,
+//     profileImageUrl: x.profileImageUrl != null ? String(x.profileImageUrl) : null,
 
-    warning: x.warning != null ? Number(x.warning) : null,
-    suspendedUntil: x.suspendedUntil ? String(x.suspendedUntil) : null,
-    viewOnly: x.viewOnly != null ? Boolean(x.viewOnly) : null,
+//     warning: x.warning != null ? Number(x.warning) : null,
+//     suspendedUntil: x.suspendedUntil ? String(x.suspendedUntil) : null,
+//     viewOnly: x.viewOnly != null ? Boolean(x.viewOnly) : null,
 
-    createdAt: x.createdAt ? String(x.createdAt) : null,
-  };
-}
+//     createdAt: x.createdAt ? String(x.createdAt) : null,
+//   };
+// }
 
 function parseAuthorityFromAny(x: any): Authority {
   const pick =

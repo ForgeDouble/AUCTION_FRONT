@@ -5,20 +5,20 @@ import { ApiError, UnauthorizedError, DataReadError } from "@/errors/Errors";
 const BASE =
 (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://localhost:8080";
 
-async function safeFetch(url: string, init: RequestInit, fallback: string) {
-  let res: Response;
-  try {
-    res = await fetch(url, init);
-  } catch (e: any) {
-    throw new ApiError(0, "INTERNAL_SERVER_ERROR" as any, "요청이 차단되었거나 네트워크 오류입니다.", undefined);
-  }
+// async function safeFetch(url: string, init: RequestInit, fallback: string) {
+//   let res: Response;
+//   try {
+//     res = await fetch(url, init);
+//   } catch (e: any) {
+//     throw new ApiError(0, "INTERNAL_SERVER_ERROR" as any, "요청이 차단되었거나 네트워크 오류입니다.", undefined);
+//   }
 
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new UnauthorizedError();
-    throw new ApiError(res.status, "INTERNAL_SERVER_ERROR" as any, fallback, undefined);
-  }
-  return res;
-}
+//   if (!res.ok) {
+//     if (res.status === 401 || res.status === 403) throw new UnauthorizedError();
+//     throw new ApiError(res.status, "INTERNAL_SERVER_ERROR" as any, fallback, undefined);
+//   }
+//   return res;
+// }
 
 async function throwApiError(res: Response, fallback: string): Promise<never> {
   const text = await res.text().catch(() => "");

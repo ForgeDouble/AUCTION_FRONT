@@ -5,8 +5,12 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  allowedRoles?: Authority[]; // 허용된 권한 목록
-  requireAuth?: boolean; // 로그인 필수 여부
+  allowedRoles?: Authority[];
+  requireAuth?: boolean;
+}
+
+function isAuthority(value: string): value is Authority {
+  return ["ADMIN", "USER", "INQUIRY"].includes(value);
 }
 
 const ProtectedRoute = ({
@@ -25,17 +29,16 @@ const ProtectedRoute = ({
   if (requireAuth && !isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
+  
   // 특정 권한이 필요한데 권한이 없는 경우
   if (
     allowedRoles.length > 0 &&
     authority &&
-    !allowedRoles.includes(authority)
+    (!isAuthority(authority) || !allowedRoles.includes(authority))
   ) {
     return <Navigate to="/" replace />;
   }
 
-  // 권한이 있는 경우 자식 컴포넌트 렌더링
   return <>{children}</>;
 };
 

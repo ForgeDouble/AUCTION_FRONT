@@ -17,7 +17,7 @@ import {
   User,
 } from "lucide-react";
 
-// import placeholderImg from "@/assets/images/PlaceHolder.jpg";
+import placeholderImg from "@/assets/images/PlaceHolder.jpg";
 import ReportModal from "@/components/report/ReportModal";
 import {
   fetchPublicProfile,
@@ -125,7 +125,7 @@ export default function UserProfilePage() {
   const [loadingList, setLoadingList] = useState(false);
   const [rows, setRows] = useState<ProductRow[]>([]);
   const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
+  const [, setTotalElements] = useState(0);
 
   const [page, setPage] = useState(0);
   const [size] = useState(12);

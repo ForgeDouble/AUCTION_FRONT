@@ -32,7 +32,7 @@ function categoryLabel(c: NoticeCategory): string {
 
 const AdminNoticesPage: React.FC = () => {
   const nav = useNavigate();
-  const { showError, showLogin, showLoading, showWarning } = useModal();
+  const { showError, showLogin, showWarning } = useModal();
   const { logout } = useAuth();
   const { noticesLoadErr } = useAdminStore();
   const shownErrRef = useRef<string | null>(null);
@@ -56,7 +56,7 @@ const AdminNoticesPage: React.FC = () => {
     showError(noticesLoadErr);
   }, [noticesLoadErr, showError]);
 
-  const {notices, query, addNotice, updateNotice, deleteNotice, noticePage, noticeTotalPages, noticeTotalElements, goNoticePage, } = useAdminStore();
+  const {notices, addNotice, updateNotice, deleteNotice, noticePage, noticeTotalPages, noticeTotalElements, goNoticePage, } = useAdminStore();
 
   const [createForm, setCreateForm] = useState({
     category: "HANDOVER" as NoticeCategory,
@@ -237,16 +237,16 @@ const AdminNoticesPage: React.FC = () => {
     }
   };
 
-  const onDelete = async (id: number) => {
-    const ok = window.confirm("정말 삭제할까요?");
-    if (!ok) return;
+  // const onDelete = async (id: number) => {
+  //   const ok = window.confirm("정말 삭제할까요?");
+  //   if (!ok) return;
 
-    try {
-      await deleteNotice(id);
-    } catch (e) {
-      applyUiError(e, uiDeps);
-    }
-  };
+  //   try {
+  //     await deleteNotice(id);
+  //   } catch (e) {
+  //     applyUiError(e, uiDeps);
+  //   }
+  // };
 
   const onGoPage = async (p: number) => {
     try {

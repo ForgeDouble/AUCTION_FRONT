@@ -113,20 +113,20 @@ function getDisplayName(m: AdminChatMessageRow) {
   return (m.senderId ?? "익명").toString();
 }
 
-function getAuthority(m: AdminChatMessageRow) {
-  const raw = (m.sender?.authority ?? "").toString().toUpperCase();
-  if (raw.includes("ADMIN")) return "ADMIN";
-  if (raw.includes("INQUIRY")) return "INQUIRY";
-  if (raw.includes("USER")) return "USER";
-  return "";
-}
+// function getAuthority(m: AdminChatMessageRow) {
+//   const raw = (m.sender?.authority ?? "").toString().toUpperCase();
+//   if (raw.includes("ADMIN")) return "ADMIN";
+//   if (raw.includes("INQUIRY")) return "INQUIRY";
+//   if (raw.includes("USER")) return "USER";
+//   return "";
+// }
 
-function roleChipClass(role: string) {
-  if (role === "ADMIN") return "bg-[rgb(118_90_255)]/10 text-[rgb(118_90_255)] border-[rgb(118_90_255)]/30";
-  if (role === "INQUIRY") return "bg-sky-50 text-sky-700 border-sky-200";
-  if (role === "USER") return "bg-gray-50 text-gray-700 border-gray-200";
-  return "bg-gray-50 text-gray-600 border-gray-200";
-}
+// function roleChipClass(role: string) {
+//   if (role === "ADMIN") return "bg-[rgb(118_90_255)]/10 text-[rgb(118_90_255)] border-[rgb(118_90_255)]/30";
+//   if (role === "INQUIRY") return "bg-sky-50 text-sky-700 border-sky-200";
+//   if (role === "USER") return "bg-gray-50 text-gray-700 border-gray-200";
+//   return "bg-gray-50 text-gray-600 border-gray-200";
+// }
 
 function initialFromName(name: string) {
   const s = (name ?? "").trim();
@@ -791,7 +791,7 @@ const inputBase =
                     idx === 0 || dayKey(prev?.createdAt) !== dayKey(m.createdAt);
 
                   const displayName = getDisplayName(m);
-                  const role = getAuthority(m);
+                  // const role = getAuthority(m);
 
                   // const text = (m.message ?? "").trim();
                   const rawText = m.message ?? "";

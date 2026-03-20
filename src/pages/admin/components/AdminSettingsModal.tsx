@@ -80,9 +80,9 @@ function extractMonthDayFlexible(
 
   return { yyyy, mm, dd };
 }
-function startOfDay(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
+// function startOfDay(d: Date) {
+//   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+// }
 function isLeapYear(y: number) {
   return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
 }
@@ -195,17 +195,17 @@ const AdminSettingsModal: React.FC<Props> = ({
   // 실패(저장/이미지)만 모달
   const showFail = (msg: string) => showError(msg);
   // 성공은 굳이 모달 아니어도 되면(토스트/경고용)
-  const showOk = (msg: string) => showWarning(msg);
+  // const showOk = (msg: string) => showWarning(msg);
 
   const closeThenOk = (msg: string) => {
     onClose();
     setTimeout(() => showWarning(msg), 0);
   };
 
-  const closeThenFail = (msg: string) => {
-    onClose();
-    setTimeout(() => showError(msg), 0);
-  };
+  // const closeThenFail = (msg: string) => {
+  //   onClose();
+  //   setTimeout(() => showError(msg), 0);
+  // };
 
   useEffect(() => {
     if (!open) return;

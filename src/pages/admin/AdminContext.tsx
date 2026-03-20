@@ -412,12 +412,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({
   const [noticesLoadErr, setNoticesLoadErr] = useState<string | null>(null);
   const [calendarLoadErr, setCalendarLoadErr] = useState<string | null>(null);
 
-  type AdminRealtimePayload = {
-    realtimeUsers?: number;
-    todayActiveUsers?: number;
-    ongoingAuctions?: number;
-    ts?: number;
-  };
+  // type AdminRealtimePayload = {
+  //   realtimeUsers?: number;
+  //   todayActiveUsers?: number;
+  //   ongoingAuctions?: number;
+  //   ts?: number;
+  // };
   const [rtConnected, setRtConnected] = useState(false);
   const rtClientRef = useRef<Client | null>(null);
   const [rtTokenVersion, setRtTokenVersion] = useState(0);
@@ -575,20 +575,20 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [rtTokenVersion]);
 
-  const computeCountsFromItems = useCallback(
-    (items: AdminUserRow[]): AdminUserCounts => {
-      return items.reduce(
-        (acc, u) => {
-          if (u.authority === "ADMIN") acc.ADMIN += 1;
-          else if (u.authority === "INQUIRY") acc.INQUIRY += 1;
-          else acc.USER += 1;
-          return acc;
-        },
-        { ADMIN: 0, INQUIRY: 0, USER: 0 } as AdminUserCounts,
-      );
-    },
-    [],
-  );
+  // const computeCountsFromItems = useCallback(
+  //   (items: AdminUserRow[]): AdminUserCounts => {
+  //     return items.reduce(
+  //       (acc, u) => {
+  //         if (u.authority === "ADMIN") acc.ADMIN += 1;
+  //         else if (u.authority === "INQUIRY") acc.INQUIRY += 1;
+  //         else acc.USER += 1;
+  //         return acc;
+  //       },
+  //       { ADMIN: 0, INQUIRY: 0, USER: 0 } as AdminUserCounts,
+  //     );
+  //   },
+  //   [],
+  // );
 
   useEffect(() => {
     const t = window.setTimeout(() => {

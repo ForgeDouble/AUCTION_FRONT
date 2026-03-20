@@ -482,7 +482,6 @@ function TabButton({
   active,
   onClick,
   label,
-  count,
 }: {
   active: boolean;
   onClick: () => void;
