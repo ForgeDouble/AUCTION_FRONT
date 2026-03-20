@@ -2,10 +2,14 @@ import { ApiError } from "@/errors/Errors";
 import type { ApiResponse } from "../../type/CommonType";
 import type { loginRequest, loginResponse } from "./LoginDto";
 
+const BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
+  "http://localhost:8080";
+
 export const fetchLogin = async (
   loginDto: loginRequest,
 ): Promise<ApiResponse<loginResponse>> => {
-  const response = await fetch(`http://localhost:8080/user/login`, {
+  const response = await fetch(`${BASE}/user/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

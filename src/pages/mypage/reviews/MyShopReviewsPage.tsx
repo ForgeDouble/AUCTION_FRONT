@@ -1,5 +1,4 @@
-// pages/mypage/reviews/MyShopReviewsPage.tsx
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import {
@@ -14,9 +13,13 @@ import {
   Store,
   X,
   XCircle,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
-import { fetchMyPendingReviews, fetchMyReviews, fetchReviewDetail } from "./reviewApi";
+import {
+  fetchMyPendingReviews,
+  fetchMyReviews,
+  fetchReviewDetail,
+} from "./reviewApi";
 import {
   REVIEW_TAG_LABEL,
   formatKST,
@@ -28,9 +31,7 @@ import {
   type ReviewDetailDto,
 } from "./reviewTypes";
 import ReviewWriteModal from "./ReviewWriteModal";
-// import { handleApiError } from "@/errors/HandleApiError";
 import { applyUiError } from "@/hooks/applyUiError";
-import { useModal } from "@/contexts/ModalContext";
 
 function isReviewTag(x: unknown): x is ReviewTag {
   return typeof x === "string" && x in REVIEW_TAG_LABEL;
@@ -40,16 +41,18 @@ type TabKey = "PENDING" | "MINE";
 
 const LOGIN_PATH = "/login";
 
-
 export default function MyShopReviewsPage() {
   const nav = useNavigate();
-  const { showError } = useModal();
-  const [token, setToken] = useState(() => localStorage.getItem("accessToken") ?? "");
+
+  const [token, setToken] = useState(
+    () => localStorage.getItem("accessToken") ?? "",
+  );
 
   const [tab, setTab] = useState<TabKey>("PENDING");
 
   const [pPage, setPPage] = useState(0);
-  const [pending, setPending] = useState<SpringPage<PendingReviewRowDto> | null>(null);
+  const [pending, setPending] =
+    useState<SpringPage<PendingReviewRowDto> | null>(null);
 
   const [mPage, setMPage] = useState(0);
   const [mine, setMine] = useState<SpringPage<ReviewListDto> | null>(null);
@@ -59,7 +62,9 @@ export default function MyShopReviewsPage() {
   const [err, setErr] = useState<string | null>(null);
 
   const [writeOpen, setWriteOpen] = useState(false);
-  const [writeTarget, setWriteTarget] = useState<PendingReviewRowDto | null>(null);
+  const [writeTarget, setWriteTarget] = useState<PendingReviewRowDto | null>(
+    null,
+  );
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -121,7 +126,8 @@ export default function MyShopReviewsPage() {
     setLbIndex(index);
     setLbOpen(true);
   }
-  const LIST_INTERNAL_MSG = "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.";
+  const LIST_INTERNAL_MSG =
+    "서버 내부에서 오류가 발생했습니다. 관리자에게 문의해주세요.";
 
   function makeListDeps(setMessage?: (m: string | null) => void) {
     return {
@@ -269,9 +275,12 @@ export default function MyShopReviewsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="relative mb-8 bg-white rounded-3xl border border-gray-100 p-6 overflow-hidden">
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">리뷰 관리</h1>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+            리뷰 관리
+          </h1>
           <p className="text-gray-500 text-sm mt-1">
-            낙찰받은 상품의 후기를 작성하거나, 내가 쓴 후기를 관리할 수 있습니다.
+            낙찰받은 상품의 후기를 작성하거나, 내가 쓴 후기를 관리할 수
+            있습니다.
           </p>
         </div>
 
@@ -306,7 +315,9 @@ export default function MyShopReviewsPage() {
           {loading && (
             <div className="py-20 text-center">
               <div className="animate-spin w-8 h-8 border-4 border-[rgba(118,90,255,0.25)] border-t-[rgb(118,90,255)] rounded-full mx-auto mb-4" />
-              <p className="text-gray-500 text-sm">정보를 불러오고 있습니다...</p>
+              <p className="text-gray-500 text-sm">
+                정보를 불러오고 있습니다...
+              </p>
             </div>
           )}
 
@@ -338,9 +349,12 @@ export default function MyShopReviewsPage() {
                           setWriteTarget(r);
                           setWriteOpen(true);
                         }}
-                        onViewProduct={() => nav(`/auction_detail/${r.productId}`)}
+                        onViewProduct={() =>
+                          nav(`/auction_detail/${r.productId}`)
+                        }
                         onViewSeller={() => {
-                          const sellerUserId = (r as any).sellerUserId ?? (r as any).sellerId;
+                          const sellerUserId =
+                            (r as any).sellerUserId ?? (r as any).sellerId;
                           if (sellerUserId == null) return;
                           nav(`/user/profile/${sellerUserId}`);
                         }}
@@ -353,7 +367,9 @@ export default function MyShopReviewsPage() {
                       page={pending.number}
                       totalPages={pending.totalPages}
                       onPrev={() => setPPage((p) => Math.max(0, p - 1))}
-                      onNext={() => setPPage((p) => Math.min(pending.totalPages - 1, p + 1))}
+                      onNext={() =>
+                        setPPage((p) => Math.min(pending.totalPages - 1, p + 1))
+                      }
                     />
                   )}
                 </div>
@@ -381,7 +397,9 @@ export default function MyShopReviewsPage() {
                       <WrittenReviewCard
                         key={r.reviewId}
                         data={r}
-                        onViewProduct={() => nav(`/auction_detail/${r.productId}`)}
+                        onViewProduct={() =>
+                          nav(`/auction_detail/${r.productId}`)
+                        }
                         onOpenDetail={() => openDetail(r.reviewId)}
                       />
                     ))
@@ -392,7 +410,9 @@ export default function MyShopReviewsPage() {
                       page={mine.number}
                       totalPages={mine.totalPages}
                       onPrev={() => setMPage((p) => Math.max(0, p - 1))}
-                      onNext={() => setMPage((p) => Math.min(mine.totalPages - 1, p + 1))}
+                      onNext={() =>
+                        setMPage((p) => Math.min(mine.totalPages - 1, p + 1))
+                      }
                     />
                   )}
                 </div>
@@ -448,7 +468,9 @@ export default function MyShopReviewsPage() {
             open={lbOpen}
             urls={detailImageUrls}
             index={lbIndex}
-            setIndex={(v: any) => setLbIndex(typeof v === "number" ? v : v(lbIndex))}
+            setIndex={(v: any) =>
+              setLbIndex(typeof v === "number" ? v : v(lbIndex))
+            }
             onClose={() => setLbOpen(false)}
           />
         </div>
@@ -456,13 +478,22 @@ export default function MyShopReviewsPage() {
     </div>
   );
 }
-function TabButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
+function TabButton({
+  active,
+  onClick,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count?: number;
+}) {
   return (
     <button
       onClick={onClick}
       className={`pb-3 px-1 text-sm font-bold relative transition-colors flex items-center gap-1.5 ${
         active ? "text-[rgb(118,90,255)]" : "text-gray-400 hover:text-gray-600"
-        
       }`}
     >
       <span>{label}</span>
@@ -480,7 +511,17 @@ function TabButton({ active, onClick, label, count }: { active: boolean; onClick
   );
 }
 
-function PendingReviewCard({ data, onReview, onViewProduct, onViewSeller,}: { data: PendingReviewRowDto; onReview: () => void; onViewProduct: () => void; onViewSeller: () => void;}) {
+function PendingReviewCard({
+  data,
+  onReview,
+  onViewProduct,
+  onViewSeller,
+}: {
+  data: PendingReviewRowDto;
+  onReview: () => void;
+  onViewProduct: () => void;
+  onViewSeller: () => void;
+}) {
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
       <div className="flex-1 min-w-0">
@@ -493,7 +534,7 @@ function PendingReviewCard({ data, onReview, onViewProduct, onViewSeller,}: { da
             {formatKST(data.auctionEndTime)}
           </span>
         </div>
-        
+
         <button
           type="button"
           onClick={onViewProduct}
@@ -502,7 +543,7 @@ function PendingReviewCard({ data, onReview, onViewProduct, onViewSeller,}: { da
         >
           {data.productName}
         </button>
-        
+
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
           <button
             type="button"
@@ -510,12 +551,17 @@ function PendingReviewCard({ data, onReview, onViewProduct, onViewSeller,}: { da
             title="판매자 공용 프로필 보기"
             className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[rgb(118,90,255)] hover:underline underline-offset-4 decoration-gray-300 transition"
           >
-            <Store className="w-3.5 h-3.5" /> 
-            <span className="font-semibold text-gray-700"> {(data.sellerNick ?? "알 수 없음") + "님 상점"} </span>
+            <Store className="w-3.5 h-3.5" />
+            <span className="font-semibold text-gray-700">
+              {" "}
+              {(data.sellerNick ?? "알 수 없음") + "님 상점"}{" "}
+            </span>
           </button>
           <div className="w-px h-3 bg-gray-200" />
           <div className="flex items-center gap-1">
-            <span className="font-semibold text-gray-900">{Number(data.winnerBidAmount ?? 0).toLocaleString()}</span>
+            <span className="font-semibold text-gray-900">
+              {Number(data.winnerBidAmount ?? 0).toLocaleString()}
+            </span>
             <span>원</span>
           </div>
         </div>
@@ -532,13 +578,23 @@ function PendingReviewCard({ data, onReview, onViewProduct, onViewSeller,}: { da
   );
 }
 
-function WrittenReviewCard({ data, onViewProduct, onOpenDetail, }: { data: ReviewListDto; onViewProduct: () => void; onOpenDetail: () => void; }) {
+function WrittenReviewCard({
+  data,
+  onViewProduct,
+  onOpenDetail,
+}: {
+  data: ReviewListDto;
+  onViewProduct: () => void;
+  onOpenDetail: () => void;
+}) {
   return (
     <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-1 bg-violet-50 px-2 py-1 rounded-lg">
           <Star className="w-4 h-4 text-violet-600" fill="currentColor" />
-          <span className="font-extrabold text-[rgb(118,90,255)] text-sm">{Number(data.rating ?? 0).toFixed(1)}</span>
+          <span className="font-extrabold text-[rgb(118,90,255)] text-sm">
+            {Number(data.rating ?? 0).toFixed(1)}
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -558,8 +614,10 @@ function WrittenReviewCard({ data, onViewProduct, onOpenDetail, }: { data: Revie
         </div>
       </div>
 
-
-      <div className="flex items-center gap-2 mb-4 text-sm text-gray-500 hover:text-gray-900 transition-colors cursor-pointer w-fit" onClick={onViewProduct}>
+      <div
+        className="flex items-center gap-2 mb-4 text-sm text-gray-500 hover:text-gray-900 transition-colors cursor-pointer w-fit"
+        onClick={onViewProduct}
+      >
         <ShoppingBag className="w-4 h-4" />
         <span className="font-semibold underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900">
           {data.productName}
@@ -621,7 +679,12 @@ function EmptyBox(props: {
         )}
       </div>
 
-      <div className={"font-bold text-lg mb-1 " + (isError ? "text-rose-700" : "text-gray-900")}>
+      <div
+        className={
+          "font-bold text-lg mb-1 " +
+          (isError ? "text-rose-700" : "text-gray-900")
+        }
+      >
         {title}
       </div>
       <div className="text-gray-500 text-sm whitespace-pre-line">{desc}</div>
@@ -640,7 +703,12 @@ function EmptyBox(props: {
   );
 }
 
-function Pager(props: { page: number; totalPages: number; onPrev: () => void; onNext: () => void }) {
+function Pager(props: {
+  page: number;
+  totalPages: number;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
   const { page, totalPages, onPrev, onNext } = props;
   return (
     <div className="mt-8 flex justify-center items-center gap-3">
@@ -652,9 +720,10 @@ function Pager(props: { page: number; totalPages: number; onPrev: () => void; on
         이전
       </button>
       <span className="text-sm font-bold text-gray-900 px-2">
-        {page + 1} <span className="text-gray-400 font-normal">/</span> {totalPages}
+        {page + 1} <span className="text-gray-400 font-normal">/</span>{" "}
+        {totalPages}
       </span>
-      <button 
+      <button
         disabled={page >= totalPages - 1}
         onClick={onNext}
         className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
@@ -675,7 +744,16 @@ function ReviewDetailModal(props: {
   onGoSeller: (sellerId: number) => void;
   onOpenLightbox: (index: number) => void;
 }) {
-  const { open, loading, err, data, onClose, onGoProduct, onGoSeller, onOpenLightbox } = props;
+  const {
+    open,
+    loading,
+    err,
+    data,
+    onClose,
+    onGoProduct,
+    onGoSeller,
+    onOpenLightbox,
+  } = props;
 
   useEffect(() => {
     if (!open) return;
@@ -752,7 +830,10 @@ function ReviewDetailModal(props: {
               <>
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <div className="flex items-center gap-2 bg-[rgba(118,90,255,0.08)] px-3 py-2 rounded-2xl">
-                    <Star className="w-5 h-5 text-[rgb(118,90,255)]" fill="currentColor" />
+                    <Star
+                      className="w-5 h-5 text-[rgb(118,90,255)]"
+                      fill="currentColor"
+                    />
                     <span className="text-[rgb(118,90,255)] font-extrabold">
                       {Number(data.rating ?? 0).toFixed(1)}
                     </span>
@@ -763,9 +844,9 @@ function ReviewDetailModal(props: {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5">
-                  <button 
-                    type="button" 
-                    onClick={() => onGoProduct(data.productId)} 
+                  <button
+                    type="button"
+                    onClick={() => onGoProduct(data.productId)}
                     className="
                       w-full inline-flex items-center justify-center gap-2
                       px-4 py-2.5 rounded-2xl
@@ -774,9 +855,9 @@ function ReviewDetailModal(props: {
                       transition-all
                       focus-visible:outline-none 
                       focus-visible:ring-2 focus-visible:ring-[rgba(118,90,255,0.35)] focus-visible:ring-offset-2
-                    " 
-                  > 
-                    상품으로 이동 
+                    "
+                  >
+                    상품으로 이동
                   </button>
 
                   <button
@@ -795,7 +876,9 @@ function ReviewDetailModal(props: {
                     "
                   >
                     <Store className="w-4 h-4 text-[rgb(118,90,255)]" />
-                    <span className="min-w-0 truncate">{data.sellerNick}님 상점</span>
+                    <span className="min-w-0 truncate">
+                      {data.sellerNick}님 상점
+                    </span>
                   </button>
                 </div>
 
@@ -834,25 +917,37 @@ function ReviewDetailModal(props: {
                     전체 보기
                   </button>
                 )}
-                <div className="grid grid-cols-6 grid-rows-2 gap-2 h-[240px]"> {thumbs.map((img: any, idx: number) => ( <button key={img.id} type="button" onClick={() => onOpenLightbox(idx)} className="relative rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 group" aria-label="이미지 확대 보기" > <img src={img.url} className="w-full h-full object-cover group-hover:scale-[1.02] transition" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
-
-                    {extra > 0 && idx === MAX_SLOTS - 1 && (
-                      <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
-                        <div className="px-3 py-1.5 rounded-full bg-black/35 text-white text-xs font-extrabold">
-                          +{extra}
+                <div className="grid grid-cols-6 grid-rows-2 gap-2 h-[240px]">
+                  {" "}
+                  {thumbs.map((img: any, idx: number) => (
+                    <button
+                      key={img.id}
+                      type="button"
+                      onClick={() => onOpenLightbox(idx)}
+                      className="relative rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 group"
+                      aria-label="이미지 확대 보기"
+                    >
+                      {" "}
+                      <img
+                        src={img.url}
+                        className="w-full h-full object-cover group-hover:scale-[1.02] transition"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
+                      {extra > 0 && idx === MAX_SLOTS - 1 && (
+                        <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+                          <div className="px-3 py-1.5 rounded-full bg-black/35 text-white text-xs font-extrabold">
+                            +{extra}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </button>
-                ))}
-
-                {Array.from({ length: placeholders }).map((_, i) => (
-                  <div
-                    key={`ph-${i}`}
-                    className="rounded-2xl border border-dashed border-gray-200 bg-gray-50"
-                  />
-                ))}
+                      )}
+                    </button>
+                  ))}
+                  {Array.from({ length: placeholders }).map((_, i) => (
+                    <div
+                      key={`ph-${i}`}
+                      className="rounded-2xl border border-dashed border-gray-200 bg-gray-50"
+                    />
+                  ))}
                 </div>
               </>
             )}
@@ -876,7 +971,8 @@ function Lightbox(props: {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft") setIndex((index - 1 + urls.length) % urls.length);
+      if (e.key === "ArrowLeft")
+        setIndex((index - 1 + urls.length) % urls.length);
       if (e.key === "ArrowRight") setIndex((index + 1) % urls.length);
     };
     window.addEventListener("keydown", onKey);
@@ -892,8 +988,14 @@ function Lightbox(props: {
     <div className="fixed inset-0 z-[60]">
       <div className="absolute inset-0 bg-black/80" onClick={onClose} />
 
-      <div className="absolute inset-0 flex items-center justify-center p-4" onClick={onClose}>
-        <div className="relative w-[min(96vw,980px)] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="absolute inset-0 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <div
+          className="relative w-[min(96vw,980px)] max-h-[90vh]"
+          onClick={(e) => e.stopPropagation()}
+        >
           <img
             src={urls[index]}
             className="w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
@@ -902,7 +1004,7 @@ function Lightbox(props: {
           <button
             type="button"
             onClick={onClose}
-            className = "absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/45 hover:bg-black/60 border border-white/20 backdrop-blur transition flex items-center justify-center shadow-lg"
+            className="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/45 hover:bg-black/60 border border-white/20 backdrop-blur transition flex items-center justify-center shadow-lg"
             aria-label="닫기"
           >
             <X className="w-6 h-6 text-white" />
@@ -928,7 +1030,7 @@ function Lightbox(props: {
                 <ChevronRight className="w-7 h-7 text-white" />
               </button>
 
-              <div className = "absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/45 border border-white/20 backdrop-blur text-white text-xs font-bold shadow-lg">
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/45 border border-white/20 backdrop-blur text-white text-xs font-bold shadow-lg">
                 {index + 1} / {urls.length}
               </div>
             </>
@@ -937,5 +1039,4 @@ function Lightbox(props: {
       </div>
     </div>
   );
-
 }

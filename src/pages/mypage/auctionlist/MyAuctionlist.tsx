@@ -4,7 +4,6 @@ import {
   Eye,
   Search,
   RefreshCw,
-  LayoutGrid,
   Grid3X3,
   List as ListIcon,
   ChevronRight,

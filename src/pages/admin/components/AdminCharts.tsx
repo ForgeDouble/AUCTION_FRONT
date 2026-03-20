@@ -1,5 +1,3 @@
-// src/pages/admin/components/AdminCharts.tsx
-import { Bold } from "lucide-react";
 import React, { useMemo } from "react";
 
 export interface LinePoint {
@@ -35,9 +33,17 @@ export const SimpleMultiLineChart: React.FC<{
 
   valueLabelMode?: "none" | "last" | "all";
   valueFormatter?: (v: number) => string;
-
-}> = ({ series, height = 180, yLabel, valueLabelMode = "none" , valueFormatter, }) => {
-  const allValues = useMemo(() => series.flatMap((s) => s.points.map((p) => p.value)), [series]);
+}> = ({
+  series,
+  height = 180,
+  yLabel,
+  valueLabelMode = "none",
+  valueFormatter,
+}) => {
+  const allValues = useMemo(
+    () => series.flatMap((s) => s.points.map((p) => p.value)),
+    [series],
+  );
   const max = useMemo(() => Math.max(1, ...allValues), [allValues]);
   const min = useMemo(() => Math.min(0, ...allValues), [allValues]);
 
@@ -73,12 +79,28 @@ export const SimpleMultiLineChart: React.FC<{
         {/* grid */}
         {[0, 0.25, 0.5, 0.75, 1].map((t) => {
           const y = padT + (h - padT - padB) * t;
-          return <line key={t} x1={padL} x2={w - padR} y1={y} y2={y} stroke="#eee" strokeWidth="1" />;
+          return (
+            <line
+              key={t}
+              x1={padL}
+              x2={w - padR}
+              y1={y}
+              y2={y}
+              stroke="#eee"
+              strokeWidth="1"
+            />
+          );
         })}
 
         {/* axis */}
         <line x1={padL} x2={padL} y1={padT} y2={h - padB} stroke="#ddd" />
-        <line x1={padL} x2={w - padR} y1={h - padB} y2={h - padB} stroke="#ddd" />
+        <line
+          x1={padL}
+          x2={w - padR}
+          y1={h - padB}
+          y2={h - padB}
+          stroke="#ddd"
+        />
 
         {/* y label */}
         {yLabel ? (
@@ -153,10 +175,18 @@ export const SimpleMultiLineChart: React.FC<{
         {/* x labels (sparse) */}
         {labels.map((lb, i) => {
           const step = Math.ceil(labels.length / 6);
-          if (labels.length > 6 && i % step !== 0 && i !== labels.length - 1) return null;
+          if (labels.length > 6 && i % step !== 0 && i !== labels.length - 1)
+            return null;
           const x = xAt(i, labels.length);
           return (
-            <text key={lb + i} x={x} y={h - 8} fontSize="10" textAnchor="middle" fill="#999">
+            <text
+              key={lb + i}
+              x={x}
+              y={h - 8}
+              fontSize="10"
+              textAnchor="middle"
+              fill="#999"
+            >
               {lb}
             </text>
           );
@@ -184,7 +214,10 @@ export const SimpleDonutChart: React.FC<{
   size?: number;
   thickness?: number;
 }> = ({ segments, size = 180, thickness = 16 }) => {
-  const total = useMemo(() => segments.reduce((acc, s) => acc + s.value, 0), [segments]);
+  const total = useMemo(
+    () => segments.reduce((acc, s) => acc + s.value, 0),
+    [segments],
+  );
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
 
@@ -223,7 +256,14 @@ export const SimpleDonutChart: React.FC<{
           offset += dash;
           return node;
         })}
-        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fontSize="14" fill="#333">
+        <text
+          x="50%"
+          y="50%"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize="14"
+          fill="#333"
+        >
           {total.toLocaleString()}
         </text>
       </svg>
@@ -232,7 +272,10 @@ export const SimpleDonutChart: React.FC<{
         {segments.map((s) => {
           const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
           return (
-            <div key={s.label} className="flex items-center justify-between text-sm">
+            <div
+              key={s.label}
+              className="flex items-center justify-between text-sm"
+            >
               <div className="flex items-center gap-2">
                 <span
                   className={"w-3 h-3 rounded-full shrink-0 " + s.colorClass}
@@ -280,7 +323,13 @@ export const SimpleBarChart: React.FC<{
   return (
     <div className="w-full">
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto">
-        <line x1={padL} x2={w - padR} y1={h - padB} y2={h - padB} stroke="#ddd" />
+        <line
+          x1={padL}
+          x2={w - padR}
+          y1={h - padB}
+          y2={h - padB}
+          stroke="#ddd"
+        />
 
         {data.map((d, i) => {
           const x = xAt(i);
@@ -289,8 +338,22 @@ export const SimpleBarChart: React.FC<{
           const barH = base - y;
           return (
             <g key={d.label}>
-              <rect x={x} y={y} width={barW} height={barH} rx={6} fill="#7c3aed" opacity={0.85} />
-              <text x={x + barW / 2} y={h - 8} fontSize="10" textAnchor="middle" fill="#999">
+              <rect
+                x={x}
+                y={y}
+                width={barW}
+                height={barH}
+                rx={6}
+                fill="#7c3aed"
+                opacity={0.85}
+              />
+              <text
+                x={x + barW / 2}
+                y={h - 8}
+                fontSize="10"
+                textAnchor="middle"
+                fill="#999"
+              >
                 {d.label}
               </text>
             </g>

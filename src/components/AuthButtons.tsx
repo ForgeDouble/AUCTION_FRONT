@@ -1,5 +1,3 @@
-// AuthButtons.tsx 
-
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
@@ -74,7 +72,15 @@ function NotificationMenu(props: {
   onClickItem: (n: NotificationItem) => void;
   onMarkAllRead: () => void;
 }) {
-  const { notifications,unreadCount, loading, error, onReload, onClickItem, onMarkAllRead, } = props;
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    onReload,
+    onClickItem,
+    onMarkAllRead,
+  } = props;
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotificationCategory>("ALL");
   const ref = useRef<HTMLDivElement | null>(null);
@@ -299,8 +305,10 @@ function UserMenu(props: {
         className="flex items-center gap-2 pl-1 pr-2 h-9 rounded-full hover:bg-black/5 active:scale-[0.99] transition"
         aria-label="유저 메뉴"
       >
-        <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center
-                        bg-[rgba(118,90,255,0.10)] ring-1 ring-[rgba(118,90,255,0.18)]">
+        <div
+          className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center
+                        bg-[rgba(118,90,255,0.10)] ring-1 ring-[rgba(118,90,255,0.18)]"
+        >
           {profileUrl ? (
             <img
               src={profileUrl}
@@ -308,7 +316,10 @@ function UserMenu(props: {
               className="w-full h-full object-cover"
             />
           ) : (
-            <User2 className="w-4 h-4 text-[rgb(118,90,255)]" aria-hidden="true" />
+            <User2
+              className="w-4 h-4 text-[rgb(118,90,255)]"
+              aria-hidden="true"
+            />
           )}
         </div>
 
@@ -405,19 +416,33 @@ function UserMenu(props: {
 
 export default function AuthButtons() {
   const navigate = useNavigate();
-  const { userEmail, isAuthenticated, logout, nickname, profileImageUrl, userId } =
-    useAuth() as {
-      userEmail: string | null;
-      isAuthenticated: boolean;
-      logout: () => void;
-      nickname?: string;
-      profileImageUrl?: string | null;
-      userId?: number;
-    };
+  const {
+    userEmail,
+    isAuthenticated,
+    logout,
+    nickname,
+    profileImageUrl,
+    userId,
+  } = useAuth() as {
+    userEmail: string | null;
+    isAuthenticated: boolean;
+    logout: () => void;
+    nickname?: string;
+    profileImageUrl?: string | null;
+    userId?: number;
+  };
 
   const { unread } = useChat();
 
-  const { notifications, unreadCount, loading, error, reload, markAsRead, markAllRead, } = useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    reload,
+    markAsRead,
+    markAllRead,
+  } = useNotifications();
 
   const unreadTotal = Object.values(unread || {}).reduce(
     (a, b) => a + (b || 0),
@@ -436,7 +461,7 @@ export default function AuthButtons() {
     }
 
     const ok = window.confirm(
-      "정말 회원 탈퇴 하시겠습니까?\n탈퇴 후에는 계정 복구가 어려울 수 있습니다."
+      "정말 회원 탈퇴 하시겠습니까?\n탈퇴 후에는 계정 복구가 어려울 수 있습니다.",
     );
     if (!ok) return;
 

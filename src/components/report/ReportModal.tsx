@@ -1,5 +1,4 @@
-// src/components/report/ReportModal.tsx
-import React, { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { X, Siren } from "lucide-react";
 import {
   createProductReport,
@@ -12,14 +11,15 @@ import { handleApiError } from "@/errors/HandleApiError";
 
 type Mode = "USER" | "PRODUCT";
 
-const CATEGORIES: Array<{ key: ReportCategory; label: string; desc: string }> = [
-  { key: "SPAM", label: "스팸", desc: "도배/반복/무의미한 내용" },
-  { key: "AD", label: "광고", desc: "홍보/외부 링크/상업성" },
-  { key: "ABUSE", label: "욕설/비방", desc: "모욕/괴롭힘/인신공격" },
-  { key: "HATE", label: "혐오", desc: "차별/혐오 표현" },
-  { key: "SCAM", label: "사기", desc: "허위/사기 의심" },
-  { key: "OTHER", label: "기타", desc: "기타 사유" },
-];
+const CATEGORIES: Array<{ key: ReportCategory; label: string; desc: string }> =
+  [
+    { key: "SPAM", label: "스팸", desc: "도배/반복/무의미한 내용" },
+    { key: "AD", label: "광고", desc: "홍보/외부 링크/상업성" },
+    { key: "ABUSE", label: "욕설/비방", desc: "모욕/괴롭힘/인신공격" },
+    { key: "HATE", label: "혐오", desc: "차별/혐오 표현" },
+    { key: "SCAM", label: "사기", desc: "허위/사기 의심" },
+    { key: "OTHER", label: "기타", desc: "기타 사유" },
+  ];
 
 export type ReportModalProps = {
   open: boolean;
@@ -245,12 +245,10 @@ export default function ReportModal(props: ReportModalProps) {
           </div>
         </div>
 
-
         <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-end gap-2">
           <button
             className={
-              btnBase +
-              " border border-gray-200 hover:bg-gray-50 text-gray-700"
+              btnBase + " border border-gray-200 hover:bg-gray-50 text-gray-700"
             }
             onClick={onClose}
             disabled={submitting}

@@ -1,11 +1,14 @@
-// api/authApi.ts
 import { ApiError, UnauthorizedError } from "@/errors/Errors";
 import type { ApiResponse, UserTokenDto } from "../type/CommonType";
+
+const BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
+  "http://localhost:8080";
 
 export const fetchLoginEmail = async (
   token: string,
 ): Promise<ApiResponse<UserTokenDto>> => {
-  const response = await fetch(`http://localhost:8080/user/verify-token`, {
+  const response = await fetch(`${BASE}/user/verify-token`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,

@@ -86,6 +86,10 @@ const AuctionDetail = () => {
   );
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
 
+  const BASE =
+    (import.meta.env.VITE_API_BASE as string | undefined) ??
+    "http://localhost:8080";
+
   // 본인 상품 여부 등 로직 (필요시 복구)
   // const isSelfSeller = false;
   const nav = useNavigate();
@@ -685,7 +689,7 @@ const AuctionDetail = () => {
     const token = localStorage.getItem("accessToken");
     const endpoint = token ? "/ws" : "/ws-public";
 
-    const socket = new SockJS(`http://localhost:8080${endpoint}`);
+    const socket = new SockJS(`${BASE}${endpoint}`);
     socketRef.current = socket;
 
     const stomp = Stomp.over(socket);
@@ -975,18 +979,18 @@ const AuctionDetail = () => {
           </div>
 
           <div className="flex items-center gap-2">
-              {!isSelfSeller && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReportMode("PRODUCT");
-                    setReportOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-extrabold text-rose-600 hover:bg-rose-100 transition"
-                >
-                  <Siren className="w-3 h-3" />
-                  신고
-                </button>
+            {!isSelfSeller && (
+              <button
+                type="button"
+                onClick={() => {
+                  setReportMode("PRODUCT");
+                  setReportOpen(true);
+                }}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-extrabold text-rose-600 hover:bg-rose-100 transition"
+              >
+                <Siren className="w-3 h-3" />
+                신고
+              </button>
             )}
             <span
               className="px-3 py-1 rounded-full text-xs font-extrabold border"

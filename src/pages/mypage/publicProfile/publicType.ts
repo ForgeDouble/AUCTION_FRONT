@@ -1,4 +1,3 @@
-// src/pages/mypage/publicProfile/publicType.ts
 export type ProfileUserDto = {
   userId: number;
   email?: string;
