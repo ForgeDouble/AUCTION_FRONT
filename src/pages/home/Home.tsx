@@ -364,7 +364,7 @@ const Home = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-3">
-              AuctionHub이 제공하는 경험
+              BID이 제공하는 경험
             </h2>
             <p className="text-sm md:text-base text-gray-600">
               안전성과 편의성을 동시에 만족시키는 경매 환경을 제공합니다.
