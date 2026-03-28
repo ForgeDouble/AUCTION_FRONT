@@ -2,9 +2,7 @@ import type { ApiResponse } from "@/type/CommonType";
 import type { ParentCategoriesDto, Top3ProductDto } from "./HomeDto";
 import { ApiError } from "@/errors/Errors";
 
-const BASE =
-  (import.meta.env.VITE_API_BASE as string | undefined) ??
-  "http://localhost:8080";
+const BASE = import.meta.env.VITE_API_BASE
 
 export const fetchTop3Products = async (): Promise<
   ApiResponse<Top3ProductDto[]>
@@ -31,12 +29,6 @@ export const fetchParentCategories = async (): Promise<
 > => {
   const response = await fetch(`${BASE}/category/with_count`, {
     method: "GET",
-<<<<<<< HEAD
-    // headers: {
-    //   "Content-Type": "application/json",
-    // },
-=======
->>>>>>> 417a00bf3ea2299133b741b6b05051b4a1291838
   });
 
   if (!response.ok) {
