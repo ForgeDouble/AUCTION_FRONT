@@ -11,9 +11,6 @@ export const fetchTop3Products = async (): Promise<
 > => {
   const response = await fetch(`${BASE}/product/top3`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
   });
 
   if (!response.ok) {
@@ -34,9 +31,6 @@ export const fetchParentCategories = async (): Promise<
 > => {
   const response = await fetch(`${BASE}/category/with_count`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
   });
 
   if (!response.ok) {
