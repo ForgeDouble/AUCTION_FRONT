@@ -3,8 +3,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { fetchLoginEmail } from "../api/authApi";
 import { AuthContext, type Authority } from "./AuthContext";
 
-const BASE =
-  (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://localhost:8080";
+const BASE = import.meta.env.VITE_API_BASE;
 
 type JwtPayload = {
   email?: string;
