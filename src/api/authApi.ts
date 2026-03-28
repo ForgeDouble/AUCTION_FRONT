@@ -1,8 +1,7 @@
 import { ApiError, UnauthorizedError } from "@/errors/Errors";
 import type { ApiResponse, UserTokenDto } from "../type/CommonType";
 
-const BASE =
-  (import.meta.env.VITE_API_BASE as string | undefined)
+const BASE = import.meta.env.VITE_API_BASE
 
 export const fetchLoginEmail = async (
   token: string,
@@ -11,9 +10,9 @@ export const fetchLoginEmail = async (
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+      // "Content-Type": "application/json",
     },
-    credentials: "include", // 필요하면 쿠키 포함
+    // credentials: "include", // 필요하면 쿠키 포함
   });
 
   if (!response.ok) {

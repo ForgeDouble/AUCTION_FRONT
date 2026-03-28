@@ -16,9 +16,9 @@ export const fetchProducts = async (
 ): Promise<ApiResponse<PageResponse<ProductListDto>>> => {
   const response = await fetch(`${BASE}/product/all?${params.toString()}`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    // headers: {
+    //   "Content-Type": "application/json",
+    // },
   });
 
   if (!response.ok) {
@@ -41,9 +41,9 @@ export const fetchParentCategories = async (): Promise<
 > => {
   const response = await fetch(`${BASE}/category/with_children_and_count`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    // headers: {
+    //   "Content-Type": "application/json",
+    // },
   });
 
   if (!response.ok) {
@@ -68,7 +68,7 @@ export const fetchWishlistByUser = async (
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+      // "Content-Type": "application/json",
     },
   });
 
