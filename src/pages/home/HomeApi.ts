@@ -31,9 +31,12 @@ export const fetchParentCategories = async (): Promise<
 > => {
   const response = await fetch(`${BASE}/category/with_count`, {
     method: "GET",
+<<<<<<< HEAD
     // headers: {
     //   "Content-Type": "application/json",
     // },
+=======
+>>>>>>> 417a00bf3ea2299133b741b6b05051b4a1291838
   });
 
   if (!response.ok) {
