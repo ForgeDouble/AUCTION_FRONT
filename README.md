@@ -2,13 +2,13 @@
 
 <br/>
 
-## 관련 저장소
-**백엔드**: 링크 (https://github.com/kkameoo/AuctionBackend)
-
 # AUCTION Frontend
 
 실시간 입찰, 채팅, 신고, 알림, 관리자 모니터링 기능을 제공하는 경매 서비스 프론트엔드입니다.  
 React와 Vite 기반으로 구현되었으며, 사용자 화면과 관리자 화면(MOS)을 함께 제공합니다.
+
+## 관련 저장소
+**백엔드**: 링크 (https://github.com/kkameoo/AuctionBackend)
 
 <br/>
 
